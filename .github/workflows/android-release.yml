@@ -35,7 +35,7 @@ jobs:
         working-directory: ConvoyMeshApp
         run: flutter pub get
 
-      # Rigenera SOLO la piattaforma Android (manteniamo lib/)
+      # Rigenera SOLO la piattaforma Android con le versioni scelte da Flutter
       - name: Ensure Android platform exists
         working-directory: ConvoyMeshApp
         run: |
@@ -55,20 +55,7 @@ jobs:
           echo "KEY_ALIAS=upload" >> $GITHUB_ENV
           echo "KEY_PASSWORD=password" >> $GITHUB_ENV
 
-      # Scrive il build.gradle di PROGETTO con Kotlin 1.9.24 + AGP 8.4.2
-      - name: Write android/build.gradle (project)
-        working-directory: ConvoyMeshApp
-        run: |
-          cat > android/build.gradle <<'EOF'
-          // Top-level build file
-          plugins {
-              id "com.android.application" version "8.4.2" apply false
-              id "org.jetbrains.kotlin.android" version "1.9.24" apply false
-              id "dev.flutter.flutter-plugin-loader" version "1.0.0" apply false
-          }
-          EOF
-
-      # Scrive l'app/build.gradle con firma release
+      # Scrive SOLO il build.gradle del modulo app, lasciando intatto quello di progetto (per evitare conflitti di versione)
       - name: Write signed app/build.gradle (module)
         working-directory: ConvoyMeshApp
         run: |
