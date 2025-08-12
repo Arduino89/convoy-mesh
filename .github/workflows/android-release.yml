@@ -24,12 +24,18 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
 
-      # 👉 Il progetto è nella sottocartella ConvoyMeshApp
+      # Il progetto è nella sottocartella ConvoyMeshApp
+      - name: Ensure assets dir exists (fix pubspec)
+        working-directory: ConvoyMeshApp
+        run: |
+          mkdir -p assets
+          echo "keep" > assets/.keep
+
       - name: Install dependencies
         working-directory: ConvoyMeshApp
         run: flutter pub get
 
-      # Rigenera SOLO la piattaforma Android (Gradle + MainActivity) mantenendo il codice in lib/
+      # Rigenera SOLO la piattaforma Android (manteniamo lib/)
       - name: Ensure Android platform exists
         working-directory: ConvoyMeshApp
         run: |
@@ -37,7 +43,7 @@ jobs:
           flutter create . --platforms=android --project-name convoy_mesh_app --org app.convoymesh
           flutter pub get
 
-      # Keystore temporaneo per firmare la release (va benissimo per i test)
+      # Keystore temporaneo per firmare
       - name: Generate throwaway keystore
         working-directory: ConvoyMeshApp
         run: |
@@ -49,8 +55,21 @@ jobs:
           echo "KEY_ALIAS=upload" >> $GITHUB_ENV
           echo "KEY_PASSWORD=password" >> $GITHUB_ENV
 
-      # Scrive un build.gradle già configurato con la firma release
-      - name: Write signed app/build.gradle
+      # Scrive il build.gradle di PROGETTO con Kotlin 1.9.24 + AGP 8.4.2
+      - name: Write android/build.gradle (project)
+        working-directory: ConvoyMeshApp
+        run: |
+          cat > android/build.gradle <<'EOF'
+          // Top-level build file
+          plugins {
+              id "com.android.application" version "8.4.2" apply false
+              id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+              id "dev.flutter.flutter-plugin-loader" version "1.0.0" apply false
+          }
+          EOF
+
+      # Scrive l'app/build.gradle con firma release
+      - name: Write signed app/build.gradle (module)
         working-directory: ConvoyMeshApp
         run: |
           cat > android/app/build.gradle <<'EOF'
@@ -124,4 +143,3 @@ jobs:
           name: convoy-mesh-release
           path: ConvoyMeshApp/build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
-
