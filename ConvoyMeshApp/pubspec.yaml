@@ -1,0 +1,29 @@
+name: convoy_mesh_app
+description: Convoy/Trekking tracking app with offline BLE relay (MVP scaffold)
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^13.0.2
+  permission_handler: ^11.3.1
+  provider: ^6.1.2
+  uuid: ^4.5.1
+  # BLE package (we stub usage in this MVP; requires testing on device)
+  flutter_reactive_ble: ^5.3.1
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
