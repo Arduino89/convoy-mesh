@@ -21,10 +21,23 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
 
+      # 👉 Lavoriamo nella sottocartella del progetto
       - name: Install dependencies
+        working-directory: ConvoyMeshApp
         run: flutter pub get
 
-      - name: Generate throwaway keystore (for dev signing)
+      # Rigeneriamo SOLO la piattaforma Android (Gradle, manifest, MainActivity, ecc.)
+      # mantenendo il codice in lib/ così com'è.
+      - name: Ensure Android platform exists
+        working-directory: ConvoyMeshApp
+        run: |
+          rm -rf android
+          flutter create . --platforms=android --project-name convoy_mesh_app --org app.convoymesh
+          flutter pub get
+
+      # Keystore temporaneo per firmare la release (va bene per test)
+      - name: Generate throwaway keystore
+        working-directory: ConvoyMeshApp
         run: |
           keytool -genkeypair -v -keystore release.keystore -storepass password -keypass password \
             -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
@@ -34,22 +47,25 @@ jobs:
           echo "KEY_ALIAS=upload" >> $GITHUB_ENV
           echo "KEY_PASSWORD=password" >> $GITHUB_ENV
 
-      - name: Configure signing in Gradle
+      # Abilita la firma release nel build.gradle generato
+      - name: Enable release signing
+        working-directory: ConvoyMeshApp
         run: |
-          sed -i '/buildTypes {/a \
-              release {\
-                  signingConfig signingConfigs.debug\
-              }' android/app/build.gradle
+          sed -i 's/minifyEnabled false/minifyEnabled false\n            signingConfig signingConfigs.release/g' android/app/build.gradle
+          # Patcha la sezione signingConfigs.release
+          sed -i 's/signingConfigs {[^}]*}/signingConfigs {\n        release {\n            storeFile file("'"$KEYSTORE_PATH"'")\n            storePassword "'"$KEYSTORE_PASSWORD"'"\n            keyAlias "'"$KEY_ALIAS"'"\n            keyPassword "'"$KEY_PASSWORD"'"\n        }\n    }/g' android/app/build.gradle
 
       - name: Build release APK
+        working-directory: ConvoyMeshApp
         run: flutter build apk --release
 
       - name: List outputs
+        working-directory: ConvoyMeshApp
         run: ls -R build/app/outputs || true
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: convoy-mesh-release
-          path: build/app/outputs/flutter-apk/*.apk
+          path: ConvoyMeshApp/build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
