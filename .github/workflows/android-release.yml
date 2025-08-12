@@ -21,11 +21,8 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
 
-      - name: Generate Android scaffolding
-        run: |
-          rm -rf android ios web
-          flutter create . --platforms=android --project-name convoy_mesh_app --org app.convoymesh
-          flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
       - name: Generate throwaway keystore (for dev signing)
         run: |
@@ -37,58 +34,22 @@ jobs:
           echo "KEY_ALIAS=upload" >> $GITHUB_ENV
           echo "KEY_PASSWORD=password" >> $GITHUB_ENV
 
-      - name: Patch app/build.gradle for signing
+      - name: Configure signing in Gradle
         run: |
-          cat > android/app/build.gradle <<'EOF'
-          plugins {
-              id "com.android.application"
-              id "org.jetbrains.kotlin.android"
-              id "dev.flutter.flutter-gradle-plugin"
-          }
-          android {
-              namespace "app.convoymesh"
-              compileSdk 34
-              defaultConfig {
-                  applicationId "app.convoymesh"
-                  minSdk 23
-                  targetSdk 34
-                  versionCode 1
-                  versionName "0.1.0"
-              }
-              signingConfigs {
-                  release {
-                      storeFile file(System.getenv("KEYSTORE_PATH") ?: "release.keystore")
-                      storePassword System.getenv("KEYSTORE_PASSWORD") ?: "password"
-                      keyAlias System.getenv("KEY_ALIAS") ?: "upload"
-                      keyPassword System.getenv("KEY_PASSWORD") ?: "password"
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                      minifyEnabled false
-                      shrinkResources false
-                  }
-                  debug {
-                      signingConfig signingConfigs.release
-                  }
-              }
-          }
-          flutter { source '../..' }
-          EOF
+          sed -i '/buildTypes {/a \
+              release {\
+                  signingConfig signingConfigs.debug\
+              }' android/app/build.gradle
 
       - name: Build release APK
         run: flutter build apk --release
 
-      - name: List outputs (debug info)
-        run: |
-          echo "== OUTPUTS =="
-          ls -R build/app/outputs || true
+      - name: List outputs
+        run: ls -R build/app/outputs || true
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: convoy-mesh-release
-          path: |
-            build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
