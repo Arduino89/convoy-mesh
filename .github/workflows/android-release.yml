@@ -48,24 +48,63 @@ jobs:
           echo "KEY_PASSWORD=password" >> $GITHUB_ENV
 
       # Abilita la firma release nel build.gradle generato
-      - name: Enable release signing
+      - name: Write signed app/build.gradle
         working-directory: ConvoyMeshApp
         run: |
-          sed -i 's/minifyEnabled false/minifyEnabled false\n            signingConfig signingConfigs.release/g' android/app/build.gradle
-          # Patcha la sezione signingConfigs.release
-          sed -i 's/signingConfigs {[^}]*}/signingConfigs {\n        release {\n            storeFile file("'"$KEYSTORE_PATH"'")\n            storePassword "'"$KEYSTORE_PASSWORD"'"\n            keyAlias "'"$KEY_ALIAS"'"\n            keyPassword "'"$KEY_PASSWORD"'"\n        }\n    }/g' android/app/build.gradle
+          cat > android/app/build.gradle <<'EOF'
+          plugins {
+              id "com.android.application"
+              id "org.jetbrains.kotlin.android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
 
-      - name: Build release APK
-        working-directory: ConvoyMeshApp
-        run: flutter build apk --release
+          android {
+              namespace "app.convoymesh"
+              compileSdk 34
 
-      - name: List outputs
-        working-directory: ConvoyMeshApp
-        run: ls -R build/app/outputs || true
+              defaultConfig {
+                  applicationId "app.convoymesh"
+                  minSdk 23
+                  targetSdk 34
+                  versionCode 1
+                  versionName "0.1.0"
+              }
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: convoy-mesh-release
-          path: ConvoyMeshApp/build/app/outputs/flutter-apk/*.apk
-          if-no-files-found: error
+              signingConfigs {
+                  release {
+                      storeFile file(System.getenv("KEYSTORE_PATH"))
+                      storePassword System.getenv("KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("KEY_ALIAS")
+                      keyPassword System.getenv("KEY_PASSWORD")
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+                  debug {
+                      signingConfig signingConfigs.release
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+
+          flutter {
+              source '../..'
+          }
+
+          dependencies {
+          }
+          EOF
+
