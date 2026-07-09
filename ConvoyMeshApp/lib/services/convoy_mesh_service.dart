@@ -21,7 +21,7 @@ class ConvoyMeshService extends ChangeNotifier {
   final FlutterReactiveBle _ble = FlutterReactiveBle();
   final FlutterBlePeripheral _peripheral = FlutterBlePeripheral();
 
-  // Identity persistente.
+  // Identity persistente locale. In futuro: separare deviceId interno e sessionPeerId.
   int _myId = 0;
   int get myId => _myId;
 
@@ -45,7 +45,6 @@ class ConvoyMeshService extends ChangeNotifier {
 
   // Android BLE scan può rimanere "apparentemente ON" ma non consegnare più risultati,
   // soprattutto se la Posizione Android viene attivata/disattivata a runtime.
-  // Teniamo un watchdog leggero per riavviare solo lo scanner, senza toccare codec/payload.
   Timer? _scanWatchdogTimer;
   bool _scanRestarting = false;
   DateTime? _lastScanStartedAt;
@@ -74,7 +73,7 @@ class ConvoyMeshService extends ChangeNotifier {
   // Serializza start/stop adv per evitare crash plugin (Reply already submitted).
   Future<void> _advOp = Future.value();
 
-  // Online/offline e rimozione: non rimuoviamo subito, ma evitiamo liste sporche.
+  // Online/offline e rimozione basati su ultimo pacchetto valido, non su rumore BLE.
   static const Duration peerOnlineTtl = Duration(seconds: 15);
   static const Duration peerTtl = Duration(seconds: 60);
   static const Duration gcEvery = Duration(seconds: 5);
@@ -89,6 +88,9 @@ class ConvoyMeshService extends ChangeNotifier {
 
   // Trail retention default 90 min.
   static const Duration trailRetention = Duration(minutes: 90);
+
+  // Soglia volutamente alta: evita salti GPS assurdi senza penalizzare convogli auto/moto.
+  static const double maxPlausiblePeerSpeedKmh = 250.0;
 
   // -------- Debug/stato diagnostico esposto alla UI --------
   String? _lastAdvError;
@@ -273,9 +275,13 @@ class ConvoyMeshService extends ChangeNotifier {
   }
 
   int _newRandomId() {
-    return (DateTime.now().microsecondsSinceEpoch.remainder(0x7fffffff) ^
-            Random().nextInt(1 << 30))
-        .abs();
+    try {
+      return Random.secure().nextInt(0x7ffffffe) + 1;
+    } catch (_) {
+      return (DateTime.now().microsecondsSinceEpoch.remainder(0x7fffffff) ^
+              Random().nextInt(1 << 30))
+          .abs();
+    }
   }
 
   Future<void> regenerateMyId() async {
@@ -301,7 +307,7 @@ class ConvoyMeshService extends ChangeNotifier {
 
   void spamMyNameNow() {
     _forcedNamePackets = 6;
-    _advertiseName(force: true);
+    unawaited(_advertiseName(force: true));
     notifyListeners();
   }
 
@@ -439,7 +445,6 @@ class ConvoyMeshService extends ChangeNotifier {
       if (parsed.reason == 'no_magic') {
         _rxNoMagic++;
         // Non notifichiamo a ogni ADV casuale dell'ambiente: sono tantissimi.
-        // Aggiorniamo comunque la UI ogni tanto, così i contatori respirano.
         if (_rxNoMagic % 100 == 0) notifyListeners();
       } else {
         _rxBadPacket++;
@@ -457,19 +462,16 @@ class ConvoyMeshService extends ChangeNotifier {
       _rxIgnoredSelf++;
       _lastRxAt = DateTime.now();
       _lastRxSummary = 'self ${pkt.kindLabel} seq ${pkt.seq} off ${parsed.magicOffset}';
-      // I pacchetti self/duplicati possono arrivare spesso: aggiorniamo la UI a campioni
-      // per ridurre rebuild e warning di frame saltati, senza perdere i contatori.
       if (_rxIgnoredSelf % 10 == 0) notifyListeners();
       return;
     }
 
-    final peer = _peers.putIfAbsent(pkt.userId, () => PeerState(userId: pkt.userId));
     final now = DateTime.now();
+    final peer = _peers.putIfAbsent(pkt.userId, () => PeerState(userId: pkt.userId));
 
-    // Anche se l'advertisement è duplicato, aggiorniamo presenza/RSSI.
-    peer.lastSeen = now;
-    peer.rssi = d.rssi;
-    peer.lastAddress = d.id;
+    // Separiamo "sentito qualcosa" da "pacchetto valido accettato".
+    // Questo evita ghost peer tenuti online da duplicati/stale o rumore BLE.
+    peer.markHeard(now: now, rssi: d.rssi, address: d.id);
 
     var acceptedAny = false;
     final staleParts = <String>[];
@@ -497,13 +499,14 @@ class ConvoyMeshService extends ChangeNotifier {
     }
 
     if (pkt.hasFix) {
-      final acceptFix = _isSeqAcceptable(
+      final acceptSeq = _isSeqAcceptable(
         incoming: pkt.seq,
         current: peer.lastFixSeq,
         lastAcceptedAt: peer.lastFixSeen,
       );
+      final plausible = _isPeerFixPlausible(peer, pkt, now);
 
-      if (acceptFix) {
+      if (acceptSeq && plausible) {
         peer.accuracyM = pkt.accuracyM;
         peer.lat = pkt.lat;
         peer.lon = pkt.lon;
@@ -514,11 +517,11 @@ class ConvoyMeshService extends ChangeNotifier {
         peer.addPointIfValid(retention: trailRetention);
         acceptedAny = true;
       } else {
-        staleParts.add('pos');
+        staleParts.add(plausible ? 'pos' : 'pos_jump');
       }
     }
 
-    // Pacchetto PING senza fix/nome: per ora serve solo a mantenere presenza.
+    // Pacchetto PING senza fix/nome: serve solo a mantenere presenza se la seq è fresca.
     if (!pkt.hasName && !pkt.hasFix) {
       final acceptPing = _isSeqAcceptable(
         incoming: pkt.seq,
@@ -534,11 +537,12 @@ class ConvoyMeshService extends ChangeNotifier {
       _lastRxAt = now;
       final parts = staleParts.isEmpty ? pkt.kindLabel : staleParts.join('+');
       _lastRxSummary = 'stale $parts from ${pkt.userId} seq ${pkt.seq} off ${parsed.magicOffset}';
-      // I duplicati BLE fanno rumore: notifichiamo ogni 10 scarti per alleggerire la UI.
       if (_rxStale % 10 == 0) notifyListeners();
       return;
     }
 
+    // Da qui in poi il peer è davvero valido/online.
+    peer.lastSeen = now;
     peer.lastSeq = pkt.seq;
     peer.rxPackets++;
 
@@ -546,6 +550,20 @@ class ConvoyMeshService extends ChangeNotifier {
     _lastRxAt = now;
     _lastRxSummary = '${pkt.kindLabel} from ${pkt.userId} seq ${pkt.seq} rssi ${d.rssi} off ${parsed.magicOffset}';
     notifyListeners();
+  }
+
+  bool _isPeerFixPlausible(PeerState peer, ConvoyPacket pkt, DateTime now) {
+    if (pkt.lat == null || pkt.lon == null) return false;
+    if (peer.lat == null || peer.lon == null || peer.lastFixSeen == null) return true;
+
+    final dt = max(1, now.difference(peer.lastFixSeen!).inSeconds);
+    final distM = PeerState.distanceMeters(peer.lat!, peer.lon!, pkt.lat!, pkt.lon!);
+    final speedKmh = (distM / dt) * 3.6;
+    final acc = pkt.accuracyM ?? 9999;
+
+    // Se l'accuracy è buona, lasciamo passare anche salti importanti: potrebbe essere un mezzo veloce.
+    if (acc <= 25) return true;
+    return speedKmh <= maxPlausiblePeerSpeedKmh;
   }
 
   bool _isSeqAcceptable({
@@ -761,6 +779,7 @@ class ConvoyMeshService extends ChangeNotifier {
   static String ageLabel(DateTime? t) {
     if (t == null) return '-';
     final s = DateTime.now().difference(t).inSeconds;
+    if (s < 0) return 'ora';
     if (s < 60) return '${s}s fa';
     final m = s ~/ 60;
     return '${m}m fa';
@@ -777,13 +796,16 @@ class PeerState {
   double? accuracyM;
   int rssi = 0;
 
-  // lastSeq è ora solo informativo/compat UI.
+  // lastSeq è informativo/compat UI.
   // Per evitare che POS renda stale i NAME (e viceversa), teniamo sequenze separate.
   int lastSeq = -1;
   int lastFixSeq = -1;
   int lastNameSeq = -1;
 
+  // lastSeen = ultimo pacchetto valido accettato.
+  // lastHeardAt = ultimo advertisement Convoy Mesh parsato da questo peer, anche se stale.
   DateTime lastSeen = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime lastHeardAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime? lastFixSeen;
   DateTime? lastNameSeen;
   String? lastAddress;
@@ -805,6 +827,14 @@ class PeerState {
     return DateTime.now().difference(t) <= ConvoyMeshService.peerOnlineTtl;
   }
 
+  DateTime get lastActivityAt => lastHeardAt.isAfter(lastSeen) ? lastHeardAt : lastSeen;
+
+  void markHeard({required DateTime now, required int rssi, required String address}) {
+    lastHeardAt = now;
+    this.rssi = rssi;
+    lastAddress = address;
+  }
+
   void addPointIfValid({required Duration retention}) {
     if (lat == null || lon == null) return;
 
@@ -823,7 +853,7 @@ class PeerState {
     }
 
     final last = trail.last;
-    final d = _haversine(last.lat, last.lon, p.lat, p.lon);
+    final d = distanceMeters(last.lat, last.lon, p.lat, p.lon);
 
     final minMove = max(3.0, acc * 0.35);
     if (d < minMove) return;
@@ -831,7 +861,7 @@ class PeerState {
     trail.add(p);
   }
 
-  static double _haversine(double lat1, double lon1, double lat2, double lon2) {
+  static double distanceMeters(double lat1, double lon1, double lat2, double lon2) {
     const r = 6371000.0;
     final dLat = _deg2rad(lat2 - lat1);
     final dLon = _deg2rad(lon2 - lon1);
