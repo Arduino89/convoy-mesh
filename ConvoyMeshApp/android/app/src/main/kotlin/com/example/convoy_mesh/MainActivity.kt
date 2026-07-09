@@ -15,18 +15,29 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "openBluetoothSettings" -> {
-                        try {
-                            val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            startActivity(intent)
-                            result.success(true)
-                        } catch (e: Exception) {
-                            result.error("ERR_BT_SETTINGS", e.message, null)
-                        }
-                    }
+                    "openBluetoothSettings" -> openSettingsIntent(
+                        action = Settings.ACTION_BLUETOOTH_SETTINGS,
+                        errorCode = "ERR_BT_SETTINGS",
+                        result = result,
+                    )
+                    "openLocationSettings" -> openSettingsIntent(
+                        action = Settings.ACTION_LOCATION_SOURCE_SETTINGS,
+                        errorCode = "ERR_LOCATION_SETTINGS",
+                        result = result,
+                    )
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun openSettingsIntent(action: String, errorCode: String, result: MethodChannel.Result) {
+        try {
+            val intent = Intent(action)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            result.success(true)
+        } catch (e: Exception) {
+            result.error(errorCode, e.message, null)
+        }
     }
 }
