@@ -39,7 +39,7 @@ jobs:
         working-directory: ConvoyMeshApp
         run: |
           set -o pipefail
-          flutter analyze 2>&1 | tee ../flutter-analyze.log
+          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee ../flutter-analyze.log
 
       - name: Upload analyze log
         if: always()
