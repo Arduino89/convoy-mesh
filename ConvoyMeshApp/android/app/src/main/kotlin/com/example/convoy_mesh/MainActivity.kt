@@ -18,12 +18,12 @@ class MainActivity : FlutterActivity() {
                     "openBluetoothSettings" -> openSettingsIntent(
                         action = Settings.ACTION_BLUETOOTH_SETTINGS,
                         errorCode = "ERR_BT_SETTINGS",
-                        result = result,
+                        result = result
                     )
                     "openLocationSettings" -> openSettingsIntent(
                         action = Settings.ACTION_LOCATION_SOURCE_SETTINGS,
                         errorCode = "ERR_LOCATION_SETTINGS",
-                        result = result,
+                        result = result
                     )
                     else -> result.notImplemented()
                 }
