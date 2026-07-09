@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:sensors_plus/sensors_plus.dart';
 
 import '../location/fused_location.dart';
+import '../location/gps_pedestrian_filter.dart';
 
 class TrackPoint {
   final double lat;
@@ -47,15 +48,14 @@ class LocationFusionService extends ChangeNotifier {
   bool _isMoving = false;
   DateTime _lastMotionFlip = DateTime.fromMillisecondsSinceEpoch(0);
 
-  // Soglie: tarate “a mano” per uso normale.
-  // Se vuoi più aggressivo contro drift: alza unlockDistance o alza STILL_ENTER.
-  static const double STILL_ENTER = 0.20; // sotto => consideriamo "fermo" (con stabilizzazione)
-  static const double MOVE_ENTER  = 0.55; // sopra => consideriamo "in movimento"
+  // Soglie tarate per camminata/trekking, non per veicoli.
+  // Isteresi + hold time evitano flip continui fermo/in movimento.
+  static const double STILL_ENTER = 0.20;
+  static const double MOVE_ENTER = 0.55;
   static const Duration MOTION_HOLD = Duration(seconds: 2);
 
   // -------- Tuning “a piedi” --------
-  static const double maxSpeedKmh = 20.0;
-  static const int updateSeconds = 5; // un pelo più reattivo, ma non eccessivo
+  static const int updateSeconds = 5; // reattivo ma non troppo energivoro
 
   // Trail retention
   static const int trackRetentionMinutes = 90;
@@ -76,6 +76,8 @@ class LocationFusionService extends ChangeNotifier {
       lon: null,
       acc: null,
       forcedState: _serviceEnabled ? GpsUiState.searching : GpsUiState.off,
+      gpsDecision: 'startup',
+      gpsReason: _serviceEnabled ? 'GPS attivo: aggancio in corso.' : 'Posizione Android disattivata.',
     );
 
     _serviceSub?.cancel();
@@ -85,7 +87,14 @@ class LocationFusionService extends ChangeNotifier {
       if (!_serviceEnabled) {
         _posSub?.cancel();
         _posSub = null;
-        _pushState(lat: null, lon: null, acc: null, forcedState: GpsUiState.off);
+        _pushState(
+          lat: null,
+          lon: null,
+          acc: null,
+          forcedState: GpsUiState.off,
+          gpsDecision: 'location_off',
+          gpsReason: 'Posizione Android disattivata.',
+        );
       } else {
         _startPosStream();
       }
@@ -108,7 +117,6 @@ class LocationFusionService extends ChangeNotifier {
 
       final now = DateTime.now();
 
-      // isteresi + hold time per evitare flip continui
       if (_isMoving) {
         if (_motionEma < STILL_ENTER && now.difference(_lastMotionFlip) > MOTION_HOLD) {
           _isMoving = false;
@@ -123,7 +131,7 @@ class LocationFusionService extends ChangeNotifier {
         }
       }
     }, onError: (_) {
-      // Se sensori falliscono, restiamo in modalità GPS-only (non crashiamo)
+      // Se i sensori falliscono, restiamo in modalità GPS-only (non crashiamo).
     });
   }
 
@@ -137,101 +145,62 @@ class LocationFusionService extends ChangeNotifier {
     );
 
     _posSub = Geolocator.getPositionStream(locationSettings: settings).listen(
-          (pos) {
+      (pos) {
         final rawLat = pos.latitude;
         final rawLon = pos.longitude;
         final acc = max(0.0, pos.accuracy.toDouble());
         final now = DateTime.now();
 
         final prev = _last;
+        final lastTrack = _track.isEmpty ? null : _track.last;
 
-        // --- filtro “teletrasporti” (camminata) ---
-        if (prev?.lat != null && prev?.lon != null) {
-          final dt = max(1, now.difference(prev!.ts).inSeconds);
-          final distM = Geolocator.distanceBetween(prev.lat!, prev.lon!, rawLat, rawLon);
-          final maxM = (maxSpeedKmh / 3.6) * dt;
-
-          if (distM > maxM * 1.6 && acc > 25) {
-            // scarta fix brutto
-            _pushState(
-              lat: prev.lat,
-              lon: prev.lon,
-              acc: prev.accuracyM,
-              forcedState: GpsUiState.searching,
-              keepTs: true,
-            );
-            return;
-          }
-        }
-
-        // --- BLOCCO ANTI-DRIFT: se sensori dicono "fermo", congela la posizione ---
-        // Sblocco solo se lo spostamento supera una soglia “plausibile”.
-        if (!_isMoving && prev?.lat != null && prev?.lon != null) {
-          final distM = Geolocator.distanceBetween(prev!.lat!, prev.lon!, rawLat, rawLon);
-
-          // Soglia di sblocco: più l’accuracy è brutta, più richiediamo spostamento reale
-          final unlockDistance = max(12.0, acc * 1.2); // 12m minimo
-
-          if (distM < unlockDistance) {
-            // mantieni coordinate precedenti (marker fermo), ma aggiorna stato/accuratezza
-            final bars = _accuracyToBars(acc);
-            final gpsState = _computeGpsState(bars);
-
-            final fused = FusedLocation(
-              lat: prev.lat,
-              lon: prev.lon,
-              accuracyM: acc,
-              hasPermission: _hasPerm,
-              serviceEnabled: _serviceEnabled,
-              gpsState: gpsState,
-              gpsBars: bars,
-              ts: now,
-              isMoving: _isMoving,
-              motionScore: _motionEma,
-            );
-
-            _last = fused;
-            _ctrl.add(fused);
-            notifyListeners();
-            return;
-          }
-        }
-
-        // --- track: aggiungi solo sopra minStep e con fix decente ---
-        final minStep = minStepForTrack(acc);
-
-        bool acceptForTrack = true;
-        if (_track.isNotEmpty) {
-          final lastPt = _track.last;
-          final d = Geolocator.distanceBetween(lastPt.lat, lastPt.lon, rawLat, rawLon);
-          if (d < minStep) acceptForTrack = false;
-        }
-
-        // Se sensori dicono “fermo”, NON tracciamo mai
-        if (!_isMoving) acceptForTrack = false;
-
-        final bars = _accuracyToBars(acc);
-        final gpsState = _computeGpsState(bars);
-
-        final fused = FusedLocation(
-          lat: rawLat,
-          lon: rawLon,
+        final result = PedestrianGpsFilter.evaluate(
+          rawLat: rawLat,
+          rawLon: rawLon,
           accuracyM: acc,
-          hasPermission: _hasPerm,
-          serviceEnabled: _serviceEnabled,
-          gpsState: gpsState,
-          gpsBars: bars,
           ts: now,
           isMoving: _isMoving,
           motionScore: _motionEma,
+          previousLat: prev?.lat,
+          previousLon: prev?.lon,
+          previousTs: prev?.ts,
+          previousAccuracyM: prev?.accuracyM,
+          lastTrackLat: lastTrack?.lat,
+          lastTrackLon: lastTrack?.lon,
+        );
+
+        final gpsState = _stateForResult(result);
+        final fused = FusedLocation(
+          lat: result.displayLat,
+          lon: result.displayLon,
+          accuracyM: result.accuracyM,
+          rawLat: result.rawLat,
+          rawLon: result.rawLon,
+          hasPermission: _hasPerm,
+          serviceEnabled: _serviceEnabled,
+          gpsState: gpsState,
+          gpsBars: gpsState == GpsUiState.off ? 0 : result.bars,
+          gpsQuality: gpsState == GpsUiState.off ? 0 : result.quality,
+          ts: now,
+          isMoving: _isMoving,
+          motionScore: _motionEma,
+          gpsDecision: result.decisionLabel,
+          gpsReason: result.reason,
         );
 
         _last = fused;
         _ctrl.add(fused);
         notifyListeners();
 
-        if (acceptForTrack && gpsState != GpsUiState.off && bars >= 2) {
-          _track.add(TrackPoint(lat: rawLat, lon: rawLon, ts: now, accuracyM: acc));
+        if (result.acceptedForTrack && result.displayLat != null && result.displayLon != null) {
+          _track.add(
+            TrackPoint(
+              lat: result.displayLat!,
+              lon: result.displayLon!,
+              ts: now,
+              accuracyM: result.accuracyM,
+            ),
+          );
           _trimTrack(minutes: trackRetentionMinutes);
         }
       },
@@ -241,11 +210,24 @@ class LocationFusionService extends ChangeNotifier {
           lon: _last?.lon,
           acc: _last?.accuracyM,
           forcedState: GpsUiState.searching,
+          gpsDecision: 'gps_error',
+          gpsReason: 'Errore nello stream GPS: mantengo ultima posizione nota.',
+          rawLat: _last?.rawLat,
+          rawLon: _last?.rawLon,
         );
       },
     );
 
-    _pushState(lat: _last?.lat, lon: _last?.lon, acc: _last?.accuracyM, forcedState: GpsUiState.searching);
+    _pushState(
+      lat: _last?.lat,
+      lon: _last?.lon,
+      acc: _last?.accuracyM,
+      forcedState: GpsUiState.searching,
+      gpsDecision: 'searching',
+      gpsReason: 'GPS attivo: aggancio in corso.',
+      rawLat: _last?.rawLat,
+      rawLon: _last?.rawLon,
+    );
   }
 
   void clearTrack() {
@@ -271,24 +253,37 @@ class LocationFusionService extends ChangeNotifier {
     required double? lon,
     required double? acc,
     required GpsUiState forcedState,
-    bool keepTs = false,
+    String gpsDecision = 'state',
+    String gpsReason = '-',
+    double? rawLat,
+    double? rawLon,
   }) {
-    final bars = acc == null ? 0 : _accuracyToBars(acc);
+    final bars = PedestrianGpsFilter.barsForAccuracy(acc);
     final st = (!_hasPerm || !_serviceEnabled) ? GpsUiState.off : forcedState;
-
-    final ts = keepTs ? (_last?.ts ?? DateTime.now()) : DateTime.now();
+    final quality = acc == null
+        ? 0
+        : PedestrianGpsFilter.qualityScore(
+            accuracyM: max(0.0, acc),
+            isMoving: _isMoving,
+            motionScore: _motionEma,
+          );
 
     final f = FusedLocation(
       lat: lat,
       lon: lon,
       accuracyM: acc,
+      rawLat: rawLat,
+      rawLon: rawLon,
       hasPermission: _hasPerm,
       serviceEnabled: _serviceEnabled,
       gpsState: st,
       gpsBars: st == GpsUiState.off ? 0 : bars,
-      ts: ts,
+      gpsQuality: st == GpsUiState.off ? 0 : quality,
+      ts: DateTime.now(),
       isMoving: _isMoving,
       motionScore: _motionEma,
+      gpsDecision: gpsDecision,
+      gpsReason: gpsReason,
     );
 
     _last = f;
@@ -296,12 +291,20 @@ class LocationFusionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  static GpsUiState _stateForResult(PedestrianGpsResult result) {
+    switch (result.decision) {
+      case PedestrianGpsDecision.accepted:
+      case PedestrianGpsDecision.anchored:
+        return result.bars >= 2 && result.quality >= 35 ? GpsUiState.ok : GpsUiState.searching;
+      case PedestrianGpsDecision.rejectedJump:
+      case PedestrianGpsDecision.rejectedPoorAccuracy:
+      case PedestrianGpsDecision.waitingForFirstGoodFix:
+        return GpsUiState.searching;
+    }
+  }
+
   static int _accuracyToBars(double accM) {
-    if (accM <= 5) return 4;
-    if (accM <= 15) return 3;
-    if (accM <= 50) return 2;
-    if (accM <= 100) return 1;
-    return 0;
+    return PedestrianGpsFilter.barsForAccuracy(accM);
   }
 
   static GpsUiState _computeGpsState(int bars) {
@@ -310,6 +313,6 @@ class LocationFusionService extends ChangeNotifier {
   }
 
   static double minStepForTrack(double accuracyM) {
-    return max(4.0, accuracyM * 0.40);
+    return PedestrianGpsFilter.minStepForTrack(accuracyM);
   }
 }
