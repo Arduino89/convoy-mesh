@@ -35,6 +35,19 @@ jobs:
         working-directory: ConvoyMeshApp
         run: flutter pub get
 
+      - name: Test
+        working-directory: ConvoyMeshApp
+        run: |
+          set -o pipefail
+          flutter test --no-pub 2>&1 | tee ../flutter-test.log
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-test-log
+          path: flutter-test.log
+
       - name: Analyze
         working-directory: ConvoyMeshApp
         run: |
