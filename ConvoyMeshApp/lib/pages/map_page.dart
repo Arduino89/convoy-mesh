@@ -52,7 +52,7 @@ class _MapPageState extends State<MapPage> {
           );
         }
 
-        // tracce peers
+        // tracce peers: disegniamo solo tracce basate su punti accettati.
         for (final p in mesh.peers.values) {
           if (p.trail.length < 2) continue;
           final c = Color(ConvoyMeshService.colorForUser(p.userId)).withOpacity(0.35);
@@ -82,21 +82,29 @@ class _MapPageState extends State<MapPage> {
         // marker peers
         for (final p in mesh.peers.values) {
           if (p.lat == null || p.lon == null) continue;
+
+          final online = ConvoyMeshService.isPeerOnline(p);
+          final freshFix = p.hasFreshFix;
           final c = Color(ConvoyMeshService.colorForUser(p.userId));
-          final label = (p.name != null && p.name!.trim().isNotEmpty) ? p.name! : "User ${p.userId}";
+          final baseLabel = (p.name != null && p.name!.trim().isNotEmpty) ? p.name! : 'User ${p.userId}';
+          final label = freshFix ? baseLabel : '$baseLabel • ${ConvoyMeshService.ageLabel(p.lastFixSeen)}';
+
           markers.add(
             Marker(
-              width: 90,
-              height: 60,
+              width: 120,
+              height: 64,
               point: LatLng(p.lat!, p.lon!),
-              child: _peerMarker(c, label),
+              child: Opacity(
+                opacity: freshFix ? 1.0 : 0.55,
+                child: _peerMarker(c, label, online: online, freshFix: freshFix),
+              ),
             ),
           );
         }
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text("Mappa"),
+            title: const Text('Mappa'),
             actions: [
               IconButton(
                 onPressed: () {
@@ -141,7 +149,10 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-  Widget _peerMarker(Color c, String label) {
+  Widget _peerMarker(Color c, String label, {required bool online, required bool freshFix}) {
+    final borderColor = freshFix ? Colors.white : Colors.black45;
+    final icon = online ? Icons.person : Icons.person_off;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -151,15 +162,15 @@ class _MapPageState extends State<MapPage> {
           decoration: BoxDecoration(
             color: c,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
+            border: Border.all(color: borderColor, width: 2),
           ),
-          child: const Icon(Icons.person, color: Colors.white, size: 18),
+          child: Icon(icon, color: Colors.white, size: 18),
         ),
         const SizedBox(height: 3),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.65),
+            color: Colors.black.withOpacity(freshFix ? 0.65 : 0.45),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
