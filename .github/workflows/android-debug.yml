@@ -70,3 +70,55 @@ jobs:
         with:
           name: convoy-mesh-debug-apk
           path: ConvoyMeshApp/build/app/outputs/flutter-apk/app-debug.apk
+
+  android-emulator-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        working-directory: ConvoyMeshApp
+        run: flutter pub get
+
+      - name: Build debug APK for emulator
+        working-directory: ConvoyMeshApp
+        run: flutter build apk --debug
+
+      - name: Install and launch on Android emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          script: |
+            set -euo pipefail
+            adb install -r ConvoyMeshApp/build/app/outputs/flutter-apk/app-debug.apk
+            adb logcat -c
+            adb shell monkey -p com.example.convoy_mesh -c android.intent.category.LAUNCHER 1
+            sleep 12
+            adb logcat -d > emulator-logcat.txt
+            if grep -E "FATAL EXCEPTION|AndroidRuntime|Process: com.example.convoy_mesh" emulator-logcat.txt; then
+              echo "Detected fatal app crash in emulator logcat"
+              exit 1
+            fi
+
+      - name: Upload emulator logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-logcat
+          path: emulator-logcat.txt
