@@ -87,9 +87,12 @@ class PedestrianGpsFilter {
 
     if (acc > maxUsableAccuracyM) {
       if (hasPrevious) {
+        final prevLat = previousLat!;
+        final prevLon = previousLon!;
+        final distanceFromPrevious = distanceMeters(prevLat, prevLon, rawLat, rawLon);
         return PedestrianGpsResult(
-          displayLat: previousLat,
-          displayLon: previousLon,
+          displayLat: prevLat,
+          displayLon: prevLon,
           rawLat: rawLat,
           rawLon: rawLon,
           accuracyM: acc,
@@ -98,7 +101,7 @@ class PedestrianGpsFilter {
           decision: PedestrianGpsDecision.rejectedPoorAccuracy,
           reason: 'Accuracy troppo debole: mantengo ultima posizione buona.',
           acceptedForTrack: false,
-          distanceFromPreviousM: distanceMeters(previousLat, previousLon, rawLat, rawLon),
+          distanceFromPreviousM: distanceFromPrevious,
           speedKmh: 0,
         );
       }
@@ -137,8 +140,12 @@ class PedestrianGpsFilter {
       );
     }
 
-    final dtSeconds = max(1, ts.difference(previousTs).inSeconds);
-    final distanceFromPrevious = distanceMeters(previousLat, previousLon, rawLat, rawLon);
+    final prevLat = previousLat!;
+    final prevLon = previousLon!;
+    final prevTs = previousTs!;
+
+    final dtSeconds = max(1, ts.difference(prevTs).inSeconds);
+    final distanceFromPrevious = distanceMeters(prevLat, prevLon, rawLat, rawLon);
     final speedKmh = (distanceFromPrevious / dtSeconds) * 3.6;
 
     final allowedByWalking = (maxWalkingSpeedKmh / 3.6) * dtSeconds;
@@ -147,8 +154,8 @@ class PedestrianGpsFilter {
 
     if (distanceFromPrevious > maxPlausibleDistance && acc > goodAccuracyM) {
       return PedestrianGpsResult(
-        displayLat: previousLat,
-        displayLon: previousLon,
+        displayLat: prevLat,
+        displayLon: prevLon,
         rawLat: rawLat,
         rawLon: rawLon,
         accuracyM: acc,
@@ -170,8 +177,8 @@ class PedestrianGpsFilter {
 
       if (distanceFromPrevious < unlockDistance) {
         return PedestrianGpsResult(
-          displayLat: previousLat,
-          displayLon: previousLon,
+          displayLat: prevLat,
+          displayLon: prevLon,
           rawLat: rawLat,
           rawLon: rawLon,
           accuracyM: acc,
