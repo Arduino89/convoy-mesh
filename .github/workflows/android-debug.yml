@@ -93,14 +93,8 @@ jobs:
   android-emulator-smoke:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
@@ -123,6 +117,8 @@ jobs:
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
           api-level: 29
+          disable-linux-hw-accel: true
+          emulator-boot-timeout: 1200
           script: |
             set -uo pipefail
             APK='emulator-apk/app-debug.apk'
