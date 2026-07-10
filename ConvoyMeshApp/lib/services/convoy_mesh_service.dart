@@ -89,8 +89,10 @@ class ConvoyMeshService extends ChangeNotifier {
   // Trail retention default 90 min.
   static const Duration trailRetention = Duration(minutes: 90);
 
-  // Soglia volutamente alta: evita salti GPS assurdi senza penalizzare convogli auto/moto.
-  static const double maxPlausiblePeerSpeedKmh = 250.0;
+  // Plausibilità pedonale peer. I margini includono l'incertezza dei due fix,
+  // quindi non penalizzano i normali errori GPS in bosco o in valle.
+  static const double maxPeerWalkingSpeedKmh = 15.0;
+  static const double hardPeerRejectSpeedKmh = 40.0;
 
   // -------- Debug/stato diagnostico esposto alla UI --------
   String? _lastAdvError;
@@ -278,9 +280,10 @@ class ConvoyMeshService extends ChangeNotifier {
     try {
       return Random.secure().nextInt(0x7ffffffe) + 1;
     } catch (_) {
-      return (DateTime.now().microsecondsSinceEpoch.remainder(0x7fffffff) ^
+      final fallback = (DateTime.now().microsecondsSinceEpoch.remainder(0x7fffffff) ^
               Random().nextInt(1 << 30))
           .abs();
+      return fallback == 0 ? 1 : fallback;
     }
   }
 
@@ -556,14 +559,51 @@ class ConvoyMeshService extends ChangeNotifier {
     if (pkt.lat == null || pkt.lon == null) return false;
     if (peer.lat == null || peer.lon == null || peer.lastFixSeen == null) return true;
 
-    final dt = max(1, now.difference(peer.lastFixSeen!).inSeconds);
-    final distM = PeerState.distanceMeters(peer.lat!, peer.lon!, pkt.lat!, pkt.lon!);
-    final speedKmh = (distM / dt) * 3.6;
-    final acc = pkt.accuracyM ?? 9999;
+    return isPeerMovementPlausible(
+      previousLat: peer.lat!,
+      previousLon: peer.lon!,
+      previousAccuracyM: peer.accuracyM,
+      previousAt: peer.lastFixSeen!,
+      nextLat: pkt.lat!,
+      nextLon: pkt.lon!,
+      nextAccuracyM: pkt.accuracyM,
+      nextAt: now,
+    );
+  }
 
-    // Se l'accuracy è buona, lasciamo passare anche salti importanti: potrebbe essere un mezzo veloce.
-    if (acc <= 25) return true;
-    return speedKmh <= maxPlausiblePeerSpeedKmh;
+  @visibleForTesting
+  static bool isPeerMovementPlausible({
+    required double previousLat,
+    required double previousLon,
+    required double? previousAccuracyM,
+    required DateTime previousAt,
+    required double nextLat,
+    required double nextLon,
+    required double? nextAccuracyM,
+    required DateTime nextAt,
+  }) {
+    final dtSeconds = max(1, nextAt.difference(previousAt).inSeconds);
+    final distanceM = PeerState.distanceMeters(previousLat, previousLon, nextLat, nextLon);
+    final speedKmh = (distanceM / dtSeconds) * 3.6;
+
+    final previousAcc = max(0.0, previousAccuracyM ?? 100.0);
+    final nextAcc = max(0.0, nextAccuracyM ?? 100.0);
+    final uncertaintyBuffer = max(previousAcc, nextAcc) * 1.3;
+    final walkingAllowance = (maxPeerWalkingSpeedKmh / 3.6) * dtSeconds;
+    final softDistanceLimit = max(30.0, walkingAllowance + uncertaintyBuffer);
+    final hardDistanceLimit = max(80.0, walkingAllowance * 3.0 + uncertaintyBuffer);
+
+    if (speedKmh > hardPeerRejectSpeedKmh || distanceM > hardDistanceLimit) {
+      return false;
+    }
+
+    // Con accuracy debole chiediamo coerenza più stretta; con accuracy buona
+    // resta comunque attivo il limite duro pedonale sopra.
+    if (nextAcc > 25.0 && distanceM > softDistanceLimit) {
+      return false;
+    }
+
+    return true;
   }
 
   bool _isSeqAcceptable({
