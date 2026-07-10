@@ -88,4 +88,68 @@ void main() {
       expect(distance, closeTo(111.2, 1.0));
     });
   });
+
+  group('pedestrian peer movement validation', () {
+    final start = DateTime(2026, 7, 10, 9);
+
+    test('accepts normal walking movement', () {
+      final plausible = ConvoyMeshService.isPeerMovementPlausible(
+        previousLat: 45.000000,
+        previousLon: 10.000000,
+        previousAccuracyM: 8,
+        previousAt: start,
+        nextLat: 45.000100,
+        nextLon: 10.000000,
+        nextAccuracyM: 8,
+        nextAt: start.add(const Duration(seconds: 10)),
+      );
+
+      expect(plausible, isTrue);
+    });
+
+    test('rejects a teleport even when both fixes claim good accuracy', () {
+      final plausible = ConvoyMeshService.isPeerMovementPlausible(
+        previousLat: 45.000000,
+        previousLon: 10.000000,
+        previousAccuracyM: 5,
+        previousAt: start,
+        nextLat: 45.010000,
+        nextLon: 10.000000,
+        nextAccuracyM: 5,
+        nextAt: start.add(const Duration(seconds: 5)),
+      );
+
+      expect(plausible, isFalse);
+    });
+
+    test('allows movement that fits the uncertainty of weak outdoor fixes', () {
+      final plausible = ConvoyMeshService.isPeerMovementPlausible(
+        previousLat: 45.000000,
+        previousLon: 10.000000,
+        previousAccuracyM: 40,
+        previousAt: start,
+        nextLat: 45.000270,
+        nextLon: 10.000000,
+        nextAccuracyM: 50,
+        nextAt: start.add(const Duration(seconds: 10)),
+      );
+
+      expect(plausible, isTrue);
+    });
+
+    test('rejects a large weak-accuracy jump beyond uncertainty margin', () {
+      final plausible = ConvoyMeshService.isPeerMovementPlausible(
+        previousLat: 45.000000,
+        previousLon: 10.000000,
+        previousAccuracyM: 35,
+        previousAt: start,
+        nextLat: 45.003000,
+        nextLon: 10.000000,
+        nextAccuracyM: 45,
+        nextAt: start.add(const Duration(seconds: 10)),
+      );
+
+      expect(plausible, isFalse);
+    });
+  });
 }
