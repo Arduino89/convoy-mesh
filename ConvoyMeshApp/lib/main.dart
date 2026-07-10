@@ -5,6 +5,7 @@ import 'ble/ble_page.dart';
 import 'pages/diagnostic_page.dart';
 import 'pages/map_page.dart';
 import 'services/convoy_mesh_service.dart';
+import 'services/diagnostic_capture_bridge.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +42,7 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
+    DiagnosticCaptureBridge.instance.attach();
     _boot();
   }
 
