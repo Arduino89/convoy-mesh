@@ -59,6 +59,7 @@ class PedestrianGpsResult {
 /// avoids vehicle assumptions and road/map matching.
 class PedestrianGpsFilter {
   static const double maxWalkingSpeedKmh = 12.0;
+  static const double hardRejectSpeedKmh = 35.0;
   static const double maxUsableAccuracyM = 120.0;
   static const double maxTrackAccuracyM = 80.0;
   static const double goodAccuracyM = 25.0;
@@ -72,6 +73,7 @@ class PedestrianGpsFilter {
     required DateTime ts,
     required bool isMoving,
     required double motionScore,
+    bool motionReliable = true,
     double? previousLat,
     double? previousLon,
     DateTime? previousTs,
@@ -81,7 +83,13 @@ class PedestrianGpsFilter {
   }) {
     final acc = max(0.0, accuracyM);
     final bars = barsForAccuracy(acc);
-    final quality = qualityScore(accuracyM: acc, isMoving: isMoving, motionScore: motionScore);
+    final effectiveMoving = motionReliable ? isMoving : true;
+    final quality = qualityScore(
+      accuracyM: acc,
+      isMoving: effectiveMoving,
+      motionScore: motionScore,
+      motionReliable: motionReliable,
+    );
 
     final hasPrevious = previousLat != null && previousLon != null && previousTs != null;
 
@@ -123,7 +131,7 @@ class PedestrianGpsFilter {
     }
 
     if (!hasPrevious) {
-      final acceptedForTrack = isMoving && bars >= 2 && acc <= maxTrackAccuracyM;
+      final acceptedForTrack = effectiveMoving && bars >= 2 && acc <= maxTrackAccuracyM;
       return PedestrianGpsResult(
         displayLat: rawLat,
         displayLon: rawLon,
@@ -133,7 +141,7 @@ class PedestrianGpsFilter {
         quality: quality,
         bars: bars,
         decision: PedestrianGpsDecision.accepted,
-        reason: 'Primo fix GPS accettato.',
+        reason: motionReliable ? 'Primo fix GPS accettato.' : 'Primo fix GPS accettato in modalita GPS-only.',
         acceptedForTrack: acceptedForTrack,
         distanceFromPreviousM: 0,
         speedKmh: 0,
@@ -151,8 +159,13 @@ class PedestrianGpsFilter {
     final allowedByWalking = (maxWalkingSpeedKmh / 3.6) * dtSeconds;
     final uncertaintyBuffer = max(acc, previousAccuracyM ?? acc) * 1.2;
     final maxPlausibleDistance = max(25.0, allowedByWalking + uncertaintyBuffer);
+    final hardDistanceLimit = max(60.0, allowedByWalking * 3.0 + uncertaintyBuffer);
 
-    if (distanceFromPrevious > maxPlausibleDistance && acc > goodAccuracyM) {
+    final weakAccuracyJump = distanceFromPrevious > maxPlausibleDistance && acc > goodAccuracyM;
+    final impossibleEvenWithGoodAccuracy =
+        distanceFromPrevious > hardDistanceLimit || speedKmh > hardRejectSpeedKmh;
+
+    if (weakAccuracyJump || impossibleEvenWithGoodAccuracy) {
       return PedestrianGpsResult(
         displayLat: prevLat,
         displayLon: prevLon,
@@ -169,7 +182,7 @@ class PedestrianGpsFilter {
       );
     }
 
-    if (!isMoving) {
+    if (motionReliable && !isMoving) {
       final unlockDistance = max(
         stationaryUnlockMinM,
         max(acc, previousAccuracyM ?? acc) * stationaryAccuracyFactor,
@@ -194,7 +207,7 @@ class PedestrianGpsFilter {
     }
 
     var acceptedForTrack = false;
-    if (isMoving && bars >= 2 && acc <= maxTrackAccuracyM) {
+    if (effectiveMoving && bars >= 2 && acc <= maxTrackAccuracyM) {
       if (lastTrackLat == null || lastTrackLon == null) {
         acceptedForTrack = true;
       } else {
@@ -202,6 +215,12 @@ class PedestrianGpsFilter {
         acceptedForTrack = trackDistance >= minStepForTrack(acc);
       }
     }
+
+    final reason = acceptedForTrack
+        ? motionReliable
+            ? 'Camminata: fix accettato e aggiunto alla traccia.'
+            : 'GPS-only: fix coerente aggiunto alla traccia.'
+        : 'Fix accettato.';
 
     return PedestrianGpsResult(
       displayLat: rawLat,
@@ -212,7 +231,7 @@ class PedestrianGpsFilter {
       quality: quality,
       bars: bars,
       decision: PedestrianGpsDecision.accepted,
-      reason: acceptedForTrack ? 'Camminata: fix accettato e aggiunto alla traccia.' : 'Fix accettato.',
+      reason: reason,
       acceptedForTrack: acceptedForTrack,
       distanceFromPreviousM: distanceFromPrevious,
       speedKmh: speedKmh,
@@ -232,6 +251,7 @@ class PedestrianGpsFilter {
     required double accuracyM,
     required bool isMoving,
     required double motionScore,
+    bool motionReliable = true,
   }) {
     final base = accuracyM <= 5
         ? 100
@@ -249,7 +269,7 @@ class PedestrianGpsFilter {
                                 ? 20
                                 : 5;
 
-    final motionBonus = !isMoving && motionScore < 0.25 ? 5 : 0;
+    final motionBonus = motionReliable && !isMoving && motionScore < 0.25 ? 5 : 0;
     return (base + motionBonus).clamp(0, 100).toInt();
   }
 
