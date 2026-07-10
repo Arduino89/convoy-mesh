@@ -14,6 +14,7 @@ class TrackPoint {
   final double lon;
   final DateTime ts;
   final double accuracyM;
+
   TrackPoint({
     required this.lat,
     required this.lon,
@@ -24,16 +25,17 @@ class TrackPoint {
 
 class LocationFusionService extends ChangeNotifier {
   LocationFusionService._();
+
   static final LocationFusionService instance = LocationFusionService._();
 
-  final _ctrl = StreamController<FusedLocation>.broadcast();
+  final StreamController<FusedLocation> _ctrl = StreamController<FusedLocation>.broadcast();
   Stream<FusedLocation> get stream => _ctrl.stream;
 
   FusedLocation? _last;
   FusedLocation? get last => _last;
 
-  final List<TrackPoint> _track = [];
-  List<TrackPoint> get trackPoints => List.unmodifiable(_track);
+  final List<TrackPoint> _track = <TrackPoint>[];
+  List<TrackPoint> get trackPoints => List<TrackPoint>.unmodifiable(_track);
 
   StreamSubscription<ServiceStatus>? _serviceSub;
   StreamSubscription<Position>? _posSub;
@@ -42,49 +44,56 @@ class LocationFusionService extends ChangeNotifier {
   bool _hasPerm = false;
   bool _serviceEnabled = false;
 
+  // Ultima posizione realmente accettata dal filtro. Non viene aggiornata da
+  // jitter ancorato, fix scartati o errori: serve come riferimento stabile per
+  // distanza e velocità del fix successivo.
+  double? _acceptedLat;
+  double? _acceptedLon;
+  double? _acceptedAccuracyM;
+  DateTime? _acceptedAt;
+
   // -------- MOVIMENTO (sensori) --------
-  // userAccelerometerEvents (m/s^2) => da fermo tende vicino a 0
-  double _motionEma = 0.0; // smoothing
+  double _motionEma = 0.0;
   bool _isMoving = false;
   DateTime _lastMotionFlip = DateTime.fromMillisecondsSinceEpoch(0);
+  int _motionSamples = 0;
+  bool _motionSensorFailed = false;
+
+  bool get _motionReliable => !_motionSensorFailed && _motionSamples >= 5;
 
   // Soglie tarate per camminata/trekking, non per veicoli.
-  // Isteresi + hold time evitano flip continui fermo/in movimento.
-  static const double STILL_ENTER = 0.20;
-  static const double MOVE_ENTER = 0.55;
-  static const Duration MOTION_HOLD = Duration(seconds: 2);
+  static const double stillEnter = 0.20;
+  static const double moveEnter = 0.55;
+  static const Duration motionHold = Duration(seconds: 2);
 
-  // -------- Tuning “a piedi” --------
-  static const int updateSeconds = 5; // reattivo ma non troppo energivoro
-
-  // Trail retention
+  static const int updateSeconds = 5;
   static const int trackRetentionMinutes = 90;
 
   Future<void> start() async {
-    // 1) permesso location
     final perm = await ph.Permission.locationWhenInUse.request();
     _hasPerm = perm.isGranted;
 
-    // 2) sensori movimento (no permessi extra)
     _startMotionSensors();
-
-    // 3) stato servizi GPS
     _serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
     _pushState(
       lat: null,
       lon: null,
       acc: null,
-      forcedState: _serviceEnabled ? GpsUiState.searching : GpsUiState.off,
-      gpsDecision: 'startup',
-      gpsReason: _serviceEnabled ? 'GPS attivo: aggancio in corso.' : 'Posizione Android disattivata.',
+      forcedState: _serviceEnabled && _hasPerm ? GpsUiState.searching : GpsUiState.off,
+      gpsDecision: _hasPerm ? 'startup' : 'permission_denied',
+      gpsReason: !_hasPerm
+          ? 'Permesso posizione non concesso.'
+          : _serviceEnabled
+              ? 'GPS attivo: aggancio in corso.'
+              : 'Posizione Android disattivata.',
     );
 
-    _serviceSub?.cancel();
-    _serviceSub = Geolocator.getServiceStatusStream().listen((s) {
-      _serviceEnabled = (s == ServiceStatus.enabled);
+    await _serviceSub?.cancel();
+    _serviceSub = Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+      _serviceEnabled = status == ServiceStatus.enabled;
 
-      if (!_serviceEnabled) {
+      if (!_serviceEnabled || !_hasPerm) {
         _posSub?.cancel();
         _posSub = null;
         _pushState(
@@ -92,50 +101,59 @@ class LocationFusionService extends ChangeNotifier {
           lon: null,
           acc: null,
           forcedState: GpsUiState.off,
-          gpsDecision: 'location_off',
-          gpsReason: 'Posizione Android disattivata.',
+          gpsDecision: !_hasPerm ? 'permission_denied' : 'location_off',
+          gpsReason: !_hasPerm ? 'Permesso posizione non concesso.' : 'Posizione Android disattivata.',
         );
       } else {
         _startPosStream();
       }
     });
 
-    if (_serviceEnabled) {
+    if (_serviceEnabled && _hasPerm) {
       _startPosStream();
     }
   }
 
   void _startMotionSensors() {
     _uaSub?.cancel();
+    _motionSamples = 0;
+    _motionSensorFailed = false;
 
-    _uaSub = userAccelerometerEvents.listen((e) {
-      // magnitudine (senza gravità)
-      final mag = sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
+    _uaSub = userAccelerometerEventStream().listen(
+      (UserAccelerometerEvent event) {
+        final magnitude = sqrt(
+          event.x * event.x + event.y * event.y + event.z * event.z,
+        );
 
-      // EMA (filtro passa-basso)
-      _motionEma = _motionEma * 0.85 + mag * 0.15;
+        _motionEma = _motionEma * 0.85 + magnitude * 0.15;
+        _motionSamples = min(_motionSamples + 1, 1000000);
 
-      final now = DateTime.now();
-
-      if (_isMoving) {
-        if (_motionEma < STILL_ENTER && now.difference(_lastMotionFlip) > MOTION_HOLD) {
-          _isMoving = false;
-          _lastMotionFlip = now;
-          notifyListeners();
-        }
-      } else {
-        if (_motionEma > MOVE_ENTER && now.difference(_lastMotionFlip) > MOTION_HOLD) {
+        final now = DateTime.now();
+        if (_isMoving) {
+          if (_motionEma < stillEnter && now.difference(_lastMotionFlip) > motionHold) {
+            _isMoving = false;
+            _lastMotionFlip = now;
+            notifyListeners();
+          }
+        } else if (_motionEma > moveEnter && now.difference(_lastMotionFlip) > motionHold) {
           _isMoving = true;
           _lastMotionFlip = now;
           notifyListeners();
         }
-      }
-    }, onError: (_) {
-      // Se i sensori falliscono, restiamo in modalità GPS-only (non crashiamo).
-    });
+      },
+      onError: (_) {
+        // Senza accelerometro il filtro passa automaticamente in GPS-only:
+        // niente freeze permanente e trail ancora utilizzabile.
+        _motionSensorFailed = true;
+        _motionSamples = 0;
+        notifyListeners();
+      },
+    );
   }
 
   void _startPosStream() {
+    if (!_hasPerm || !_serviceEnabled) return;
+
     _posSub?.cancel();
 
     final settings = AndroidSettings(
@@ -145,29 +163,37 @@ class LocationFusionService extends ChangeNotifier {
     );
 
     _posSub = Geolocator.getPositionStream(locationSettings: settings).listen(
-      (pos) {
-        final rawLat = pos.latitude;
-        final rawLon = pos.longitude;
-        final acc = max(0.0, pos.accuracy.toDouble());
+      (Position position) {
+        final rawLat = position.latitude;
+        final rawLon = position.longitude;
+        final accuracyM = max(0.0, position.accuracy.toDouble());
         final now = DateTime.now();
-
-        final prev = _last;
         final lastTrack = _track.isEmpty ? null : _track.last;
 
         final result = PedestrianGpsFilter.evaluate(
           rawLat: rawLat,
           rawLon: rawLon,
-          accuracyM: acc,
+          accuracyM: accuracyM,
           ts: now,
           isMoving: _isMoving,
           motionScore: _motionEma,
-          previousLat: prev?.lat,
-          previousLon: prev?.lon,
-          previousTs: prev?.ts,
-          previousAccuracyM: prev?.accuracyM,
+          motionReliable: _motionReliable,
+          previousLat: _acceptedLat,
+          previousLon: _acceptedLon,
+          previousTs: _acceptedAt,
+          previousAccuracyM: _acceptedAccuracyM,
           lastTrackLat: lastTrack?.lat,
           lastTrackLon: lastTrack?.lon,
         );
+
+        if (result.decision == PedestrianGpsDecision.accepted &&
+            result.displayLat != null &&
+            result.displayLon != null) {
+          _acceptedLat = result.displayLat;
+          _acceptedLon = result.displayLon;
+          _acceptedAccuracyM = result.accuracyM;
+          _acceptedAt = now;
+        }
 
         final gpsState = _stateForResult(result);
         final fused = FusedLocation(
@@ -182,7 +208,7 @@ class LocationFusionService extends ChangeNotifier {
           gpsBars: gpsState == GpsUiState.off ? 0 : result.bars,
           gpsQuality: gpsState == GpsUiState.off ? 0 : result.quality,
           ts: now,
-          isMoving: _isMoving,
+          isMoving: _motionReliable ? _isMoving : true,
           motionScore: _motionEma,
           gpsDecision: result.decisionLabel,
           gpsReason: result.reason,
@@ -206,12 +232,12 @@ class LocationFusionService extends ChangeNotifier {
       },
       onError: (_) {
         _pushState(
-          lat: _last?.lat,
-          lon: _last?.lon,
-          acc: _last?.accuracyM,
+          lat: _acceptedLat,
+          lon: _acceptedLon,
+          acc: _acceptedAccuracyM,
           forcedState: GpsUiState.searching,
           gpsDecision: 'gps_error',
-          gpsReason: 'Errore nello stream GPS: mantengo ultima posizione nota.',
+          gpsReason: 'Errore nello stream GPS: mantengo ultima posizione valida.',
           rawLat: _last?.rawLat,
           rawLon: _last?.rawLon,
         );
@@ -219,9 +245,9 @@ class LocationFusionService extends ChangeNotifier {
     );
 
     _pushState(
-      lat: _last?.lat,
-      lon: _last?.lon,
-      acc: _last?.accuracyM,
+      lat: _acceptedLat,
+      lon: _acceptedLon,
+      acc: _acceptedAccuracyM,
       forcedState: GpsUiState.searching,
       gpsDecision: 'searching',
       gpsReason: 'GPS attivo: aggancio in corso.',
@@ -259,16 +285,17 @@ class LocationFusionService extends ChangeNotifier {
     double? rawLon,
   }) {
     final bars = PedestrianGpsFilter.barsForAccuracy(acc);
-    final st = (!_hasPerm || !_serviceEnabled) ? GpsUiState.off : forcedState;
+    final state = (!_hasPerm || !_serviceEnabled) ? GpsUiState.off : forcedState;
     final quality = acc == null
         ? 0
         : PedestrianGpsFilter.qualityScore(
             accuracyM: max(0.0, acc),
-            isMoving: _isMoving,
+            isMoving: _motionReliable ? _isMoving : true,
             motionScore: _motionEma,
+            motionReliable: _motionReliable,
           );
 
-    final f = FusedLocation(
+    final fused = FusedLocation(
       lat: lat,
       lon: lon,
       accuracyM: acc,
@@ -276,18 +303,18 @@ class LocationFusionService extends ChangeNotifier {
       rawLon: rawLon,
       hasPermission: _hasPerm,
       serviceEnabled: _serviceEnabled,
-      gpsState: st,
-      gpsBars: st == GpsUiState.off ? 0 : bars,
-      gpsQuality: st == GpsUiState.off ? 0 : quality,
+      gpsState: state,
+      gpsBars: state == GpsUiState.off ? 0 : bars,
+      gpsQuality: state == GpsUiState.off ? 0 : quality,
       ts: DateTime.now(),
-      isMoving: _isMoving,
+      isMoving: _motionReliable ? _isMoving : true,
       motionScore: _motionEma,
       gpsDecision: gpsDecision,
       gpsReason: gpsReason,
     );
 
-    _last = f;
-    _ctrl.add(f);
+    _last = fused;
+    _ctrl.add(fused);
     notifyListeners();
   }
 
@@ -301,15 +328,6 @@ class LocationFusionService extends ChangeNotifier {
       case PedestrianGpsDecision.waitingForFirstGoodFix:
         return GpsUiState.searching;
     }
-  }
-
-  static int _accuracyToBars(double accM) {
-    return PedestrianGpsFilter.barsForAccuracy(accM);
-  }
-
-  static GpsUiState _computeGpsState(int bars) {
-    if (bars >= 2) return GpsUiState.ok;
-    return GpsUiState.searching;
   }
 
   static double minStepForTrack(double accuracyM) {
