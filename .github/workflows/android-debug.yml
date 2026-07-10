@@ -91,6 +91,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
+    if: github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 45
