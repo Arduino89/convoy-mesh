@@ -122,13 +122,7 @@ jobs:
       - name: Install and launch on Android emulator
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          profile: pixel_7_pro
-          emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
+          api-level: 29
           script: |
             set -uo pipefail
             APK='emulator-apk/app-debug.apk'
