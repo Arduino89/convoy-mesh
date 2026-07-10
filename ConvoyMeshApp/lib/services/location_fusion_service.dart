@@ -208,7 +208,8 @@ class LocationFusionService extends ChangeNotifier {
           gpsBars: gpsState == GpsUiState.off ? 0 : result.bars,
           gpsQuality: gpsState == GpsUiState.off ? 0 : result.quality,
           ts: now,
-          isMoving: _motionReliable ? _isMoving : true,
+          isMoving: _isMoving,
+          motionReliable: _motionReliable,
           motionScore: _motionEma,
           gpsDecision: result.decisionLabel,
           gpsReason: result.reason,
@@ -290,7 +291,7 @@ class LocationFusionService extends ChangeNotifier {
         ? 0
         : PedestrianGpsFilter.qualityScore(
             accuracyM: max(0.0, acc),
-            isMoving: _motionReliable ? _isMoving : true,
+            isMoving: _isMoving,
             motionScore: _motionEma,
             motionReliable: _motionReliable,
           );
@@ -307,7 +308,8 @@ class LocationFusionService extends ChangeNotifier {
       gpsBars: state == GpsUiState.off ? 0 : bars,
       gpsQuality: state == GpsUiState.off ? 0 : quality,
       ts: DateTime.now(),
-      isMoving: _motionReliable ? _isMoving : true,
+      isMoving: _isMoving,
+      motionReliable: _motionReliable,
       motionScore: _motionEma,
       gpsDecision: gpsDecision,
       gpsReason: gpsReason,
