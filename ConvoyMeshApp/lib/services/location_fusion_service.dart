@@ -8,6 +8,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 
 import '../location/fused_location.dart';
 import '../location/gps_pedestrian_filter.dart';
+import 'diagnostic_recorder.dart';
 
 class TrackPoint {
   final double lat;
@@ -44,15 +45,11 @@ class LocationFusionService extends ChangeNotifier {
   bool _hasPerm = false;
   bool _serviceEnabled = false;
 
-  // Ultima posizione realmente accettata dal filtro. Non viene aggiornata da
-  // jitter ancorato, fix scartati o errori: serve come riferimento stabile per
-  // distanza e velocità del fix successivo.
   double? _acceptedLat;
   double? _acceptedLon;
   double? _acceptedAccuracyM;
   DateTime? _acceptedAt;
 
-  // -------- MOVIMENTO (sensori) --------
   double _motionEma = 0.0;
   bool _isMoving = false;
   DateTime _lastMotionFlip = DateTime.fromMillisecondsSinceEpoch(0);
@@ -61,7 +58,6 @@ class LocationFusionService extends ChangeNotifier {
 
   bool get _motionReliable => !_motionSensorFailed && _motionSamples >= 5;
 
-  // Soglie tarate per camminata/trekking, non per veicoli.
   static const double stillEnter = 0.20;
   static const double moveEnter = 0.55;
   static const Duration motionHold = Duration(seconds: 2);
@@ -75,6 +71,15 @@ class LocationFusionService extends ChangeNotifier {
 
     _startMotionSensors();
     _serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    DiagnosticRecorder.instance.record(
+      'gps',
+      'service_start',
+      data: <String, Object?>{
+        'permission': _hasPerm,
+        'service_enabled': _serviceEnabled,
+      },
+    );
 
     _pushState(
       lat: null,
@@ -92,6 +97,15 @@ class LocationFusionService extends ChangeNotifier {
     await _serviceSub?.cancel();
     _serviceSub = Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
       _serviceEnabled = status == ServiceStatus.enabled;
+
+      DiagnosticRecorder.instance.record(
+        'gps',
+        'service_status',
+        data: <String, Object?>{
+          'enabled': _serviceEnabled,
+          'permission': _hasPerm,
+        },
+      );
 
       if (!_serviceEnabled || !_hasPerm) {
         _posSub?.cancel();
@@ -133,19 +147,40 @@ class LocationFusionService extends ChangeNotifier {
           if (_motionEma < stillEnter && now.difference(_lastMotionFlip) > motionHold) {
             _isMoving = false;
             _lastMotionFlip = now;
+            DiagnosticRecorder.instance.record(
+              'motion',
+              'state_change',
+              data: <String, Object?>{
+                'moving': false,
+                'score': _motionEma,
+                'reliable': _motionReliable,
+              },
+            );
             notifyListeners();
           }
         } else if (_motionEma > moveEnter && now.difference(_lastMotionFlip) > motionHold) {
           _isMoving = true;
           _lastMotionFlip = now;
+          DiagnosticRecorder.instance.record(
+            'motion',
+            'state_change',
+            data: <String, Object?>{
+              'moving': true,
+              'score': _motionEma,
+              'reliable': _motionReliable,
+            },
+          );
           notifyListeners();
         }
       },
-      onError: (_) {
-        // Senza accelerometro il filtro passa automaticamente in GPS-only:
-        // niente freeze permanente e trail ancora utilizzabile.
+      onError: (Object error) {
         _motionSensorFailed = true;
         _motionSamples = 0;
+        DiagnosticRecorder.instance.record(
+          'motion',
+          'sensor_error',
+          data: <String, Object?>{'error': error.toString()},
+        );
         notifyListeners();
       },
     );
@@ -160,6 +195,15 @@ class LocationFusionService extends ChangeNotifier {
       accuracy: LocationAccuracy.best,
       intervalDuration: const Duration(seconds: updateSeconds),
       distanceFilter: 0,
+    );
+
+    DiagnosticRecorder.instance.record(
+      'gps',
+      'stream_start',
+      data: <String, Object?>{
+        'interval_seconds': updateSeconds,
+        'accuracy_mode': 'best',
+      },
     );
 
     _posSub = Geolocator.getPositionStream(locationSettings: settings).listen(
@@ -215,6 +259,28 @@ class LocationFusionService extends ChangeNotifier {
           gpsReason: result.reason,
         );
 
+        DiagnosticRecorder.instance.record(
+          'gps',
+          'fix',
+          data: <String, Object?>{
+            'raw_lat': rawLat,
+            'raw_lon': rawLon,
+            'display_lat': result.displayLat,
+            'display_lon': result.displayLon,
+            'accuracy_m': result.accuracyM,
+            'quality': result.quality,
+            'bars': result.bars,
+            'decision': result.decisionLabel,
+            'reason': result.reason,
+            'track_added': result.acceptedForTrack,
+            'distance_from_previous_m': result.distanceFromPreviousM,
+            'speed_kmh': result.speedKmh,
+            'moving': _isMoving,
+            'motion_reliable': _motionReliable,
+            'motion_score': _motionEma,
+          },
+        );
+
         _last = fused;
         _ctrl.add(fused);
         notifyListeners();
@@ -231,7 +297,12 @@ class LocationFusionService extends ChangeNotifier {
           _trimTrack(minutes: trackRetentionMinutes);
         }
       },
-      onError: (_) {
+      onError: (Object error) {
+        DiagnosticRecorder.instance.record(
+          'gps',
+          'stream_error',
+          data: <String, Object?>{'error': error.toString()},
+        );
         _pushState(
           lat: _acceptedLat,
           lon: _acceptedLon,
@@ -259,6 +330,7 @@ class LocationFusionService extends ChangeNotifier {
 
   void clearTrack() {
     _track.clear();
+    DiagnosticRecorder.instance.record('gps', 'track_cleared');
     notifyListeners();
   }
 
