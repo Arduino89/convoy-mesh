@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/convoy_mesh_service.dart';
+import '../services/diagnostic_capture_bridge.dart';
 import '../services/diagnostic_recorder.dart';
 
 class DiagnosticPage extends StatelessWidget {
@@ -63,6 +64,7 @@ class DiagnosticPage extends StatelessWidget {
                                 deviceId: mesh.myId,
                                 deviceName: mesh.myName,
                               );
+                              DiagnosticCaptureBridge.instance.captureNow();
                             },
                             icon: const Icon(Icons.fiber_manual_record),
                             label: const Text('Avvia test • max 4 min'),
