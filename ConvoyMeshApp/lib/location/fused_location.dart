@@ -17,10 +17,14 @@ class FusedLocation {
 
   final DateTime ts;
 
-  /// True se i sensori indicano movimento reale (non drift GPS)
+  /// True solo se i sensori disponibili indicano movimento reale.
   final bool isMoving;
 
-  /// Indicatore “energia movimento” (0.. circa 2+), utile debug
+  /// False durante il bootstrap dei sensori o se l'accelerometro non è disponibile.
+  /// In quel caso il filtro passa in GPS-only senza fingere uno stato di movimento.
+  final bool motionReliable;
+
+  /// Indicatore “energia movimento” (0.. circa 2+), utile debug.
   final double motionScore;
 
   /// Decisione sintetica del filtro pedonale, utile per debug e test campo.
@@ -42,6 +46,7 @@ class FusedLocation {
     required this.gpsQuality,
     required this.ts,
     required this.isMoving,
+    required this.motionReliable,
     required this.motionScore,
     required this.gpsDecision,
     required this.gpsReason,
