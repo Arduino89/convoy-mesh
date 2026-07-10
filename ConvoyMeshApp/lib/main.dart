@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import 'ble/ble_page.dart';
+import 'pages/diagnostic_page.dart';
 import 'pages/map_page.dart';
 import 'services/convoy_mesh_service.dart';
 
@@ -58,6 +59,7 @@ class _AppShellState extends State<AppShell> {
     final pages = <Widget>[
       const BlePage(),
       const MapPage(),
+      const DiagnosticPage(),
     ];
 
     return Scaffold(
@@ -66,8 +68,9 @@ class _AppShellState extends State<AppShell> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.radar), label: "Radar BLE"),
-          NavigationDestination(icon: Icon(Icons.map), label: "Mappa"),
+          NavigationDestination(icon: Icon(Icons.radar), label: 'Radar BLE'),
+          NavigationDestination(icon: Icon(Icons.map), label: 'Mappa'),
+          NavigationDestination(icon: Icon(Icons.bug_report_outlined), label: 'Test log'),
         ],
       ),
     );
