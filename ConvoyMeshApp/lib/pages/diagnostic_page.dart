@@ -173,16 +173,18 @@ class DiagnosticPage extends StatelessWidget {
   }
 
   static Future<void> _addMarker(BuildContext context, DiagnosticRecorder recorder) async {
-    final controller = TextEditingController();
+    String draft = '';
+
     final note = await showDialog<String>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Segna il problema'),
-          content: TextField(
-            controller: controller,
+          content: TextFormField(
             autofocus: true,
             maxLength: 120,
+            onChanged: (value) => draft = value,
+            onFieldSubmitted: (value) => Navigator.pop(dialogContext, value),
             decoration: const InputDecoration(
               hintText: 'Es: Francesca non vede più Cama',
             ),
@@ -193,7 +195,7 @@ class DiagnosticPage extends StatelessWidget {
               child: const Text('Annulla'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text),
+              onPressed: () => Navigator.pop(dialogContext, draft),
               child: const Text('Aggiungi'),
             ),
           ],
@@ -201,9 +203,9 @@ class DiagnosticPage extends StatelessWidget {
       },
     );
 
-    controller.dispose();
-    if (note != null && note.trim().isNotEmpty) {
-      recorder.addMarker(note);
+    final cleaned = note?.trim() ?? '';
+    if (cleaned.isNotEmpty) {
+      recorder.addMarker(cleaned);
     }
   }
 }
