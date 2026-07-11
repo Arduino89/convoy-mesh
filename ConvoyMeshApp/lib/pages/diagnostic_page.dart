@@ -175,16 +175,24 @@ class DiagnosticPage extends StatelessWidget {
   static Future<void> _addMarker(BuildContext context, DiagnosticRecorder recorder) async {
     String draft = '';
 
-    final note = await showDialog<String>(
+    await showDialog<void>(
       context: context,
       builder: (dialogContext) {
+        void submit(String value) {
+          final cleaned = value.trim();
+          if (cleaned.isNotEmpty) {
+            recorder.addMarker(cleaned);
+          }
+          Navigator.pop(dialogContext);
+        }
+
         return AlertDialog(
           title: const Text('Segna il problema'),
           content: TextFormField(
             autofocus: true,
             maxLength: 120,
             onChanged: (value) => draft = value,
-            onFieldSubmitted: (value) => Navigator.pop(dialogContext, value),
+            onFieldSubmitted: submit,
             decoration: const InputDecoration(
               hintText: 'Es: Francesca non vede più Cama',
             ),
@@ -195,17 +203,12 @@ class DiagnosticPage extends StatelessWidget {
               child: const Text('Annulla'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, draft),
+              onPressed: () => submit(draft),
               child: const Text('Aggiungi'),
             ),
           ],
         );
       },
     );
-
-    final cleaned = note?.trim() ?? '';
-    if (cleaned.isNotEmpty) {
-      recorder.addMarker(cleaned);
-    }
   }
 }
