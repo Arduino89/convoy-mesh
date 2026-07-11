@@ -11,7 +11,13 @@ void main() {
     }
 
     await tester.pumpWidget(
-      const MaterialApp(home: DiagnosticPage()),
+      MaterialApp(
+        home: DiagnosticPage(
+          deviceIdOverride: 12345,
+          deviceNameOverride: 'TestPhone',
+          captureNowOverride: () {},
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
