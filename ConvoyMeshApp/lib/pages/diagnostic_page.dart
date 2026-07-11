@@ -5,12 +5,24 @@ import '../services/diagnostic_capture_bridge.dart';
 import '../services/diagnostic_recorder.dart';
 
 class DiagnosticPage extends StatelessWidget {
-  const DiagnosticPage({super.key});
+  const DiagnosticPage({
+    super.key,
+    this.deviceIdOverride,
+    this.deviceNameOverride,
+    this.captureNowOverride,
+  });
+
+  final int? deviceIdOverride;
+  final String? deviceNameOverride;
+  final VoidCallback? captureNowOverride;
 
   @override
   Widget build(BuildContext context) {
     final recorder = DiagnosticRecorder.instance;
-    final mesh = ConvoyMeshService.instance;
+    final useOverrides = deviceIdOverride != null && deviceNameOverride != null;
+    final mesh = useOverrides ? null : ConvoyMeshService.instance;
+    final deviceId = deviceIdOverride ?? mesh!.myId;
+    final deviceName = deviceNameOverride ?? mesh!.myName;
 
     return AnimatedBuilder(
       animation: recorder,
@@ -48,7 +60,7 @@ class DiagnosticPage extends StatelessWidget {
                             : 'Massimo 4 minuti. Il file contiene eventi BLE, GPS, decisioni dei filtri e coordinate della sessione.',
                       ),
                       const SizedBox(height: 8),
-                      Text('Telefono: ${mesh.myName} • ID ${mesh.myId}'),
+                      Text('Telefono: $deviceName • ID $deviceId'),
                       if (recorder.isActive) ...[
                         const SizedBox(height: 6),
                         Text('Eventi registrati: ${recorder.eventCount}'),
@@ -61,10 +73,15 @@ class DiagnosticPage extends StatelessWidget {
                           child: FilledButton.icon(
                             onPressed: () {
                               recorder.start(
-                                deviceId: mesh.myId,
-                                deviceName: mesh.myName,
+                                deviceId: deviceId,
+                                deviceName: deviceName,
                               );
-                              DiagnosticCaptureBridge.instance.captureNow();
+                              final capture = captureNowOverride;
+                              if (capture != null) {
+                                capture();
+                              } else {
+                                DiagnosticCaptureBridge.instance.captureNow();
+                              }
                             },
                             icon: const Icon(Icons.fiber_manual_record),
                             label: const Text('Avvia test • max 4 min'),
