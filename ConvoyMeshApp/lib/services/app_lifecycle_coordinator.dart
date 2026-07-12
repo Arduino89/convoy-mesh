@@ -10,7 +10,9 @@ class AppLifecycleCoordinator {
 
   static final AppLifecycleCoordinator instance = AppLifecycleCoordinator._();
 
-  static const Duration backgroundHeartbeatEvery = Duration(seconds: 20);
+  // Deve restare sotto peerOnlineTtl (15 s), altrimenti il ricevente mostra
+  // falsi offline tra un heartbeat e il successivo.
+  static const Duration backgroundHeartbeatEvery = Duration(seconds: 10);
 
   Timer? _backgroundHeartbeat;
   AppLifecycleState _lastState = AppLifecycleState.resumed;
@@ -54,7 +56,7 @@ class AppLifecycleCoordinator {
   void _startBackgroundHeartbeat() {
     if (_backgroundHeartbeat != null) return;
 
-    // Un primo segnale subito, poi heartbeat leggero ogni 20 secondi.
+    // Un primo segnale subito, poi heartbeat leggero ogni 10 secondi.
     ConvoyMeshService.instance.spamMyNameNow();
     DiagnosticRecorder.instance.record(
       'lifecycle',
