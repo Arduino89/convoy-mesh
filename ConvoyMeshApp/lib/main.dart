@@ -4,6 +4,8 @@ import 'package:permission_handler/permission_handler.dart' as ph;
 import 'ble/ble_page.dart';
 import 'pages/diagnostic_page.dart';
 import 'pages/map_page.dart';
+import 'services/app_lifecycle_coordinator.dart';
+import 'services/background_runtime_service.dart';
 import 'services/convoy_mesh_service.dart';
 import 'services/diagnostic_capture_bridge.dart';
 
@@ -36,14 +38,27 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _index = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     DiagnosticCaptureBridge.instance.attach();
     _boot();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    AppLifecycleCoordinator.instance.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    AppLifecycleCoordinator.instance.onStateChanged(state);
   }
 
   Future<void> _boot() async {
@@ -51,8 +66,11 @@ class _AppShellState extends State<AppShell> {
     await ph.Permission.bluetoothScan.request();
     await ph.Permission.bluetoothConnect.request();
     await ph.Permission.bluetoothAdvertise.request();
+    await ph.Permission.notification.request();
 
     await ConvoyMeshService.instance.start();
+    await BackgroundRuntimeService.instance.initializeAndStart();
+
     if (mounted) setState(() {});
   }
 
