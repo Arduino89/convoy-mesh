@@ -8,8 +8,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- (Android 14+) se un giorno fai tracking continuo in foreground -->
+    <!-- Foreground service: keeps GPS/BLE alive while screen is off or app is backgrounded. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- BLE (Android 12+) -->
     <uses-permission
@@ -34,6 +37,12 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
+
+        <service
+            android:name=".ConvoyForegroundService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="location|connectedDevice" />
 
         <activity
             android:name=".MainActivity"
@@ -70,4 +79,3 @@
     </queries>
 
 </manifest>
-
