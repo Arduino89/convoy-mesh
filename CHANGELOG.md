@@ -4,13 +4,13 @@
 
 - Aggiunto filtro GPS pedonale dedicato a gruppi a piedi/outdoor, senza logiche veicolari.
 - Introdotto quality score GPS, barre qualità e motivo dell'ultimo fix accettato/scartato.
-- Migliorato anti-jitter da fermo: il marker resta ancorato se i sensori indicano assenza di movimento reale.
+- Migliorato anti-jitter da fermo: quando il motion sensor è affidabile e indica stato fermo, il marker resta ancorato all'ultima posizione accettata anche davanti a singoli outlier GPS con accuracy dichiarata buona.
 - Separato l'ultimo fix realmente accettato dagli eventi GPS scartati/ancorati, evitando falsi calcoli di velocità.
 - Aggiunto fallback GPS-only quando l'accelerometro non è disponibile o non è ancora affidabile.
 - Aggiunto scarto dei teletrasporti GPS anche quando il telefono dichiara un'accuracy apparentemente buona.
 - Allineato anche il filtro posizione dei peer allo scenario pedonale, con margine per l'incertezza GPS outdoor.
 - Evitata la creazione di tracce false: il trail cresce solo con movimento coerente, accuracy sufficiente e passo significativo.
-- Aggiunti test automatici per fix iniziale, jitter da fermo, camminata reale, micro-movimenti, salti GPS, fallback sensori e accuracy pessima.
+- Aggiunti test automatici per fix iniziale, jitter da fermo, camminata reale, micro-movimenti, salti GPS, fallback sensori, accuracy pessima e outlier da fermo con accuracy apparentemente buona.
 - Rafforzata la CI con cache, artifact diagnostici e smoke test su emulatore Android con KVM.
 
 ## v0.4-stability
