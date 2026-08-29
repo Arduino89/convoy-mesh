@@ -183,27 +183,20 @@ class PedestrianGpsFilter {
     }
 
     if (motionReliable && !isMoving) {
-      final unlockDistance = max(
-        stationaryUnlockMinM,
-        max(acc, previousAccuracyM ?? acc) * stationaryAccuracyFactor,
+      return PedestrianGpsResult(
+        displayLat: prevLat,
+        displayLon: prevLon,
+        rawLat: rawLat,
+        rawLon: rawLon,
+        accuracyM: acc,
+        quality: quality,
+        bars: bars,
+        decision: PedestrianGpsDecision.anchored,
+        reason: 'Fermo: jitter GPS ignorato.',
+        acceptedForTrack: false,
+        distanceFromPreviousM: distanceFromPrevious,
+        speedKmh: speedKmh,
       );
-
-      if (distanceFromPrevious < unlockDistance) {
-        return PedestrianGpsResult(
-          displayLat: prevLat,
-          displayLon: prevLon,
-          rawLat: rawLat,
-          rawLon: rawLon,
-          accuracyM: acc,
-          quality: quality,
-          bars: bars,
-          decision: PedestrianGpsDecision.anchored,
-          reason: 'Fermo: jitter GPS ignorato.',
-          acceptedForTrack: false,
-          distanceFromPreviousM: distanceFromPrevious,
-          speedKmh: speedKmh,
-        );
-      }
     }
 
     var acceptedForTrack = false;
