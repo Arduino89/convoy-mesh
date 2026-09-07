@@ -1,410 +1,199 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:sensors_plus/sensors_plus.dart';
-
 import '../location/fused_location.dart';
 import '../location/gps_pedestrian_filter.dart';
+import '../location/pedestrian_position_estimator.dart';
 import 'diagnostic_recorder.dart';
 
 class TrackPoint {
-  final double lat;
-  final double lon;
+  final double lat, lon, accuracyM;
   final DateTime ts;
-  final double accuracyM;
-
-  TrackPoint({
-    required this.lat,
-    required this.lon,
-    required this.ts,
-    required this.accuracyM,
-  });
+  final int segment;
+  TrackPoint({required this.lat, required this.lon, required this.ts,
+    required this.accuracyM, this.segment = 0});
 }
 
 class LocationFusionService extends ChangeNotifier {
   LocationFusionService._();
-
-  static final LocationFusionService instance = LocationFusionService._();
-
-  final StreamController<FusedLocation> _ctrl = StreamController<FusedLocation>.broadcast();
+  static final instance = LocationFusionService._();
+  final _ctrl = StreamController<FusedLocation>.broadcast();
   Stream<FusedLocation> get stream => _ctrl.stream;
-
   FusedLocation? _last;
   FusedLocation? get last => _last;
-
-  final List<TrackPoint> _track = <TrackPoint>[];
-  List<TrackPoint> get trackPoints => List<TrackPoint>.unmodifiable(_track);
-
+  final List<TrackPoint> _track = [];
+  List<TrackPoint> get trackPoints => List.unmodifiable(_track);
+  PedestrianPositionEstimator _estimator = PedestrianPositionEstimator();
+  GpsObservation? _raw;
+  Future<void>? _startFuture;
+  Future<void> _positionOp = Future.value();
   StreamSubscription<ServiceStatus>? _serviceSub;
   StreamSubscription<Position>? _posSub;
-  StreamSubscription<UserAccelerometerEvent>? _uaSub;
-
-  bool _hasPerm = false;
-  bool _serviceEnabled = false;
-
-  double? _acceptedLat;
-  double? _acceptedLon;
-  double? _acceptedAccuracyM;
-  DateTime? _acceptedAt;
-
-  double _motionEma = 0.0;
-  bool _isMoving = false;
-  DateTime _lastMotionFlip = DateTime.fromMillisecondsSinceEpoch(0);
+  StreamSubscription<UserAccelerometerEvent>? _motionSub;
+  Timer? _ageTimer;
+  bool _running = false, _hasPerm = false, _serviceEnabled = false;
+  int _generation = 0, _positionGeneration = 0, _segment = 0;
+  final Stopwatch _clock = Stopwatch()..start();
+  Duration? _lastMotionSample;
+  Duration _lastMotionFlip = Duration.zero;
+  double _motionEma = 0;
+  bool _moving = false;
   int _motionSamples = 0;
-  bool _motionSensorFailed = false;
-
-  bool get _motionReliable => !_motionSensorFailed && _motionSamples >= 5;
-
-  static const double stillEnter = 0.20;
-  static const double moveEnter = 0.55;
-  static const Duration motionHold = Duration(seconds: 2);
-
   static const int updateSeconds = 5;
   static const int trackRetentionMinutes = 90;
+  static const double stillEnter = 0.20, moveEnter = 0.55;
+  static const motionHold = Duration(seconds: 2);
+  bool get _motionReliable => _motionSamples >= 5 && _lastMotionSample != null &&
+      _clock.elapsed - _lastMotionSample! <= const Duration(seconds: 3);
 
-  Future<void> start() async {
-    final perm = await ph.Permission.locationWhenInUse.request();
-    _hasPerm = perm.isGranted;
-
-    _startMotionSensors();
+  Future<void> start() => _startFuture ??= _startInternal();
+  Future<void> _startInternal() async {
+    _running = true;
+    final epoch = ++_generation;
+    _segment++;
+    _estimator = PedestrianPositionEstimator();
+    _raw = null;
+    _hasPerm = (await ph.Permission.locationWhenInUse.status).isGranted;
     _serviceEnabled = await Geolocator.isLocationServiceEnabled();
-
-    DiagnosticRecorder.instance.record(
-      'gps',
-      'service_start',
-      data: <String, Object?>{
-        'permission': _hasPerm,
-        'service_enabled': _serviceEnabled,
-      },
-    );
-
-    _pushState(
-      lat: null,
-      lon: null,
-      acc: null,
-      forcedState: _serviceEnabled && _hasPerm ? GpsUiState.searching : GpsUiState.off,
-      gpsDecision: _hasPerm ? 'startup' : 'permission_denied',
-      gpsReason: !_hasPerm
-          ? 'Permesso posizione non concesso.'
-          : _serviceEnabled
-              ? 'GPS attivo: aggancio in corso.'
-              : 'Posizione Android disattivata.',
-    );
-
+    if (!_running || epoch != _generation) return;
+    _startMotion();
     await _serviceSub?.cancel();
-    _serviceSub = Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+    _serviceSub = Geolocator.getServiceStatusStream().listen((status) {
+      if (!_running || epoch != _generation) return;
       _serviceEnabled = status == ServiceStatus.enabled;
-
-      DiagnosticRecorder.instance.record(
-        'gps',
-        'service_status',
-        data: <String, Object?>{
-          'enabled': _serviceEnabled,
-          'permission': _hasPerm,
-        },
-      );
-
-      if (!_serviceEnabled || !_hasPerm) {
-        _posSub?.cancel();
-        _posSub = null;
-        _pushState(
-          lat: null,
-          lon: null,
-          acc: null,
-          forcedState: GpsUiState.off,
-          gpsDecision: !_hasPerm ? 'permission_denied' : 'location_off',
-          gpsReason: !_hasPerm ? 'Permesso posizione non concesso.' : 'Posizione Android disattivata.',
-        );
-      } else {
-        _startPosStream();
+      DiagnosticRecorder.instance.record('gps', 'service_status',
+          data: {'enabled': _serviceEnabled, 'permission': _hasPerm});
+      unawaited(_reconcilePositionStream());
+    }, onError: (Object e) {
+      DiagnosticRecorder.instance.record('gps', 'service_status_error', data: {'error': e.toString()});
+    });
+    await _reconcilePositionStream();
+    _ageTimer?.cancel();
+    _ageTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (_running && _last != null && !_last!.hasFreshFixAt(DateTime.now())) {
+        _emit(_estimator.snapshot('waiting_for_fresh_fix'));
       }
     });
+  }
 
-    if (_serviceEnabled && _hasPerm) {
-      _startPosStream();
+  void _startMotion() {
+    _motionSamples = 0; _lastMotionSample = null; _motionEma = 0; _moving = false;
+    _motionSub = userAccelerometerEventStream().listen((event) {
+      if (!_running) return;
+      final m = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+      if (!m.isFinite) return;
+      _lastMotionSample = _clock.elapsed;
+      _motionSamples = min(_motionSamples + 1, 1000);
+      _motionEma = _motionEma * 0.85 + m * 0.15;
+      if (_clock.elapsed - _lastMotionFlip < motionHold) return;
+      final next = _moving ? _motionEma >= stillEnter : _motionEma > moveEnter;
+      if (next != _moving) {
+        _moving = next; _lastMotionFlip = _clock.elapsed;
+        DiagnosticRecorder.instance.record('motion', 'state_change',
+            data: {'moving': _moving, 'score': _motionEma, 'reliable': _motionReliable});
+      }
+    }, onError: (Object e) {
+      _lastMotionSample = null; _motionSamples = 0;
+      DiagnosticRecorder.instance.record('motion', 'sensor_error', data: {'error': e.toString()});
+    });
+  }
+
+  Future<void> _reconcilePositionStream() {
+    final epoch = _generation;
+    _positionOp = _positionOp.then((_) async {
+      if (!_running || epoch != _generation) return;
+      final streamEpoch = ++_positionGeneration;
+      await _posSub?.cancel();
+      _posSub = null;
+      if (!_running || epoch != _generation) return;
+      if (!_hasPerm || !_serviceEnabled) {
+        _emit(_estimator.snapshot(!_hasPerm ? 'permission_denied' : 'location_off'));
+        return;
+      }
+      final settings = AndroidSettings(accuracy: LocationAccuracy.best,
+          intervalDuration: const Duration(seconds: updateSeconds), distanceFilter: 0);
+      _posSub = Geolocator.getPositionStream(locationSettings: settings).listen((position) {
+        if (_running && epoch == _generation && streamEpoch == _positionGeneration) _onPosition(position);
+      }, onError: (Object e) {
+        DiagnosticRecorder.instance.record('gps', 'stream_error', data: {'error': e.toString()});
+        _emit(_estimator.snapshot('gps_error'));
+      });
+      _emit(_estimator.snapshot('acquiring'));
+    }).catchError((Object e) {
+      DiagnosticRecorder.instance.record('gps', 'stream_start_error', data: {'error': e.toString()});
+      _emit(_estimator.snapshot('gps_error'));
+    });
+    return _positionOp;
+  }
+
+  void _onPosition(Position position) {
+    final received = DateTime.now().toUtc();
+    final observation = GpsObservation(position.latitude, position.longitude,
+        position.accuracy, position.timestamp.toUtc());
+    _raw = observation;
+    final result = _estimator.add(observation, receivedAt: received,
+        moving: _moving, motionReliable: _motionReliable);
+    if (result.decision == 'reacquired') _segment++;
+    var added = false;
+    if (result.addToTrack && result.isFreshAt(received) && result.lat != null &&
+        result.lon != null && result.accuracyM != null) {
+      final previous = _track.isEmpty ? null : _track.last;
+      final distance = previous == null || previous.segment != _segment ? double.infinity :
+          PedestrianGpsFilter.distanceMeters(previous.lat, previous.lon, result.lat!, result.lon!);
+      if (distance >= minStepForTrack(result.accuracyM!)) {
+        _track.add(TrackPoint(lat: result.lat!, lon: result.lon!, ts: result.supportedAt!,
+            accuracyM: result.accuracyM!, segment: _segment));
+        added = true;
+      }
     }
+    _track.removeWhere((p) => received.difference(p.ts) > const Duration(minutes: trackRetentionMinutes));
+    DiagnosticRecorder.instance.record('gps', 'fix', data: {
+      'source_ts_utc': observation.at.toIso8601String(),
+      'received_ts_utc': received.toIso8601String(),
+      'coordinate_ts_utc': result.coordinateAt?.toUtc().toIso8601String(),
+      'supported_ts_utc': result.supportedAt?.toUtc().toIso8601String(),
+      'raw_lat': observation.lat, 'raw_lon': observation.lon, 'raw_accuracy_m': observation.accuracyM,
+      'display_lat': result.lat, 'display_lon': result.lon, 'accuracy_m': result.accuracyM,
+      'decision': result.decision, 'fresh': result.isFreshAt(received), 'track_added': added,
+      'moving': _moving, 'motion_reliable': _motionReliable, 'motion_score': _motionEma,
+    });
+    _emit(result);
   }
 
-  void _startMotionSensors() {
-    _uaSub?.cancel();
-    _motionSamples = 0;
-    _motionSensorFailed = false;
-
-    _uaSub = userAccelerometerEventStream().listen(
-      (UserAccelerometerEvent event) {
-        final magnitude = sqrt(
-          event.x * event.x + event.y * event.y + event.z * event.z,
-        );
-
-        _motionEma = _motionEma * 0.85 + magnitude * 0.15;
-        _motionSamples = min(_motionSamples + 1, 1000000);
-
-        final now = DateTime.now();
-        if (_isMoving) {
-          if (_motionEma < stillEnter && now.difference(_lastMotionFlip) > motionHold) {
-            _isMoving = false;
-            _lastMotionFlip = now;
-            DiagnosticRecorder.instance.record(
-              'motion',
-              'state_change',
-              data: <String, Object?>{
-                'moving': false,
-                'score': _motionEma,
-                'reliable': _motionReliable,
-              },
-            );
-            notifyListeners();
-          }
-        } else if (_motionEma > moveEnter && now.difference(_lastMotionFlip) > motionHold) {
-          _isMoving = true;
-          _lastMotionFlip = now;
-          DiagnosticRecorder.instance.record(
-            'motion',
-            'state_change',
-            data: <String, Object?>{
-              'moving': true,
-              'score': _motionEma,
-              'reliable': _motionReliable,
-            },
-          );
-          notifyListeners();
-        }
-      },
-      onError: (Object error) {
-        _motionSensorFailed = true;
-        _motionSamples = 0;
-        DiagnosticRecorder.instance.record(
-          'motion',
-          'sensor_error',
-          data: <String, Object?>{'error': error.toString()},
-        );
-        notifyListeners();
-      },
-    );
-  }
-
-  void _startPosStream() {
-    if (!_hasPerm || !_serviceEnabled) return;
-
-    _posSub?.cancel();
-
-    final settings = AndroidSettings(
-      accuracy: LocationAccuracy.best,
-      intervalDuration: const Duration(seconds: updateSeconds),
-      distanceFilter: 0,
-    );
-
-    DiagnosticRecorder.instance.record(
-      'gps',
-      'stream_start',
-      data: <String, Object?>{
-        'interval_seconds': updateSeconds,
-        'accuracy_mode': 'best',
-      },
-    );
-
-    _posSub = Geolocator.getPositionStream(locationSettings: settings).listen(
-      (Position position) {
-        final rawLat = position.latitude;
-        final rawLon = position.longitude;
-        final accuracyM = max(0.0, position.accuracy.toDouble());
-        final now = DateTime.now();
-        final lastTrack = _track.isEmpty ? null : _track.last;
-
-        final result = PedestrianGpsFilter.evaluate(
-          rawLat: rawLat,
-          rawLon: rawLon,
-          accuracyM: accuracyM,
-          ts: now,
-          isMoving: _isMoving,
-          motionScore: _motionEma,
-          motionReliable: _motionReliable,
-          previousLat: _acceptedLat,
-          previousLon: _acceptedLon,
-          previousTs: _acceptedAt,
-          previousAccuracyM: _acceptedAccuracyM,
-          lastTrackLat: lastTrack?.lat,
-          lastTrackLon: lastTrack?.lon,
-        );
-
-        if (result.decision == PedestrianGpsDecision.accepted &&
-            result.displayLat != null &&
-            result.displayLon != null) {
-          _acceptedLat = result.displayLat;
-          _acceptedLon = result.displayLon;
-          _acceptedAccuracyM = result.accuracyM;
-          _acceptedAt = now;
-        }
-
-        final gpsState = _stateForResult(result);
-        final fused = FusedLocation(
-          lat: result.displayLat,
-          lon: result.displayLon,
-          accuracyM: result.accuracyM,
-          rawLat: result.rawLat,
-          rawLon: result.rawLon,
-          hasPermission: _hasPerm,
-          serviceEnabled: _serviceEnabled,
-          gpsState: gpsState,
-          gpsBars: gpsState == GpsUiState.off ? 0 : result.bars,
-          gpsQuality: gpsState == GpsUiState.off ? 0 : result.quality,
-          ts: now,
-          isMoving: _isMoving,
-          motionReliable: _motionReliable,
-          motionScore: _motionEma,
-          gpsDecision: result.decisionLabel,
-          gpsReason: result.reason,
-        );
-
-        DiagnosticRecorder.instance.record(
-          'gps',
-          'fix',
-          data: <String, Object?>{
-            'raw_lat': rawLat,
-            'raw_lon': rawLon,
-            'display_lat': result.displayLat,
-            'display_lon': result.displayLon,
-            'accuracy_m': result.accuracyM,
-            'quality': result.quality,
-            'bars': result.bars,
-            'decision': result.decisionLabel,
-            'reason': result.reason,
-            'track_added': result.acceptedForTrack,
-            'distance_from_previous_m': result.distanceFromPreviousM,
-            'speed_kmh': result.speedKmh,
-            'moving': _isMoving,
-            'motion_reliable': _motionReliable,
-            'motion_score': _motionEma,
-          },
-        );
-
-        _last = fused;
-        _ctrl.add(fused);
-        notifyListeners();
-
-        if (result.acceptedForTrack && result.displayLat != null && result.displayLon != null) {
-          _track.add(
-            TrackPoint(
-              lat: result.displayLat!,
-              lon: result.displayLon!,
-              ts: now,
-              accuracyM: result.accuracyM,
-            ),
-          );
-          _trimTrack(minutes: trackRetentionMinutes);
-        }
-      },
-      onError: (Object error) {
-        DiagnosticRecorder.instance.record(
-          'gps',
-          'stream_error',
-          data: <String, Object?>{'error': error.toString()},
-        );
-        _pushState(
-          lat: _acceptedLat,
-          lon: _acceptedLon,
-          acc: _acceptedAccuracyM,
-          forcedState: GpsUiState.searching,
-          gpsDecision: 'gps_error',
-          gpsReason: 'Errore nello stream GPS: mantengo ultima posizione valida.',
-          rawLat: _last?.rawLat,
-          rawLon: _last?.rawLon,
-        );
-      },
-    );
-
-    _pushState(
-      lat: _acceptedLat,
-      lon: _acceptedLon,
-      acc: _acceptedAccuracyM,
-      forcedState: GpsUiState.searching,
-      gpsDecision: 'searching',
-      gpsReason: 'GPS attivo: aggancio in corso.',
-      rawLat: _last?.rawLat,
-      rawLon: _last?.rawLon,
-    );
-  }
-
-  void clearTrack() {
-    _track.clear();
-    DiagnosticRecorder.instance.record('gps', 'track_cleared');
+  void _emit(PositionEstimate result) {
+    final now = DateTime.now();
+    final fresh = _running && _hasPerm && _serviceEnabled && result.isFreshAt(now);
+    final acc = result.accuracyM;
+    final bars = fresh ? PedestrianGpsFilter.barsForAccuracy(acc) : 0;
+    final quality = !fresh || acc == null ? 0 : PedestrianGpsFilter.qualityScore(
+        accuracyM: acc, isMoving: _moving, motionScore: _motionEma, motionReliable: _motionReliable);
+    _last = FusedLocation(lat: result.lat, lon: result.lon, accuracyM: acc,
+      rawLat: _raw?.lat, rawLon: _raw?.lon, rawAccuracyM: _raw?.accuracyM,
+      hasPermission: _hasPerm, serviceEnabled: _serviceEnabled && _running,
+      gpsState: !_running || !_hasPerm || !_serviceEnabled ? GpsUiState.off :
+          fresh && bars >= 2 ? GpsUiState.ok : GpsUiState.searching,
+      gpsBars: bars, gpsQuality: quality, ts: now,
+      measurementAt: result.supportedAt, coordinateAt: result.coordinateAt,
+      isMoving: _moving, motionReliable: _motionReliable, motionScore: _motionEma,
+      gpsDecision: result.decision, gpsReason: result.decision);
+    _ctrl.add(_last!);
     notifyListeners();
   }
 
-  void disposeService() {
-    _serviceSub?.cancel();
-    _posSub?.cancel();
-    _uaSub?.cancel();
+  void clearTrack() { _track.clear(); notifyListeners(); }
+  Future<void> disposeService() async {
+    _running = false; _generation++; _positionGeneration++;
+    _ageTimer?.cancel(); _ageTimer = null;
+    await _serviceSub?.cancel(); _serviceSub = null;
+    await _motionSub?.cancel(); _motionSub = null;
+    await _positionOp;
+    await _posSub?.cancel(); _posSub = null;
+    _lastMotionSample = null; _motionSamples = 0;
+    _startFuture = null;
+    _emit(_estimator.snapshot('stopped'));
   }
-
-  void _trimTrack({required int minutes}) {
-    final cutoff = DateTime.now().subtract(Duration(minutes: minutes));
-    while (_track.isNotEmpty && _track.first.ts.isBefore(cutoff)) {
-      _track.removeAt(0);
-    }
-  }
-
-  void _pushState({
-    required double? lat,
-    required double? lon,
-    required double? acc,
-    required GpsUiState forcedState,
-    String gpsDecision = 'state',
-    String gpsReason = '-',
-    double? rawLat,
-    double? rawLon,
-  }) {
-    final bars = PedestrianGpsFilter.barsForAccuracy(acc);
-    final state = (!_hasPerm || !_serviceEnabled) ? GpsUiState.off : forcedState;
-    final quality = acc == null
-        ? 0
-        : PedestrianGpsFilter.qualityScore(
-            accuracyM: max(0.0, acc),
-            isMoving: _isMoving,
-            motionScore: _motionEma,
-            motionReliable: _motionReliable,
-          );
-
-    final fused = FusedLocation(
-      lat: lat,
-      lon: lon,
-      accuracyM: acc,
-      rawLat: rawLat,
-      rawLon: rawLon,
-      hasPermission: _hasPerm,
-      serviceEnabled: _serviceEnabled,
-      gpsState: state,
-      gpsBars: state == GpsUiState.off ? 0 : bars,
-      gpsQuality: state == GpsUiState.off ? 0 : quality,
-      ts: DateTime.now(),
-      isMoving: _isMoving,
-      motionReliable: _motionReliable,
-      motionScore: _motionEma,
-      gpsDecision: gpsDecision,
-      gpsReason: gpsReason,
-    );
-
-    _last = fused;
-    _ctrl.add(fused);
-    notifyListeners();
-  }
-
-  static GpsUiState _stateForResult(PedestrianGpsResult result) {
-    switch (result.decision) {
-      case PedestrianGpsDecision.accepted:
-      case PedestrianGpsDecision.anchored:
-        return result.bars >= 2 && result.quality >= 35 ? GpsUiState.ok : GpsUiState.searching;
-      case PedestrianGpsDecision.rejectedJump:
-      case PedestrianGpsDecision.rejectedPoorAccuracy:
-      case PedestrianGpsDecision.waitingForFirstGoodFix:
-        return GpsUiState.searching;
-    }
-  }
-
-  static double minStepForTrack(double accuracyM) {
-    return PedestrianGpsFilter.minStepForTrack(accuracyM);
-  }
+  static double minStepForTrack(double accuracyM) => PedestrianGpsFilter.minStepForTrack(accuracyM);
 }
