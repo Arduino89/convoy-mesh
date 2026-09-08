@@ -125,15 +125,30 @@ class PedestrianPositionEstimator {
     if (points.last.at.difference(points.first.at) < const Duration(seconds: 15)) return false;
     final accs = points.map((p) => p.accuracyM).toList()..sort();
     final net = _distance(points.first, points.last);
+    if (net < max(10.0, accs[2] * 1.5)) return false;
+
+    // Net/path alone accepts a stationary cluster plus ONE distant endpoint:
+    // the jump (or the return from it as the window slides) dominates the path.
+    // Keep those observations available for consensus/reacquisition, but do not
+    // let an isolated jump override a still/unknown IMU and create a false trail.
+    // GPS-only motion needs material forward progress in at least 3 of the 4
+    // intervals, with no interval accounting for most of the travelled path.
+    final minProgress = max(0.5, net * 0.10);
     var path = 0.0;
-    var meaningfulSteps = 0;
+    var largestStep = 0.0;
+    var progressingSteps = 0;
     for (var i = 1; i < points.length; i++) {
-      final d = _distance(points[i - 1], points[i]);
-      path += d;
-      if (d >= 0.5) meaningfulSteps++;
+      final previous = points[i - 1];
+      final current = points[i];
+      final step = _distance(previous, current);
+      path += step;
+      largestStep = max(largestStep, step);
+      final progress = _distance(previous, points.last) -
+          _distance(current, points.last);
+      if (progress >= minProgress) progressingSteps++;
     }
-    return meaningfulSteps >= 3 && net >= max(10.0, accs[2] * 1.5) &&
-        path > 0 && net / path >= 0.85;
+    return progressingSteps >= 3 && path > 0 &&
+        largestStep <= path * 0.50 && net / path >= 0.85;
   }
 
   PositionEstimate _accept(GpsObservation point, DateTime support, String decision, bool track) {
