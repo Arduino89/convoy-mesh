@@ -66,6 +66,30 @@ class _MapPageState extends State<MapPage> {
           }
         }
 
+        void addDashedPair(LatLng a, LatLng b, Color colour) {
+          // flutter_map 6.2.1 has no StrokePattern API. Split each recovered
+          // link into short physical polyline pieces instead of upgrading the
+          // mapping dependency during a reliability pass.
+          const pieces = 12;
+          for (var i = 0; i < pieces; i += 2) {
+            final t0 = i / pieces;
+            final t1 = (i + 1) / pieces;
+            final p0 = LatLng(
+              a.latitude + (b.latitude - a.latitude) * t0,
+              a.longitude + (b.longitude - a.longitude) * t0,
+            );
+            final p1 = LatLng(
+              a.latitude + (b.latitude - a.latitude) * t1,
+              a.longitude + (b.longitude - a.longitude) * t1,
+            );
+            lines.add(Polyline(
+              points: [p0, p1],
+              strokeWidth: 3,
+              color: colour.withOpacity(0.65),
+            ));
+          }
+        }
+
         void addPeerTrail(List<PeerPoint> source, Color colour) {
           if (source.length < 2) return;
           final points = [...source]..sort((a, b) => a.ts.compareTo(b.ts));
@@ -74,18 +98,14 @@ class _MapPageState extends State<MapPage> {
             final b = points[i];
             // Sender-side GPS reacquisition intentionally starts a new segment.
             if (a.segment != b.segment && !a.recovered && !b.recovered) continue;
-            final pair = [LatLng(a.lat, a.lon), LatLng(b.lat, b.lon)];
+            final start = LatLng(a.lat, a.lon);
+            final end = LatLng(b.lat, b.lon);
             final recovered = a.recovered || b.recovered;
             if (recovered) {
-              lines.add(Polyline(
-                points: pair,
-                strokeWidth: 3,
-                color: colour.withOpacity(0.65),
-                pattern: StrokePattern.dashed(segments: const [10, 7]),
-              ));
+              addDashedPair(start, end, colour);
             } else {
               lines.add(Polyline(
-                points: pair,
+                points: [start, end],
                 strokeWidth: 3,
                 color: colour.withOpacity(0.5),
               ));
