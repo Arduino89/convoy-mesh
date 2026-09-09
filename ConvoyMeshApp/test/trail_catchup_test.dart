@@ -46,7 +46,11 @@ void main() {
 
   group('recovered peer trail', () {
     test('history is stored as dashed/recovered evidence and never becomes current fix', () {
-      final now = DateTime.utc(2026, 9, 9, 12);
+      // HISTORY carries age relative to the receiver's current clock. Keep the
+      // fixture close to real wall time so the production retention gate (90m)
+      // is exercised rather than accidentally rejecting a deliberately old
+      // hard-coded calendar timestamp.
+      final now = DateTime.now().toUtc();
       final service = ConvoyMeshService.forTest(now: () => now);
       service.ingestForTest(
         ConvoyBleCodec.buildHistoryManufacturerData(
@@ -70,7 +74,7 @@ void main() {
     });
 
     test('live position remains current when an older history point arrives later', () {
-      var now = DateTime.utc(2026, 9, 9, 12);
+      var now = DateTime.now().toUtc();
       final service = ConvoyMeshService.forTest(now: () => now);
       service.ingestForTest(
         ConvoyBleCodec.buildPositionManufacturerData(
