@@ -28,6 +28,7 @@ class MainActivity : FlutterActivity() {
         registeredEngine = flutterEngine
         FlutterEngineCache.getInstance().put(ConvoyForegroundService.ENGINE_ID, flutterEngine)
         val app = applicationContext
+        val nativeAdvertiser = ConvoyBleAdvertiser(app)
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "convoy_mesh/filtered_scan")
             .setStreamHandler(ConvoyBleScanner(app))
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "convoy_mesh/system")
@@ -46,7 +47,21 @@ class MainActivity : FlutterActivity() {
                             result.success(true)
                         }
                         "stopForegroundRuntime" -> {
+                            nativeAdvertiser.stop()
                             app.stopService(Intent(app, ConvoyForegroundService::class.java))
+                            result.success(true)
+                        }
+                        "replaceNativeAdvertising" -> {
+                            val args = call.arguments as? Map<*, *>
+                            val payload = args?.get("payload") as? ByteArray
+                                ?: throw IllegalArgumentException("Payload advertising mancante")
+                            nativeAdvertiser.replace(payload) { ok, error ->
+                                if (ok) result.success(true)
+                                else result.error("BLE_ADVERTISE_FAILED", error, null)
+                            }
+                        }
+                        "stopNativeAdvertising" -> {
+                            nativeAdvertiser.stop()
                             result.success(true)
                         }
                         "getDiagnosticDirectory" -> {
