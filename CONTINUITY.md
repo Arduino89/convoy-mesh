@@ -2,64 +2,63 @@
 
 ## STATUS
 
-Reliability candidate **0.7.0 field-fix: automated gate passed; repeat two-phone validation pending**. Not a production release. The APK to test is bound to immutable executable/test source head `87064e4e53872df81bb157c3deabd7da2b5f02cd` and completed workflow run #63 (`34327979730`). This continuity commit is documentation-only; do not treat its newer SHA as the APK source.
+Reliability candidate **0.7.1 native-BLE: automated gate passed; repeat two-phone validation pending**. Not a production release. The APK to test is bound to executable source head `9bf625a82767c0f65aea46ee72eac87bf018d2d1` and workflow run #68 (`34331609526`). This continuity commit is documentation-only and is not the APK source.
 
 ## CURRENT ARCHITECTURE
 
-Flutter UI and one outing engine; Android native manufacturer-filtered BLE reception; one Dart POS/NAME/PING scheduler; stateful pedestrian GPS estimator with consensus, static anchoring, conservative origin loop-closure and source timestamps; explicit foreground-service lifetime; persistent opt-in JSONL diagnostics.
+Flutter UI and one outing engine; **Android-native manufacturer advertising and Android-native manufacturer-filtered scanning**; one Dart POS/NAME/PING scheduler; stateful pedestrian GPS estimator with consensus, static anchoring, conservative origin loop-closure and source timestamps; explicit foreground-service lifetime; persistent opt-in JSONL diagnostics.
 
 ## CANONICAL SOURCES
 
 - `README.md`: product scope, limitations and build commands.
-- PR #1 and current branch: operative change set.
+- PR #1/current branch: operative changes.
 - `.github/workflows/android-debug.yml`: automated gate/evidence.
-- `ConvoyMeshApp/lib/ble/ble_tx_scheduler.dart`: transmission scheduling.
-- `ConvoyMeshApp/android/app/src/main/kotlin/com/example/convoy_mesh/ConvoyBleScanner.kt`: native receive filter.
-- `ConvoyMeshApp/lib/location/pedestrian_position_estimator.dart`: runtime position estimator.
-- `ConvoyMeshApp/test/reliability_regression_test.dart`, `gps_motion_evidence_regression_test.dart`, `field_log_regression_test.dart`: reliability regressions.
-- `tools/android_smoke.sh`: bounded Android install/screen-off/resume gate.
+- `ConvoyMeshApp/android/app/src/main/kotlin/com/example/convoy_mesh/ConvoyBleAdvertiser.kt`: native TX contract.
+- `ConvoyMeshApp/android/app/src/main/kotlin/com/example/convoy_mesh/ConvoyBleScanner.kt`: native RX filter.
+- `ConvoyMeshApp/lib/ble/native_ble_advertiser.dart`: Dart→native TX bridge.
+- `ConvoyMeshApp/lib/ble/ble_tx_scheduler.dart`: POS/NAME/PING scheduling.
+- `ConvoyMeshApp/lib/location/pedestrian_position_estimator.dart`: runtime GPS estimator.
+- reliability tests under `ConvoyMeshApp/test/` and `tools/android_smoke.sh`.
 
 ## STABILIZED DECISIONS
 
-Walking/hiking groups only. No vehicle assumptions/road snapping. Live radio presence and fresh coordinates are separate facts. RSSI is proximity/signal quality, not a metre ruler. Private field logs stay outside the public repository. No NUC/Sagre/Host Bridge/shared-worker writes from Convoy work.
+Walking/hiking groups only. No vehicle assumptions/road snapping. Live radio presence and fresh coordinates are separate facts. RSSI is signal/proximity, not a metre ruler. Private field logs stay outside the public repo. Convoy work must not touch NUC/Sagre/Host Bridge/shared-worker state.
 
 ## COMPLETED
 
-- Previous integrated candidate `0032e4e0389ecf19d7cd38c019393434f828f511` passed 76 tests and emulator lifecycle gate in run #59.
-- **Real two-phone test 2026-09-09** used that exact build on `Fra` (Mi 9 Lite, Android API 29) and `cama` (M2101K6G, API 33). Both logs show BLE ready, scan subscription present and advertising active. Fra requested/succeeded 40/40 TX (34 POS, 6 NAME); cama 41/41 (35 POS, 6 NAME). Yet both had `scan_events_total=0`, `rx_valid_total=0`, no peer ever created. This isolates the failure to receive-side filtered discovery, not pairing/TTL/parser/TX scheduling.
-- The same logs provide positive background evidence: after the first `paused` lifecycle event Fra continued with 29 successful BLE TX and 36 GPS fixes; cama continued with 21 TX and 23 GPS fixes. This does not certify all OEM policies, but the outing owner was not simply dying on Home/screen state.
-- GPS static behaviour was materially improved. In cama's short out-and-return trace, raw GNSS ended ~14 m from its own initial fix while the displayed estimate ended ~16 m away; the filter was not the main source of that residual. This motivated conservative loop closure rather than looser smoothing.
-- Receive fix `7e60a170ac571ddf73c3c6ff24424000320a9117`: native scan now filters by manufacturer company ID only (plus defensive swapped-ID compatibility), then lets the codec validate `CM`; raw AD parsing is a compatibility fallback. It removes the unsafe assumption that `CM` must be the first bytes exposed to Android's `ScanFilter` while preserving a real filter for screen-off scanning.
-- GPS loop-closure fix `0ad793b5414e824684a11b1961151c245b0336ef`: after an accepted excursion, two consecutive approaching fixes must overlap the origin uncertainty region before the estimator reconciles to the outing start. It cannot close a loop from stationary drift alone and does not claim improved absolute GNSS accuracy.
-- Synthetic field regressions `87064e4e53872df81bb157c3deabd7da2b5f02cd` cover biased GNSS return, high-quality nearby pass without false snap, and stationary drift without fake loop.
-- **Run #63 (`34327979730`) passed:** 79/79 Flutter tests, analyze completed (20 existing/nonblocking issues retained), APK build/fingerprint/upload successful, Android emulator install + >70 s screen-off owner + resume smoke successful.
-- Run #63 APK artifact `10094660748`; extracted APK size `164351059` bytes; SHA-256 `211f0b450f712e267c553420dc2aa8e53e96251dece1172474546b4bd38f1d51` (CI checksum equals downloaded APK checksum). Artifacts expire 2026-09-23 unless retained elsewhere.
+- Candidate `0032e4e...` established GPS/background baseline and passed its software gate.
+- First real two-phone test on Mi 9 Lite/API29 and M2101K6G/API33: both phones transmitted successfully but both reported `scan_events_total=0`; GPS/background continued after pause. This isolated the main failure below peer/parser logic.
+- Field-fix `87064e4e...` relaxed the native RX filter to company-id matching and added conservative GPS origin loop-closure; run #63 passed 79 tests/build/emulator.
+- **Second real two-phone test on the run #63 build** repeated the failure on both directions. During the controlled ~1-minute log both devices reported BLE ready, `scanning=true`, `advertising=true`, manual scan restart, 10 requested TX and 10 plugin-success TX each, yet `scan_events_total=0`, `rx_valid_total=0`, and no peers. This rules out a Mi-9-only issue and makes plugin-advertising success insufficient evidence that compatible radio frames were emitted.
+- Native TX bridge `4c866dc62791cee5d5dd4c42ef83e6972f3c1c95`, Android advertiser `1b1b79f3acef7e53862ffacb48df2de4f49ad84b`, method-channel wiring `7331805207aa4201eb818acf078fa16e57de667e`, and service integration `9bf625a82767c0f65aea46ee72eac87bf018d2d1` remove `flutter_ble_peripheral` from the runtime TX path. TX and RX now use the same Android manufacturer contract: company ID `0x0C0A` plus Convoy payload.
+- **Run #68 (`34331609526`) passed:** Flutter tests PASS, analyze PASS, APK build/fingerprint/upload PASS, Android install + >70 s screen-off owner + resume smoke PASS.
+- Run #68 APK artifact `10096095919`; extracted APK size `164328227` bytes; SHA-256 `db53ad322d033cfffc2e4299500f991aaea2fec0374a435b6e39e4199337e9d7`. CI provenance checksum matches the downloaded APK. Artifacts expire 2026-09-23 unless retained elsewhere.
 
 ## CURRENT WORK
 
-No further executable changes after validated source `87064e4e53872df81bb157c3deabd7da2b5f02cd`. Candidate is ready for the next short physical test. Reuse branch `fix/v0.4-stability` and PR #1; no parallel implementation.
+No further executable changes after validated source `9bf625a82767c0f65aea46ee72eac87bf018d2d1`. Candidate is ready for the shortest possible physical RX test. Reuse `fix/v0.4-stability` and PR #1; no parallel implementation.
 
 ## NEXT GATE
 
-Install the **same run #63 APK** on both phones and record a 2–4 minute test. First verify peer discovery (`scan_events_total > 0`, `rx_packet`/peer appears). Then make one short out-and-return walk and leave a few fixes at the endpoint to observe `loop_closed_origin` when evidence supports it. Also include one Home/screen-lock interval. Upload both JSONL files; keep them private.
+Install the **same run #68 APK** on both phones. Start outing and Test log on both, keep phones close for 30–60 seconds, press `Invia nome` once if desired, then stop/export. The primary success criterion is simply `scan_events_total > 0` / `rx_packet` / peer visible on each device. If RX works, only then repeat walking/return/background testing. Upload both distinct JSONL files privately.
 
 ## DO NOT
 
-Do not merge PR #1 before this repeat physical validation. Do not claim metre-level GNSS, guaranteed force-stop survival, active UWB/RTT, authenticated group membership or general multi-hop mesh. Do not weaken the native filter back to permanent unfiltered background scanning merely to make discovery work. Do not touch NUC/Sagre/Host Bridge from this project.
+Do not merge PR #1 before real two-phone RX succeeds. Do not claim metre-level GNSS, guaranteed force-stop survival, active UWB/RTT, authenticated membership or general multi-hop mesh. Do not revert to permanent unfiltered background scanning merely to create visible peers. Do not touch NUC/Sagre/Host Bridge from this project.
 
 ## OPEN RISKS / DEBT
 
-- Manufacturer-ID-only filtered reception is CI/build validated but requires the two real phones to prove the real-device regression is fixed.
-- Loop closure improves route consistency only when uncertainty/evidence supports a return; it cannot know ground truth when GNSS is biased.
-- OEM power/battery behaviour still needs longer physical evidence.
+- Native TX/RX now share the same Android API contract, but only the real two phones can prove radio discovery is fixed.
+- `flutter_ble_peripheral` remains an installed but unused dependency for now; remove it only after native TX is validated on the phones.
+- Loop closure improves route consistency when evidence supports a return; it cannot determine ground truth under biased GNSS.
+- OEM battery behaviour needs longer physical evidence.
 - Debug signing is not a production signing policy.
-- Analyzer retains 5 warnings + 15 infos, mostly legacy/style/deprecations; cleanup is separate from this field gate.
-- Authenticated membership, general multi-hop relaying, downloaded basemaps and diagnostic retention/deletion UX remain later work.
+- Analyzer/deprecation cleanup, authenticated groups, multi-hop relaying, downloaded basemaps and diagnostic retention UX are later work.
 
 ## CLEANUP PENDING
 
-After physical validation, classify legacy GPS/screens/helpers and clean analyzer/deprecation debt separately. Do not delete wholesale during reliability validation. Remove temporary branch only after an approved merge.
+After physical BLE validation, remove the unused BLE advertising plugin/dependency and classify legacy GPS/screens/helpers in a separate hygiene pass. Remove the temporary branch only after an approved merge.
 
 ## LAST CHECKPOINT
 
-2026-09-09: two real logs isolated zero-event receive regression despite successful TX; filter fixed without reverting to unfiltered background scan; conservative origin loop closure added; 79 tests + build + Android screen-off/resume gate passed on exact source `87064e4e53872df81bb157c3deabd7da2b5f02cd`. Next gate is repeat two-phone test with the matching APK.
+2026-09-09: second real pair of logs confirmed symmetric zero-event RX despite successful plugin TX; advertising moved fully native; run #68 passed automated test/build/emulator gate on exact source `9bf625a82767c0f65aea46ee72eac87bf018d2d1`. Next gate is a 30–60 second two-phone RX-only test with the matching APK.
