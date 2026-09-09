@@ -109,14 +109,16 @@ wait_and_tap_text() {
   while (( SECONDS < deadline )); do
     timeout 15 adb shell uiautomator dump /sdcard/convoy-ui.xml >/dev/null 2>&1 || true
     timeout 15 adb shell cat /sdcard/convoy-ui.xml > "$OUT/ui-$name.xml" 2>/dev/null || true
-    if grep -Fq "text=\"$text\"" "$OUT/ui-$name.xml"; then
-      local bounds
-      bounds=$(python3 - "$OUT/ui-$name.xml" "$text" <<'PY'
+    local bounds
+    bounds=$(python3 - "$OUT/ui-$name.xml" "$text" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 path, wanted = sys.argv[1], sys.argv[2]
-root = ET.parse(path).getroot()
+try:
+    root = ET.parse(path).getroot()
+except Exception:
+    raise SystemExit(1)
 for node in root.iter('node'):
-    if node.attrib.get('text') == wanted:
+    if node.attrib.get('text') == wanted or node.attrib.get('content-desc') == wanted:
         m = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.attrib.get('bounds',''))
         if m:
             x1,y1,x2,y2 = map(int,m.groups())
@@ -125,12 +127,11 @@ for node in root.iter('node'):
 raise SystemExit(1)
 PY
 ) || true
-      if [ -n "$bounds" ]; then
-        read -r x y <<< "$bounds"
-        timeout 15 adb shell input tap "$x" "$y"
-        printf '%s\n' "TAP: $text at $x,$y" >> "$OUT/readiness.txt"
-        return 0
-      fi
+    if [ -n "$bounds" ]; then
+      read -r x y <<< "$bounds"
+      timeout 15 adb shell input tap "$x" "$y"
+      printf '%s\n' "TAP: $text at $x,$y" >> "$OUT/readiness.txt"
+      return 0
     fi
     sleep 2
   done
