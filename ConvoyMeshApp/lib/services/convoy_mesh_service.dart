@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../ble/convoy_ble_codec.dart';
 import '../ble/ble_tx_scheduler.dart';
 import '../ble/native_ble_scan.dart';
+import '../ble/native_ble_advertiser.dart';
 import '../location/fused_location.dart';
 import '../location/gps_pedestrian_filter.dart';
 import 'background_runtime_service.dart';
@@ -21,7 +21,6 @@ class ConvoyMeshService extends ChangeNotifier {
   static final instance = ConvoyMeshService._();
   final DateTime Function() _now;
   late final FlutterReactiveBle _ble = FlutterReactiveBle();
-  late final FlutterBlePeripheral _peripheral = FlutterBlePeripheral();
   final Stopwatch _clock = Stopwatch()..start();
   Future<void>? _startFuture, _stopFuture;
   Future<void> _advOp = Future.value();
@@ -161,7 +160,6 @@ class ConvoyMeshService extends ChangeNotifier {
     _txBusy = true;
     final epoch = _generation;
     try {
-      // Keep the outing/GPS owner alive even when Bluetooth has been switched off.
       if (_lastRuntimePulse == null || _clock.elapsed - _lastRuntimePulse! >= const Duration(seconds: 5)) {
         _lastRuntimePulse = _clock.elapsed;
         await BackgroundRuntimeService.instance.pulse();
@@ -198,18 +196,18 @@ class ConvoyMeshService extends ChangeNotifier {
         'fix_source_utc': myLast?.measurementAt?.toUtc().toIso8601String(),
       });
       try {
-        if (_advertising) await _peripheral.stop().timeout(const Duration(seconds: 3));
-        _advertising = false;
-        await _peripheral.start(advertiseData: AdvertiseData(manufacturerId: ConvoyBleCodec.manufacturerId,
-          manufacturerData: payload, includeDeviceName: false, includePowerLevel: false))
-            .timeout(const Duration(seconds: 5));
+        await NativeBleAdvertiser.replace(payload).timeout(const Duration(seconds: 5));
         if (!_running || epoch != _generation) { await _stopAdvertising(); return; }
         _advertising = true; advOkCount++; success = true;
-        DiagnosticRecorder.instance.record('ble', 'tx_plugin_success', data: {'kind': kind, 'seq': seq});
+        DiagnosticRecorder.instance.record('ble', 'tx_native_success', data: {
+          'kind': kind, 'seq': seq, 'manufacturer_id': ConvoyBleCodec.manufacturerId,
+        });
       } catch (e) {
         advErrorCount++; lastAdvError = e.toString();
         await _stopAdvertising();
-        DiagnosticRecorder.instance.record('ble', 'tx_plugin_error', data: {'kind': kind, 'seq': seq, 'error': e.toString()});
+        DiagnosticRecorder.instance.record('ble', 'tx_native_error', data: {
+          'kind': kind, 'seq': seq, 'manufacturer_id': ConvoyBleCodec.manufacturerId, 'error': e.toString(),
+        });
       }
       notifyListeners();
     });
@@ -217,7 +215,7 @@ class ConvoyMeshService extends ChangeNotifier {
     return success;
   }
   Future<void> _stopAdvertising() async {
-    try { await _peripheral.stop().timeout(const Duration(seconds: 3)); } catch (_) { }
+    try { await NativeBleAdvertiser.stop().timeout(const Duration(seconds: 3)); } catch (_) { }
     _advertising = false;
   }
 
@@ -237,7 +235,6 @@ class ConvoyMeshService extends ChangeNotifier {
       _scanRetry = Timer(const Duration(seconds: 10), () { _scanRetry = null; _ensureScanRunning(); });
       notifyListeners();
     });
-    // Silence with a filtered scan can simply mean no neighbours. Do not restart it.
     notifyListeners();
   }
   Future<void> _stopScan() async {
@@ -299,7 +296,6 @@ class ConvoyMeshService extends ChangeNotifier {
     if (pkt.hasFix) {
       final newSequence = _seqAcceptable(pkt.seq, peer.lastFixSeq, peer.lastPositionPacketAt, now);
       if (newSequence) {
-        // A radio packet can be valid while its GPS estimate is unusable.
         peer.lastFixSeq = pkt.seq; peer.lastPositionPacketAt = now; valid = true;
         final measured = pkt.fixAgeSeconds == null ? now : now.subtract(Duration(seconds: pkt.fixAgeSeconds!));
         final usableAge = (pkt.fixAgeSeconds ?? 0) <= 15;
@@ -385,7 +381,6 @@ class ConvoyMeshService extends ChangeNotifier {
     if (rssi >= 0 || rssi < -127) return 'non disponibile';
     return rssi >= -60 ? 'Ottimo' : rssi >= -70 ? 'Buono' : rssi >= -80 ? 'Medio' : 'Scarso';
   }
-  /// Legacy experimental helper, not used to present real distance to users.
   static double rssiToMeters(int rssi) {
     if (rssi >= 0) return double.infinity;
     final ratio = rssi / -59.0;
