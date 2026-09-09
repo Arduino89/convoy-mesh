@@ -2,63 +2,63 @@
 
 ## STATUS
 
-Reliability candidate **0.7.1 native-BLE: automated gate passed; repeat two-phone validation pending**. Not a production release. The APK to test is bound to executable source head `9bf625a82767c0f65aea46ee72eac87bf018d2d1` and workflow run #68 (`34331609526`). This continuity commit is documentation-only and is not the APK source.
+Reliability candidate **0.7.2 Nearby + catch-up: automated gate passed; two-phone catch-up validation pending**. Not a production release. The APK to test is bound to source head `465ee5c43f69b681faa7ea9d9c9895264c31343b` and workflow run #79 (`34376335782`). Do not merge PR #1 before the physical catch-up/GPS gate.
 
 ## CURRENT ARCHITECTURE
 
-Flutter UI and one outing engine; **Android-native manufacturer advertising and Android-native manufacturer-filtered scanning**; one Dart POS/NAME/PING scheduler; stateful pedestrian GPS estimator with consensus, static anchoring, conservative origin loop-closure and source timestamps; explicit foreground-service lifetime; persistent opt-in JSONL diagnostics.
+Flutter UI with two runtime modes. **Nearby** starts automatically while the app is open: Android-native BLE scan + manufacturer advertising for presence/name, without continuous GPS or foreground service. **Outing** adds GPS/trail and the foreground service for screen-off operation. BLE TX and RX are both Android-native. A bounded HISTORY packet queue can replay the sender's own missing trail after reconnection; recovered peer points are timestamped separately from live position and rendered dashed.
 
 ## CANONICAL SOURCES
 
-- `README.md`: product scope, limitations and build commands.
-- PR #1/current branch: operative changes.
-- `.github/workflows/android-debug.yml`: automated gate/evidence.
-- `ConvoyMeshApp/android/app/src/main/kotlin/com/example/convoy_mesh/ConvoyBleAdvertiser.kt`: native TX contract.
-- `ConvoyMeshApp/android/app/src/main/kotlin/com/example/convoy_mesh/ConvoyBleScanner.kt`: native RX filter.
-- `ConvoyMeshApp/lib/ble/native_ble_advertiser.dart`: Dart→native TX bridge.
-- `ConvoyMeshApp/lib/ble/ble_tx_scheduler.dart`: POS/NAME/PING scheduling.
-- `ConvoyMeshApp/lib/location/pedestrian_position_estimator.dart`: runtime GPS estimator.
-- reliability tests under `ConvoyMeshApp/test/` and `tools/android_smoke.sh`.
+- `README.md`: product scope and limitations.
+- PR #1 / `fix/v0.4-stability`: operative changes.
+- `.github/workflows/android-debug.yml`: automated gate and evidence.
+- `ConvoyMeshApp/lib/services/convoy_mesh_service.dart`: Nearby/Outing modes, peer state and catch-up scheduling.
+- `ConvoyMeshApp/lib/ble/convoy_ble_codec.dart`: POS/NAME/PING/HISTORY wire format.
+- `ConvoyMeshApp/android/app/src/main/kotlin/com/example/convoy_mesh/ConvoyBleAdvertiser.kt` and `ConvoyBleScanner.kt`: native radio path.
+- `ConvoyMeshApp/lib/location/pedestrian_position_estimator.dart`: GPS estimator / conservative loop closure.
+- `ConvoyMeshApp/test/trail_catchup_test.dart` and other tests under `ConvoyMeshApp/test/`.
+- `tools/android_smoke.sh`: Nearby→Outing→screen-off→resume gate.
 
 ## STABILIZED DECISIONS
 
-Walking/hiking groups only. No vehicle assumptions/road snapping. Live radio presence and fresh coordinates are separate facts. RSSI is signal/proximity, not a metre ruler. Private field logs stay outside the public repo. Convoy work must not touch NUC/Sagre/Host Bridge/shared-worker state.
+Walking/hiking groups only. No vehicle assumptions or road snapping. Live radio presence and fresh coordinates are separate facts. RSSI is signal/proximity, not metres. Recovered HISTORY never replaces a peer's current position. Live POS/NAME/PING has priority over catch-up. Private field logs stay outside the public repo. Convoy work does not touch NUC/Sagre/Host Bridge/shared-worker state.
 
 ## COMPLETED
 
-- Candidate `0032e4e...` established GPS/background baseline and passed its software gate.
-- First real two-phone test on Mi 9 Lite/API29 and M2101K6G/API33: both phones transmitted successfully but both reported `scan_events_total=0`; GPS/background continued after pause. This isolated the main failure below peer/parser logic.
-- Field-fix `87064e4e...` relaxed the native RX filter to company-id matching and added conservative GPS origin loop-closure; run #63 passed 79 tests/build/emulator.
-- **Second real two-phone test on the run #63 build** repeated the failure on both directions. During the controlled ~1-minute log both devices reported BLE ready, `scanning=true`, `advertising=true`, manual scan restart, 10 requested TX and 10 plugin-success TX each, yet `scan_events_total=0`, `rx_valid_total=0`, and no peers. This rules out a Mi-9-only issue and makes plugin-advertising success insufficient evidence that compatible radio frames were emitted.
-- Native TX bridge `4c866dc62791cee5d5dd4c42ef83e6972f3c1c95`, Android advertiser `1b1b79f3acef7e53862ffacb48df2de4f49ad84b`, method-channel wiring `7331805207aa4201eb818acf078fa16e57de667e`, and service integration `9bf625a82767c0f65aea46ee72eac87bf018d2d1` remove `flutter_ble_peripheral` from the runtime TX path. TX and RX now use the same Android manufacturer contract: company ID `0x0C0A` plus Convoy payload.
-- **Run #68 (`34331609526`) passed:** Flutter tests PASS, analyze PASS, APK build/fingerprint/upload PASS, Android install + >70 s screen-off owner + resume smoke PASS.
-- Run #68 APK artifact `10096095919`; extracted APK size `164328227` bytes; SHA-256 `db53ad322d033cfffc2e4299500f991aaea2fec0374a435b6e39e4199337e9d7`. CI provenance checksum matches the downloaded APK. Artifacts expire 2026-09-23 unless retained elsewhere.
+- 0.7.1 native-BLE source `9bf625a82767c0f65aea46ee72eac87bf018d2d1`, run #68: software/emulator gate passed after replacing plugin TX with Android-native advertising.
+- **Physical two-phone result 2026-09-09:** user confirmed Mi 9 Lite/API29 and M2101K6G/API33 now see each other with the 0.7.1 native-BLE APK. This closes the symmetric zero-RX blocker seen in the earlier plugin-TX builds.
+- GPS static drift is materially improved in current testing; an intermittent peer status that can look like Francesca's GPS is unavailable remains under observation. UI wording now distinguishes a present peer with non-recent/no usable position from a proven GPS failure.
+- Nearby/Outing split implemented: opening the app performs lightweight discovery; `Avvia uscita` enables GPS + FGS; ending the outing returns to Nearby while the app remains open.
+- HISTORY catch-up implemented for known-peer reconnection gaps: up to 28 down-sampled own-track points per reconnection, bounded to 90-minute retention and transmitted only in scheduler idle slots. Receiver inserts recovered points chronologically without changing the live fix. Map renders recovered links as explicit dashed fragments compatible with `flutter_map 6.2.1`.
+- Catch-up regressions verify wire budget, recovered/live separation, chronological insertion, and bounded first/last-preserving selection.
+- **Run #79 (`34376335782`) passed completely:** 85/85 Flutter tests, analyze PASS, APK build/fingerprint/upload PASS, Android emulator smoke PASS. Smoke verifies app opens in Nearby without FGS, real UI `Avvia uscita` promotes to FGS, same outing owner survives >70 s verified screen-off and resumes without detected fatal exception.
+- Run #79 APK artifact `10114133945`; extracted APK size `164339383` bytes; SHA-256 `9f2ad7c9658d777007a9f6cc003fe1dc9e608a94d56f0e266386aba39451f7d6`. Local downloaded checksum matches CI checksum. Artifacts expire 2026-09-23 unless retained elsewhere.
 
 ## CURRENT WORK
 
-No further executable changes after validated source `9bf625a82767c0f65aea46ee72eac87bf018d2d1`. Candidate is ready for the shortest possible physical RX test. Reuse `fix/v0.4-stability` and PR #1; no parallel implementation.
+No executable changes after the run #79 source head. Candidate APK is ready for physical validation on the same two Android phones. Continue on the existing branch/PR only.
 
 ## NEXT GATE
 
-Install the **same run #68 APK** on both phones. Start outing and Test log on both, keep phones close for 30–60 seconds, press `Invia nome` once if desired, then stop/export. The primary success criterion is simply `scan_events_total > 0` / `rx_packet` / peer visible on each device. If RX works, only then repeat walking/return/background testing. Upload both distinct JSONL files privately.
+Install the **same 0.7.2 / run #79 APK** on both phones. First confirm that opening both apps, without starting an outing, shows each other in Nearby. Then start an outing on both, establish live position, separate beyond BLE range for >30 seconds while one or both walk, reconnect within 90 minutes and observe that current position updates first and missing route points arrive as dashed HISTORY. Repeat directions if practical. Record short JSONL logs, especially any period where Francesca is shown with a non-recent/unusable GPS position.
 
 ## DO NOT
 
-Do not merge PR #1 before real two-phone RX succeeds. Do not claim metre-level GNSS, guaranteed force-stop survival, active UWB/RTT, authenticated membership or general multi-hop mesh. Do not revert to permanent unfiltered background scanning merely to create visible peers. Do not touch NUC/Sagre/Host Bridge from this project.
+Do not merge PR #1 before physical catch-up and GPS-status validation. Do not claim HISTORY transfer works on real radio until observed. Do not claim metre-level GNSS, guaranteed force-stop survival, active UWB/RTT, authenticated membership or general multi-hop mesh. Do not touch NUC/Sagre/Host Bridge from this project.
 
 ## OPEN RISKS / DEBT
 
-- Native TX/RX now share the same Android API contract, but only the real two phones can prove radio discovery is fixed.
-- `flutter_ble_peripheral` remains an installed but unused dependency for now; remove it only after native TX is validated on the phones.
-- Loop closure improves route consistency when evidence supports a return; it cannot determine ground truth under biased GNSS.
+- Catch-up is bounded advertisement replay, not a reliable acknowledged bulk-transfer protocol; real reconnection loss/reordering must be measured before deciding whether acknowledgements/GATT are necessary.
+- Francesca's occasional stale/no-usable-position state needs logs before changing GPS thresholds.
 - OEM battery behaviour needs longer physical evidence.
-- Debug signing is not a production signing policy.
-- Analyzer/deprecation cleanup, authenticated groups, multi-hop relaying, downloaded basemaps and diagnostic retention UX are later work.
+- `flutter_ble_peripheral` remains installed but unused at runtime; remove after current physical gate.
+- Debug signing is not a production signing policy. Analyzer/deprecation cleanup, authenticated groups, general multi-hop, downloaded basemaps and diagnostic retention UX remain later work.
 
 ## CLEANUP PENDING
 
-After physical BLE validation, remove the unused BLE advertising plugin/dependency and classify legacy GPS/screens/helpers in a separate hygiene pass. Remove the temporary branch only after an approved merge.
+After physical validation, remove unused advertising-plugin dependency and classify legacy GPS/screens/helpers in a separate hygiene pass. Remove the temporary branch only after an approved merge.
 
 ## LAST CHECKPOINT
 
-2026-09-09: second real pair of logs confirmed symmetric zero-event RX despite successful plugin TX; advertising moved fully native; run #68 passed automated test/build/emulator gate on exact source `9bf625a82767c0f65aea46ee72eac87bf018d2d1`. Next gate is a 30–60 second two-phone RX-only test with the matching APK.
+2026-09-09: native BLE discovery confirmed on the real phone pair; Nearby automatic discovery and bounded dashed HISTORY catch-up added; run #79 passed 85 tests, analyze, APK build and Nearby→Outing→screen-off/resume smoke on exact head `465ee5c43f69b681faa7ea9d9c9895264c31343b`. Next gate is two-phone physical catch-up plus Francesca GPS-status observation.
