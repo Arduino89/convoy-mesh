@@ -2,65 +2,64 @@
 
 ## STATUS
 
-Reliability candidate **0.7.0+7: automated gate passed; two-physical-phone validation pending**. Not a production release. The delivered APK is bound to immutable source head `0032e4e0389ecf19d7cd38c019393434f828f511`, PR merge checkout `30f20d3c9ee341d55bff9bf7b319d99df9eca66d`, and completed workflow run #59 (`34215831566`). This checkpoint update is documentation only, not a newly built app. Recheck PR #1 and compare any newer revision against the validated source; every executable/test/build change needs its own gate.
+Reliability candidate **0.7.0 field-fix: automated gate passed; repeat two-phone validation pending**. Not a production release. The APK to test is bound to immutable executable/test source head `87064e4e53872df81bb157c3deabd7da2b5f02cd` and completed workflow run #63 (`34327979730`). This continuity commit is documentation-only; do not treat its newer SHA as the APK source.
 
 ## CURRENT ARCHITECTURE
 
-Flutter UI and one outing engine; manufacturer-filtered native Android BLE reception; one Dart POS/NAME/PING scheduler; a stateful pedestrian position estimator fed by source-timestamped GPS observations; an explicit foreground-service lifetime with bounded owner pulses/wake lock; opt-in persistent JSONL diagnostics.
+Flutter UI and one outing engine; Android native manufacturer-filtered BLE reception; one Dart POS/NAME/PING scheduler; stateful pedestrian GPS estimator with consensus, static anchoring, conservative origin loop-closure and source timestamps; explicit foreground-service lifetime; persistent opt-in JSONL diagnostics.
 
 ## CANONICAL SOURCES
 
 - `README.md`: product scope, limitations and build commands.
-- PR #1 and its actual source revision: operative change set.
-- `.github/workflows/android-debug.yml`: automated gate and evidence artifacts.
-- `ConvoyMeshApp/lib/ble/ble_tx_scheduler.dart`: transmission scheduling contract.
-- `ConvoyMeshApp/lib/location/pedestrian_position_estimator.dart`: runtime estimator.
-- `ConvoyMeshApp/test/reliability_regression_test.dart` and `test/gps_motion_evidence_regression_test.dart` under the same app: synthetic reliability requirements.
-- `ConvoyMeshApp/test/diagnostic_persistence_test.dart`: persistence requirements.
-- `tools/android_smoke.sh`: Android install/lifecycle checks and explicit exclusions.
+- PR #1 and current branch: operative change set.
+- `.github/workflows/android-debug.yml`: automated gate/evidence.
+- `ConvoyMeshApp/lib/ble/ble_tx_scheduler.dart`: transmission scheduling.
+- `ConvoyMeshApp/android/app/src/main/kotlin/com/example/convoy_mesh/ConvoyBleScanner.kt`: native receive filter.
+- `ConvoyMeshApp/lib/location/pedestrian_position_estimator.dart`: runtime position estimator.
+- `ConvoyMeshApp/test/reliability_regression_test.dart`, `gps_motion_evidence_regression_test.dart`, `field_log_regression_test.dart`: reliability regressions.
+- `tools/android_smoke.sh`: bounded Android install/screen-off/resume gate.
 
 ## STABILIZED DECISIONS
 
-Walking/hiking groups only. No vehicles or road snapping. Offline local position exchange is distinct from a downloaded basemap. Signal strength is not measured distance. Hardware capability detection is not implemented ranging. Never equate a live heartbeat with a fresh position.
-
-Writes are confined to `Arduino89/convoy-mesh`. No NUC jobs, Sagre edits, Host Bridge requests, shared-worker changes or writes to `Arduino89/Cama-Enterprise`. Private field logs stay outside this public repository. No paid service or deployment is authorized by this checkpoint.
+Walking/hiking groups only. No vehicle assumptions/road snapping. Live radio presence and fresh coordinates are separate facts. RSSI is proximity/signal quality, not a metre ruler. Private field logs stay outside the public repository. No NUC/Sagre/Host Bridge/shared-worker writes from Convoy work.
 
 ## COMPLETED
 
-- Baseline: `b29e17de118f49b9359cc1e3af4e89bbc0653999`; integrated candidate includes scheduler, source-age handling, native scan/runtime, persistent diagnostics and uncertainty UI.
-- September stationary failure reproduced before repair: test-only commit `e778ddef51cd333b19bf8443d888dacba37ceb35`, run #57 (`34214510036`): 69 passed / 7 failed. A single anomalous endpoint could dominate net/path motion evidence even after the stationary display rejected it. Positive walking controls passed.
-- Local repair `d7332077584a7df0bc172550f1e41a78602e1515`: require distributed material progress before GPS overrides still/unknown IMU. No existing test assertion weakened. Principle 11: level 6 localized repair, no dependency/authority changes. Run #58 passed all 76 tests and built an APK; its emulator startup assertion was premature while Flutter was loading.
-- Harness repair `0032e4e0389ecf19d7cd38c019393434f828f511`: bounded wait for the actual foreground owner, no relaunch or ignored process death, and explicit screen-off assertion.
-- **Final run #59 (`34215831566`): build SUCCESS; emulator SUCCESS.** All 76 tests passed. Analysis passed with 5 warnings and 15 infos (nonblocking, retained in log). APK compiled and was installed on Android API 35 x86_64. Same PID 2476 and the same foreground service survived >70 seconds with `mWakefulness=Asleep`, then resumed without detected app exception. Final screenshot shows the real Radar UI, not a splash/error screen.
-- APK artifact `10051830422`: 164346831 bytes after extraction. SHA-256 `8bff221765f592a4dafa6d3a7b9ed4246e92f411a72270eaedc5e4783aee098b`. CI checksum, downloaded APK checksum and emulator checksum match. Provenance artifact `10051831015`; test log `10051751583`; analyzer log `10051759649`; emulator diagnostics `10051959432`. Artifacts currently expire 2026-09-22; verify availability before reuse.
-- PR comment `5583631351` records repair and verification. Isolation notice remains comment `5574400151`.
+- Previous integrated candidate `0032e4e0389ecf19d7cd38c019393434f828f511` passed 76 tests and emulator lifecycle gate in run #59.
+- **Real two-phone test 2026-09-09** used that exact build on `Fra` (Mi 9 Lite, Android API 29) and `cama` (M2101K6G, API 33). Both logs show BLE ready, scan subscription present and advertising active. Fra requested/succeeded 40/40 TX (34 POS, 6 NAME); cama 41/41 (35 POS, 6 NAME). Yet both had `scan_events_total=0`, `rx_valid_total=0`, no peer ever created. This isolates the failure to receive-side filtered discovery, not pairing/TTL/parser/TX scheduling.
+- The same logs provide positive background evidence: after the first `paused` lifecycle event Fra continued with 29 successful BLE TX and 36 GPS fixes; cama continued with 21 TX and 23 GPS fixes. This does not certify all OEM policies, but the outing owner was not simply dying on Home/screen state.
+- GPS static behaviour was materially improved. In cama's short out-and-return trace, raw GNSS ended ~14 m from its own initial fix while the displayed estimate ended ~16 m away; the filter was not the main source of that residual. This motivated conservative loop closure rather than looser smoothing.
+- Receive fix `7e60a170ac571ddf73c3c6ff24424000320a9117`: native scan now filters by manufacturer company ID only (plus defensive swapped-ID compatibility), then lets the codec validate `CM`; raw AD parsing is a compatibility fallback. It removes the unsafe assumption that `CM` must be the first bytes exposed to Android's `ScanFilter` while preserving a real filter for screen-off scanning.
+- GPS loop-closure fix `0ad793b5414e824684a11b1961151c245b0336ef`: after an accepted excursion, two consecutive approaching fixes must overlap the origin uncertainty region before the estimator reconciles to the outing start. It cannot close a loop from stationary drift alone and does not claim improved absolute GNSS accuracy.
+- Synthetic field regressions `87064e4e53872df81bb157c3deabd7da2b5f02cd` cover biased GNSS return, high-quality nearby pass without false snap, and stationary drift without fake loop.
+- **Run #63 (`34327979730`) passed:** 79/79 Flutter tests, analyze completed (20 existing/nonblocking issues retained), APK build/fingerprint/upload successful, Android emulator install + >70 s screen-off owner + resume smoke successful.
+- Run #63 APK artifact `10094660748`; extracted APK size `164351059` bytes; SHA-256 `211f0b450f712e267c553420dc2aa8e53e96251dece1172474546b4bd38f1d51` (CI checksum equals downloaded APK checksum). Artifacts expire 2026-09-23 unless retained elsewhere.
 
 ## CURRENT WORK
 
-Reuse branch `fix/v0.4-stability` and PR #1; no parallel implementation. The automated blocker is resolved. Candidate APK is ready for physical-device testing, not certified mountain performance. Do not relaunch old failed runs or substitute older APKs.
+No further executable changes after validated source `87064e4e53872df81bb157c3deabd7da2b5f02cd`. Candidate is ready for the next short physical test. Reuse branch `fix/v0.4-stability` and PR #1; no parallel implementation.
 
 ## NEXT GATE
 
-Validate **the same candidate APK on both Android phones**: stationary outdoor convergence, start walking, Home/screen lock and return, then compare the two short diagnostic logs. Export existing logs before uninstalling any previous build with an incompatible debug signature. Keep field logs private. Record actual observations before further tuning or merge.
+Install the **same run #63 APK** on both phones and record a 2–4 minute test. First verify peer discovery (`scan_events_total > 0`, `rx_packet`/peer appears). Then make one short out-and-return walk and leave a few fixes at the endpoint to observe `loop_closed_origin` when evidence supports it. Also include one Home/screen-lock interval. Upload both JSONL files; keep them private.
 
 ## DO NOT
 
-Do not merge PR #1 before physical-device validation. Do not claim perfect GPS, guaranteed background survival, active UWB/RTT, authenticated groups, full multi-hop mesh or downloaded offline maps. Do not silently change another project's jobs or force-push over a concurrent writer. Check HEAD and blob SHA before every existing-file update. Do not describe the documentation-only checkpoint commit as the source of the built APK.
+Do not merge PR #1 before this repeat physical validation. Do not claim metre-level GNSS, guaranteed force-stop survival, active UWB/RTT, authenticated group membership or general multi-hop mesh. Do not weaken the native filter back to permanent unfiltered background scanning merely to make discovery work. Do not touch NUC/Sagre/Host Bridge from this project.
 
 ## OPEN RISKS / DEBT
 
-- The emulator gate is bounded installation/runtime evidence, not real BLE reception, GNSS accuracy, OEM power policies or battery endurance.
-- Debug signing is not a production release policy; the delivered candidate's signing certificate differs from the previously supplied 0.6 APK.
-- Five analyzer warnings and 15 infos remain; no independent reviewer sign-off.
-- Legacy GPS helper remains for compatibility/tests; the new estimator is the runtime path.
-- Relative POS source-age metadata is not complete clock synchronization; legacy packets have unknown source age.
-- Authenticated membership, general multi-hop relaying and downloaded basemaps remain outside this stabilization.
-- Diagnostic retention/deletion UX needs a later privacy/storage pass.
+- Manufacturer-ID-only filtered reception is CI/build validated but requires the two real phones to prove the real-device regression is fixed.
+- Loop closure improves route consistency only when uncertainty/evidence supports a return; it cannot know ground truth when GNSS is biased.
+- OEM power/battery behaviour still needs longer physical evidence.
+- Debug signing is not a production signing policy.
+- Analyzer retains 5 warnings + 15 infos, mostly legacy/style/deprecations; cleanup is separate from this field gate.
+- Authenticated membership, general multi-hop relaying, downloaded basemaps and diagnostic retention/deletion UX remain later work.
 
 ## CLEANUP PENDING
 
-Classify unused legacy screens/helpers after integrated validation; do not delete wholesale during reliability work. Remove the temporary branch only after an approved merge. Keep history in Git instead of duplicating app variants.
+After physical validation, classify legacy GPS/screens/helpers and clean analyzer/deprecation debt separately. Do not delete wholesale during reliability validation. Remove temporary branch only after an approved merge.
 
 ## LAST CHECKPOINT
 
-2026-09-08: failure reproduced, motion-evidence predicate repaired, 76 tests passed, exact APK built and Android install/screen-off/resume gate passed. Documentation-only closeout follows the immutable validated source above. Next gate is physical-device validation; no NUC/Sagre changes were made.
+2026-09-09: two real logs isolated zero-event receive regression despite successful TX; filter fixed without reverting to unfiltered background scan; conservative origin loop closure added; 79 tests + build + Android screen-off/resume gate passed on exact source `87064e4e53872df81bb157c3deabd7da2b5f02cd`. Next gate is repeat two-phone test with the matching APK.
