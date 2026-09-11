@@ -37,7 +37,7 @@ class GpsVisualState {
       );
     }
 
-    final quality = fix.gpsQuality.clamp(0, 100);
+    final quality = fix.gpsQuality.clamp(0, 100).toInt();
     final accuracy = fix.accuracyM ?? double.infinity;
     if (quality >= 80 && accuracy <= 15 && fix.gpsBars >= 3) {
       return GpsVisualState(
