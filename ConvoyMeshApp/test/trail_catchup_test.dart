@@ -158,4 +158,78 @@ void main() {
       expect(selected.first.ts, start.add(const Duration(seconds: 50)));
     });
   });
+
+  group('HISTORY acknowledgement and retry bookkeeping', () {
+    test('HISTORY_ACK round-trips inside legacy advertising budget', () {
+      final payload = ConvoyBleCodec.buildHistoryAckManufacturerData(
+        userId: 42,
+        seq: 101,
+        targetUserId: 99,
+        historySeq: 77,
+      );
+
+      expect(payload.length, 16);
+      expect(payload.length + 7, lessThanOrEqualTo(31));
+      final parsed = ConvoyBleCodec.parseManufacturerData(payload);
+      expect(parsed.ok, isTrue);
+      expect(parsed.packet!.kindLabel, 'HISTORY_ACK');
+      expect(parsed.packet!.isHistoryAck, isTrue);
+      expect(parsed.packet!.ackTargetUserId, 99);
+      expect(parsed.packet!.ackHistorySeq, 77);
+    });
+
+    test('receiver ACKs HISTORY transport once while still deduplicating trail data', () {
+      final now = DateTime.now().toUtc();
+      final service = ConvoyMeshService.forTest(now: () => now)..setIdentityForTest(99);
+      final payload = ConvoyBleCodec.buildHistoryManufacturerData(
+        userId: 42,
+        seq: 77,
+        lat: 45,
+        lon: 10,
+        accuracyM: 5,
+        historyAgeSeconds: 20,
+      );
+
+      service.ingestForTest(payload);
+      service.ingestForTest(payload);
+
+      expect(service.pendingHistoryAcks, 1,
+          reason: 'Duplicate radio receptions coalesce while an ACK is still pending.');
+      expect(service.peers[42]!.rxHistoryPackets, 1,
+          reason: 'Duplicate HISTORY must not duplicate the recovered trail point.');
+    });
+
+    test('ACK from intended peer clears only the matching transfer', () {
+      final now = DateTime.now().toUtc();
+      final service = ConvoyMeshService.forTest(now: () => now)..setIdentityForTest(99);
+      service.queueHistoryForTest(
+        TrackPoint(
+          lat: 45,
+          lon: 10,
+          ts: now.subtract(const Duration(seconds: 30)),
+          accuracyM: 5,
+        ),
+        peerId: 42,
+        wireSeq: 77,
+      );
+
+      service.ingestForTest(ConvoyBleCodec.buildHistoryAckManufacturerData(
+        userId: 43,
+        seq: 1,
+        targetUserId: 99,
+        historySeq: 77,
+      ));
+      expect(service.pendingHistoryPoints, 1);
+      expect(service.unackedHistoryPeersForTest(77), {42});
+
+      service.ingestForTest(ConvoyBleCodec.buildHistoryAckManufacturerData(
+        userId: 42,
+        seq: 1,
+        targetUserId: 99,
+        historySeq: 77,
+      ));
+      expect(service.pendingHistoryPoints, 0);
+      expect(service.rxHistoryAckPackets, 2);
+    });
+  });
 }
