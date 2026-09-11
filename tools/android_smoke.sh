@@ -82,7 +82,7 @@ assert_runtime() {
 assert_no_runtime() {
   local name=$1
   if runtime_ready "$name"; then
-    echo "Foreground runtime unexpectedly active in Nearby mode: $name" >&2
+    echo "Foreground runtime unexpectedly active: $name" >&2
     return 1
   fi
   local current
@@ -118,7 +118,9 @@ try:
 except Exception:
     raise SystemExit(1)
 for node in root.iter('node'):
-    if node.attrib.get('text') == wanted or node.attrib.get('content-desc') == wanted:
+    text = node.attrib.get('text', '')
+    desc = node.attrib.get('content-desc', '')
+    if text == wanted or desc == wanted or desc.startswith(wanted + '\n'):
         m = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.attrib.get('bounds',''))
         if m:
             x1,y1,x2,y2 = map(int,m.groups())
@@ -138,6 +140,23 @@ PY
   echo "UI control not found: $text" >&2
   return 1
 }
+capture_diag() {
+  local name=$1
+  timeout 15 adb shell run-as "$PACKAGE" find . -type f > "$OUT/diag-files-$name.txt"
+  local path
+  path=$(tr -d '\r' < "$OUT/diag-files-$name.txt" | grep -E 'convoy-test-.*\.jsonl$' | tail -n 1 || true)
+  if [ -z "$path" ]; then
+    echo "Diagnostic JSONL not found: $name" >&2
+    return 1
+  fi
+  timeout 15 adb shell run-as "$PACKAGE" cat "$path" > "$OUT/diag-$name.jsonl"
+  test -s "$OUT/diag-$name.jsonl"
+}
+count_matches() {
+  local pattern=$1
+  local file=$2
+  grep -c "$pattern" "$file" 2>/dev/null || true
+}
 
 timeout 90 adb install -r "$APK" | tee "$OUT/install.txt"
 grep -q 'Success' "$OUT/install.txt"
@@ -155,34 +174,86 @@ sleep 4
 assert_no_runtime nearby
 timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 
+# A diagnostic session may begin BEFORE an outing and must span the transition.
+wait_and_tap_text 'Test log' open-test-log
+wait_and_tap_text 'Avvia test • max 4 min' start-diagnostic
+sleep 2
+capture_diag nearby-test
+grep -q '"category":"session","event":"start"' "$OUT/diag-nearby-test.jsonl"
+if grep -q '"category":"session","event":"stop"' "$OUT/diag-nearby-test.jsonl"; then
+  echo 'Diagnostic session stopped unexpectedly in Nearby mode' >&2
+  exit 1
+fi
+
 # Explicitly start an outing through the real UI. Only now must FGS appear.
 wait_and_tap_text 'Avvia uscita' start-outing
 wait_for_runtime outing
 assert_runtime outing
 timeout 15 adb exec-out screencap -p > "$OUT/outing-screen.png"
 
+# Give the estimator a stationary acquisition cluster before screen-off.
+for i in 1 2 3; do
+  timeout 10 adb emu geo fix 10.0 45.0 >> "$OUT/gps-injection.txt" 2>&1
+  sleep 5
+done
+capture_diag before-screen-off
+BASE_FIXES=$(count_matches '"category":"gps","event":"fix"' "$OUT/diag-before-screen-off.jsonl")
+BASE_TRACK=$(count_matches '"track_added":true' "$OUT/diag-before-screen-off.jsonl")
+BASE_LINES=$(wc -l < "$OUT/diag-before-screen-off.jsonl")
+
 timeout 15 adb shell input keyevent KEYCODE_HOME
 timeout 15 adb shell input keyevent KEYCODE_SLEEP
 sleep 2
 timeout 15 adb shell dumpsys power > "$OUT/power-screen-off.txt"
 grep -Eq 'mWakefulness=(Asleep|Dozing)' "$OUT/power-screen-off.txt"
-# A 70-second wait exceeds the native owner lease. A dead Dart owner must fail.
-# Synthetic GPS injection exercises the platform provider, not real GNSS accuracy.
+
+# Keep a physically plausible slow walk (~2.2 m / 5 s) while the screen is off.
+# This proves more than process survival: GPS fixes must continue and the local
+# filtered trail must gain at least one point for future HISTORY catch-up.
 for i in $(seq 1 14); do
-  latitude=$(python3 -c "print(45.0 + $i * 0.000005)")
+  latitude=$(python3 -c "print(45.0 + $i * 0.00002)")
   timeout 10 adb emu geo fix 10.0 "$latitude" >> "$OUT/gps-injection.txt" 2>&1
   sleep 5
 done
 assert_runtime screen-off
+sleep 2
+capture_diag screen-off
+AFTER_FIXES=$(count_matches '"category":"gps","event":"fix"' "$OUT/diag-screen-off.jsonl")
+AFTER_TRACK=$(count_matches '"track_added":true' "$OUT/diag-screen-off.jsonl")
+if [ "$AFTER_FIXES" -le "$BASE_FIXES" ]; then
+  echo "No new GPS fixes while screen was off ($BASE_FIXES -> $AFTER_FIXES)" >&2
+  exit 1
+fi
+if [ "$AFTER_TRACK" -le "$BASE_TRACK" ]; then
+  echo "Local trail did not grow while screen was off ($BASE_TRACK -> $AFTER_TRACK)" >&2
+  exit 1
+fi
+printf '%s\n' "SCREEN_OFF_EVIDENCE: gps_fix=$BASE_FIXES->$AFTER_FIXES track_added=$BASE_TRACK->$AFTER_TRACK" >> "$OUT/readiness.txt"
+
 timeout 15 adb shell input keyevent KEYCODE_WAKEUP
 timeout 15 adb shell wm dismiss-keyguard
 launch_app_runtime resumed
 sleep 5
 assert_runtime resumed
+
+# Ending the outing must NOT end the diagnostic session.
+capture_diag before-outing-stop
+STOP_BASE_LINES=$(wc -l < "$OUT/diag-before-outing-stop.jsonl")
+wait_and_tap_text 'Uscita attiva • Termina uscita' stop-outing
+sleep 8
+assert_no_runtime after-outing-stop
+capture_diag after-outing-stop
+if grep -q '"category":"session","event":"stop"' "$OUT/diag-after-outing-stop.jsonl"; then
+  echo 'Diagnostic session was coupled to Termina uscita' >&2
+  exit 1
+fi
+tail -n +$((STOP_BASE_LINES + 1)) "$OUT/diag-after-outing-stop.jsonl" > "$OUT/diag-after-stop-tail.jsonl"
+grep -q '"outing_active":false' "$OUT/diag-after-stop-tail.jsonl"
+
 timeout 15 adb logcat -d --pid="$PID" > "$OUT/app-logcat.txt"
 if grep -E 'FATAL EXCEPTION|Fatal signal|Unhandled Exception|EXCEPTION CAUGHT BY' "$OUT/app-logcat.txt"; then
   echo 'App exception detected' >&2
   exit 1
 fi
-printf '%s\n' 'PASS: exact APK installed; Nearby mode started without FGS; explicit Outing promoted to FGS; process and owner survived verified screen-off; resumed without detected app exception.' > "$OUT/result.txt"
-printf '%s\n' 'NOT TESTED: real BLE peer-to-peer, real GNSS error, OEM energy policies, battery endurance, real multi-device catch-up transfer.' >> "$OUT/result.txt"
+printf '%s\n' 'PASS: exact APK installed; diagnostic started in Nearby and survived Outing stop; explicit Outing promoted to FGS; process/owner survived verified screen-off; GPS fixes and local trail grew while screen was off; resumed without detected app exception.' > "$OUT/result.txt"
+printf '%s\n' 'NOT TESTED: real BLE peer-to-peer, real GNSS error, OEM energy policies, battery endurance, real multi-device HISTORY ACK loss/retry.' >> "$OUT/result.txt"
