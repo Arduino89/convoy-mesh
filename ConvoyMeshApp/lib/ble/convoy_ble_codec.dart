@@ -10,6 +10,9 @@ class ConvoyPacket {
   /// HISTORY packets are filtered trail points sent after peers reconnect.
   final bool isHistory;
   final int? historyAgeSeconds;
+  /// HISTORY_ACK confirms radio receipt of one HISTORY wire sequence.
+  final bool isHistoryAck;
+  final int? ackTargetUserId, ackHistorySeq;
 
   const ConvoyPacket({
     required this.userId,
@@ -21,13 +24,18 @@ class ConvoyPacket {
     this.fixAgeSeconds,
     this.isHistory = false,
     this.historyAgeSeconds,
+    this.isHistoryAck = false,
+    this.ackTargetUserId,
+    this.ackHistorySeq,
   });
 
   bool get hasFix => lat != null && lon != null;
   bool get hasName => name != null && name!.trim().isNotEmpty;
-  String get kindLabel => isHistory
-      ? 'HISTORY'
-      : hasFix
+  String get kindLabel => isHistoryAck
+      ? 'HISTORY_ACK'
+      : isHistory
+          ? 'HISTORY'
+          : hasFix
           ? (hasName ? 'POS+NAME' : 'POS')
           : hasName
               ? 'NAME'
@@ -55,7 +63,8 @@ class ConvoyParseResult {
 /// Compact manufacturer payload.
 ///
 /// Flags:
-/// bit0 = coordinates, bit1 = name, bit2 = recovered HISTORY point.
+/// bit0 = coordinates, bit1 = name, bit2 = recovered HISTORY point,
+/// bit3 = HISTORY_ACK.
 ///
 /// HISTORY deliberately uses a new flag bit. Older Convoy parsers reject it
 /// instead of accidentally treating an old trail point as the current position.
@@ -68,6 +77,7 @@ class ConvoyBleCodec {
   static const maxNameBytes = 12;
   static const _maxAcceptedNameBytes = 20;
   static const _historyFlag = 0x04;
+  static const _historyAckFlag = 0x08;
 
   static Uint8List buildPositionManufacturerData({
     required int userId,
@@ -114,6 +124,24 @@ class ConvoyBleCodec {
         historyAgeSeconds: historyAgeSeconds,
       );
 
+  static Uint8List buildHistoryAckManufacturerData({
+    required int userId,
+    required int seq,
+    required int targetUserId,
+    required int historySeq,
+  }) =>
+      buildManufacturerData(
+        userId: userId,
+        seq: seq,
+        lat: null,
+        lon: null,
+        accuracyM: null,
+        name: null,
+        historyAck: true,
+        ackTargetUserId: targetUserId,
+        ackHistorySeq: historySeq,
+      );
+
   static Uint8List buildNameManufacturerData({
     required int userId,
     required int seq,
@@ -147,18 +175,28 @@ class ConvoyBleCodec {
     required String? name,
     bool history = false,
     int? historyAgeSeconds,
+    bool historyAck = false,
+    int? ackTargetUserId,
+    int? ackHistorySeq,
   }) {
     final hasFix = lat != null && lon != null;
     final cleaned = name?.trim();
     final hasName = cleaned != null && cleaned.isNotEmpty;
-    if (history && (!hasFix || hasName || historyAgeSeconds == null)) {
-      throw ArgumentError('HISTORY requires coordinates, age and no name');
+    if (history && (!hasFix || hasName || historyAgeSeconds == null || historyAck)) {
+      throw ArgumentError('HISTORY requires coordinates, age and no name/ACK');
+    }
+    if (historyAck &&
+        (history || hasFix || hasName || ackTargetUserId == null || ackHistorySeq == null)) {
+      throw ArgumentError('HISTORY_ACK requires target user, history sequence and no fix/name');
     }
     if (hasFix && (!lat.isFinite || !lon.isFinite || lat.abs() > 90 || lon.abs() > 180)) {
       throw ArgumentError('Invalid position');
     }
 
-    final flags = (hasFix ? 1 : 0) | (hasName ? 2 : 0) | (history ? _historyFlag : 0);
+    final flags = (hasFix ? 1 : 0) |
+        (hasName ? 2 : 0) |
+        (history ? _historyFlag : 0) |
+        (historyAck ? _historyAckFlag : 0);
     final bytes = <int>[
       0x43,
       0x4D,
@@ -192,6 +230,10 @@ class ConvoyBleCodec {
     if (history) {
       bytes.addAll(_u16(historyAgeSeconds!.clamp(0, 65535).toInt()));
     }
+    if (historyAck) {
+      bytes.addAll(_u32(ackTargetUserId!));
+      bytes.addAll(_u16(ackHistorySeq!.clamp(0, 65535).toInt()));
+    }
     return Uint8List.fromList(bytes);
   }
 
@@ -214,8 +256,10 @@ class ConvoyBleCodec {
     final hasFix = flags & 1 != 0;
     final hasName = flags & 2 != 0;
     final isHistory = flags & _historyFlag != 0;
-    if (flags & ~0x07 != 0) return error('bad_flags_$flags');
-    if (isHistory && (!hasFix || hasName)) return error('bad_history_flags');
+    final isHistoryAck = flags & _historyAckFlag != 0;
+    if (flags & ~0x0F != 0) return error('bad_flags_$flags');
+    if (isHistory && (!hasFix || hasName || isHistoryAck)) return error('bad_history_flags');
+    if (isHistoryAck && (hasFix || hasName || isHistory)) return error('bad_history_ack_flags');
 
     final userId = _readU32(data, offset + 4);
     final seq = _readU16(data, offset + 8);
@@ -249,6 +293,14 @@ class ConvoyBleCodec {
       idx += 2;
     }
 
+    int? ackTargetUserId, ackHistorySeq;
+    if (isHistoryAck) {
+      if (data.length != idx + 6) return error('bad_history_ack_length');
+      ackTargetUserId = _readU32(data, idx);
+      ackHistorySeq = _readU16(data, idx + 4);
+      idx += 6;
+    }
+
     final int? age = !isHistory && hasFix && !hasName &&
             data.length == idx + 2 && data[idx] == 0xA3
         ? data[idx + 1]
@@ -265,6 +317,9 @@ class ConvoyBleCodec {
         fixAgeSeconds: age,
         isHistory: isHistory,
         historyAgeSeconds: historyAge,
+        isHistoryAck: isHistoryAck,
+        ackTargetUserId: ackTargetUserId,
+        ackHistorySeq: ackHistorySeq,
       ),
       reason: 'ok',
       magicOffset: offset,
@@ -279,7 +334,7 @@ class ConvoyBleCodec {
         data[p] == 0x43 &&
         data[p + 1] == 0x4D &&
         (data[p + 2] == 1 || data[p + 2] == version) &&
-        data[p + 3] & ~0x07 == 0;
+        data[p + 3] & ~0x0F == 0;
     if (valid(0)) return 0;
     if (valid(2)) return 2;
     for (var i = 1; i <= (data.length - 4).clamp(0, 8); i++) {
