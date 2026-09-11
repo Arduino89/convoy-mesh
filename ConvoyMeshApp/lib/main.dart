@@ -11,6 +11,7 @@ import 'services/background_runtime_service.dart';
 import 'services/convoy_mesh_service.dart';
 import 'services/diagnostic_capture_bridge.dart';
 import 'services/diagnostic_recorder.dart';
+import 'services/location_fusion_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -136,6 +137,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         throw StateError('Torna in Convoy Mesh e premi Avvia uscita.');
       }
 
+      // The map may have started a foreground-only GPS preview. An outing owns
+      // a fresh estimator/track, so preview observations never become outing history.
+      await LocationFusionService.instance.disposeService();
       await _mesh.startOuting();
       await _runtime.start();
       if (!_runtime.isRunning) {
@@ -174,7 +178,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     }
     if ((state == AppLifecycleState.paused || state == AppLifecycleState.detached) &&
         !_runtime.isRunning) {
-      // Nearby mode is foreground-only. No outing means no background BLE cost.
+      // Nearby + map GPS preview are foreground-only. No outing means no
+      // background BLE/GPS cost and no foreground service.
+      unawaited(LocationFusionService.instance.disposeService());
       unawaited(_mesh.disposeService());
     }
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
