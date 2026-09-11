@@ -57,7 +57,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _runtime.onStopped = () async {
       AppLifecycleCoordinator.instance.runtimeActive = false;
       await _mesh.stopOuting();
-      DiagnosticRecorder.instance.stop(reason: 'outing_stopped');
+      // Diagnostic recording is independent from outing lifetime. Keep it
+      // running so one test can span Nearby -> Outing -> Nearby transitions.
       await DiagnosticRecorder.instance.flush();
       if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
         await _ensureNearby();
@@ -161,7 +162,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (_busy) return;
     setState(() => _busy = true);
     AppLifecycleCoordinator.instance.runtimeActive = false;
-    DiagnosticRecorder.instance.stop(reason: 'outing_stopped');
+    // Do not stop an active diagnostic session when the outing ends.
+    // The user owns the test session explicitly from the Test log page.
     await DiagnosticRecorder.instance.flush();
     await _mesh.stopOuting();
     await _runtime.stop();
