@@ -17,11 +17,15 @@ class DiagnosticCaptureBridge {
     final now = DateTime.now();
     recorder.record('runtime', 'snapshot', data: {
       'foreground_service': BackgroundRuntimeService.instance.isRunning,
-      'outing_running': mesh.isRunning, 'ble_status': mesh.bleStatus.name,
+      'mesh_running': mesh.isRunning, 'outing_active': mesh.isOutingActive,
+      'ble_status': mesh.bleStatus.name,
       'scanning': mesh.isScanning, 'advertising': mesh.isAdvertising,
       'rx_valid_total': mesh.rxValid, 'rx_stale_total': mesh.rxStale,
       'scan_events_total': mesh.scanEventCount, 'tx_ok_total': mesh.advOkCount,
       'tx_error_total': mesh.advErrorCount,
+      'pending_history_points': mesh.pendingHistoryPoints,
+      'pending_history_acks': mesh.pendingHistoryAcks,
+      'rx_history_ack_total': mesh.rxHistoryAckPackets,
       'local_fix_fresh': mesh.myLast?.hasFreshFixAt(now) ?? false,
       'peers': mesh.peers.values.map((p) => {
         'id': p.userId, 'name': p.name, 'online': ConvoyMeshService.isPeerOnline(p),
