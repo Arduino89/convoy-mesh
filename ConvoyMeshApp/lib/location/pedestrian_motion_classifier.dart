@@ -62,7 +62,7 @@ class PedestrianMotionClassifier {
     }
 
     _lastSampleAt = now;
-    _samples = (_samples + 1).clamp(0, 1000000);
+    if (_samples < 1000000) _samples++;
     _score = _hasScore ? _score * 0.85 + magnitude * 0.15 : magnitude;
     _hasScore = true;
 
