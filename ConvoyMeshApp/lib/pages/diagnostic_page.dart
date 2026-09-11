@@ -19,7 +19,7 @@ class DiagnosticPage extends StatelessWidget {
       builder: (context, _) {
         final id = deviceIdOverride ?? mesh!.myId;
         final name = deviceNameOverride ?? mesh!.myName;
-        final ready = id > 0 && (overrides || (mesh!.isRunning && runtime.isRunning));
+        final ready = id > 0 && (overrides || mesh!.isRunning);
         return Scaffold(appBar: AppBar(title: const Text('Test diagnostico')),
           body: ListView(padding: const EdgeInsets.all(16), children: [
             _card([
@@ -33,6 +33,7 @@ class DiagnosticPage extends StatelessWidget {
               Text(recorder.isPersistent ? 'Log salvato progressivamente sul telefono.' :
                   'Salvataggio su disco non disponibile: il log in memoria può andare perso.'),
               if (recorder.storageError != null) Text(recorder.storageError!, style: const TextStyle(color: Colors.red)),
+              const Text('Il test è indipendente dall’uscita: può iniziare prima o dopo e non si chiude con Termina uscita.'),
               const Text('Il file contiene coordinate: condividilo solo per analizzare il test.'),
               if (recorder.isActive) ...[
                 Text('Durata ${DiagnosticRecorder.formatDuration(recorder.elapsed)} • restante ${DiagnosticRecorder.formatDuration(recorder.remaining)}'),
@@ -48,7 +49,7 @@ class DiagnosticPage extends StatelessWidget {
                   if (captureNowOverride != null) { captureNowOverride!(); }
                   else { await runtime.refreshCapabilities(); DiagnosticCaptureBridge.instance.captureNow(); }
                 } : null, icon: const Icon(Icons.fiber_manual_record),
-                  label: Text(ready ? 'Avvia test • max 4 min' : 'Avvia prima l’uscita')),
+                  label: Text(ready ? 'Avvia test • max 4 min' : 'Attendo modalità Vicini')),
               ],
             ]),
             if (!recorder.isActive && recorder.hasExport) _card([
@@ -62,7 +63,7 @@ class DiagnosticPage extends StatelessWidget {
             ]),
             _card([
               const Text('Runtime e capacità hardware', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Servizio foreground: ${runtime.isRunning ? 'ATTIVO' : 'NON ATTIVO'}'),
+              Text('Servizio foreground: ${runtime.isRunning ? 'ATTIVO (uscita)' : 'NON ATTIVO'}'),
               Text('UWB: ${runtime.uwbSupported ? 'hardware supportato' : 'non rilevato'} • ranging non attivo'),
               Text('Wi-Fi RTT: ${runtime.wifiRttSupported ? 'hardware supportato' : 'non rilevato'} • ranging non attivo'),
               Text('Android API ${runtime.sdkInt ?? '-'} • ${runtime.model ?? '-'}'),
