@@ -47,7 +47,8 @@ class ConvoyMeshService extends ChangeNotifier {
   final Map<int, PeerState> _peers = {};
   Map<int, PeerState> get peers => Map.unmodifiable(_peers);
   BleTxScheduler _scheduler = BleTxScheduler();
-  final List<TrackPoint> _historyQueue = [];
+  final List<_HistoryTransfer> _historyQueue = [];
+  final List<_HistoryAckRequest> _historyAckQueue = [];
 
   StreamSubscription<BleStatus>? _statusSub;
   StreamSubscription<BleAdvertisement>? _scanSub;
@@ -64,6 +65,8 @@ class ConvoyMeshService extends ChangeNotifier {
   static const seqResetGrace = Duration(seconds: 20);
   static const trailRetention = Duration(minutes: 90);
   static const historySendEvery = Duration(seconds: 2);
+  static const historyRetryEvery = Duration(seconds: 4);
+  static const historyMaxAttempts = 4;
   static const maxHistoryCatchupPoints = 28;
   static const maxPeerWalkingSpeedKmh = 15.0;
   static const hardPeerRejectSpeedKmh = 40.0;
@@ -74,7 +77,7 @@ class ConvoyMeshService extends ChangeNotifier {
   DateTime? lastTxAt, lastRxAt, lastScanStartedAt, lastScanEventAt, lastScanRestartAt;
   String lastScanRestartReason = '-';
   int rxValid = 0, rxNoManufacturerData = 0, rxIgnoredSelf = 0, rxStale = 0;
-  int rxFixPackets = 0, rxNamePackets = 0, rxHistoryPackets = 0;
+  int rxFixPackets = 0, rxNamePackets = 0, rxHistoryPackets = 0, rxHistoryAckPackets = 0;
   int advOkCount = 0, advErrorCount = 0;
   int rxNoMagic = 0, rxBadPacket = 0, rxMagicFound = 0, lastMdBytes = 0;
   int scanRestartCount = 0, scanEventCount = 0;
@@ -86,6 +89,7 @@ class ConvoyMeshService extends ChangeNotifier {
   int get onlinePeerCount => _peers.values.where(isPeerOnline).length;
   int get offlinePeerCount => _peers.length - onlinePeerCount;
   int get pendingHistoryPoints => _historyQueue.length;
+  int get pendingHistoryAcks => _historyAckQueue.length;
   bool get localLocationServiceEnabled =>
       myLast?.serviceEnabled ?? _lastLocationEnabled ?? false;
   bool get scanMayBeBlockedByLocation =>
@@ -324,38 +328,86 @@ class ConvoyMeshService extends ChangeNotifier {
         return;
       }
 
+      // ACKs are transport control: send them promptly in idle radio slots,
+      // but never ahead of a due live POS/NAME/PING packet.
+      if (_historyAckQueue.isNotEmpty) {
+        final ack = _historyAckQueue.removeAt(0);
+        _seq = (_seq + 1) & 0xFFFF;
+        final payload = ConvoyBleCodec.buildHistoryAckManufacturerData(
+          userId: _myId,
+          seq: _seq,
+          targetUserId: ack.targetUserId,
+          historySeq: ack.historySeq,
+        );
+        final succeeded = await _sendPayload(payload, 'HISTORY_ACK', _seq, epoch);
+        if (!succeeded) _historyAckQueue.insert(0, ack);
+        return;
+      }
+
       if (!_outingActive || _historyQueue.isEmpty ||
           (_lastHistoryTx != null &&
               _clock.elapsed - _lastHistoryTx! < historySendEvery)) {
         return;
       }
 
-      TrackPoint? point;
-      while (_historyQueue.isNotEmpty) {
-        final candidate = _historyQueue.removeAt(0);
-        final age = _now().difference(candidate.ts).inSeconds;
-        if (age >= 0 && age <= trailRetention.inSeconds) {
-          point = candidate;
+      _historyQueue.removeWhere((transfer) {
+        final age = _now().difference(transfer.point.ts).inSeconds;
+        return transfer.complete || age < 0 || age > trailRetention.inSeconds;
+      });
+      if (_historyQueue.isEmpty) return;
+
+      _HistoryTransfer? transfer;
+      for (final candidate in _historyQueue) {
+        final due = candidate.lastAttemptAt == null ||
+            _clock.elapsed - candidate.lastAttemptAt! >= historyRetryEvery;
+        if (!candidate.complete && candidate.attempts < historyMaxAttempts && due) {
+          transfer = candidate;
           break;
         }
       }
-      if (point == null) return;
 
-      _seq = (_seq + 1) & 0xFFFF;
-      final age = _now().difference(point.ts).inSeconds;
+      // A transfer that exhausted retries is dropped explicitly instead of
+      // blocking later points forever. Missing targets remain visible in logs.
+      if (transfer == null) {
+        final exhausted = _historyQueue
+            .where((item) => !item.complete && item.attempts >= historyMaxAttempts)
+            .toList(growable: false);
+        for (final item in exhausted) {
+          DiagnosticRecorder.instance.record('ble', 'history_abandoned', data: {
+            'history_seq': item.wireSeq,
+            'attempts': item.attempts,
+            'unacked_peer_ids': item.unackedTargets.toList()..sort(),
+          });
+          _historyQueue.remove(item);
+        }
+        return;
+      }
+
+      if (transfer.wireSeq == null) {
+        _seq = (_seq + 1) & 0xFFFF;
+        transfer.wireSeq = _seq;
+      }
+      final age = _now().difference(transfer.point.ts).inSeconds;
       final payload = ConvoyBleCodec.buildHistoryManufacturerData(
         userId: _myId,
-        seq: _seq,
-        lat: point.lat,
-        lon: point.lon,
-        accuracyM: point.accuracyM,
+        seq: transfer.wireSeq!,
+        lat: transfer.point.lat,
+        lon: transfer.point.lon,
+        accuracyM: transfer.point.accuracyM,
         historyAgeSeconds: age,
       );
-      final succeeded = await _sendPayload(payload, 'HISTORY', _seq, epoch);
+      final succeeded =
+          await _sendPayload(payload, 'HISTORY', transfer.wireSeq!, epoch);
       if (succeeded) {
+        transfer.attempts++;
+        transfer.lastAttemptAt = _clock.elapsed;
         _lastHistoryTx = _clock.elapsed;
-      } else {
-        _historyQueue.insert(0, point);
+        DiagnosticRecorder.instance.record('ble', 'history_attempt', data: {
+          'history_seq': transfer.wireSeq,
+          'attempt': transfer.attempts,
+          'target_peer_ids': transfer.targets.toList()..sort(),
+          'unacked_peer_ids': transfer.unackedTargets.toList()..sort(),
+        });
       }
     } catch (e) {
       lastAdvError = e.toString();
@@ -497,6 +549,30 @@ class ConvoyMeshService extends ChangeNotifier {
         ),
       );
 
+  @visibleForTesting
+  void setIdentityForTest(int userId) {
+    _myId = userId;
+  }
+
+  @visibleForTesting
+  void queueHistoryForTest(
+    TrackPoint point, {
+    required int peerId,
+    int? wireSeq,
+  }) {
+    final transfer = _HistoryTransfer(point: point, targets: {peerId})
+      ..wireSeq = wireSeq;
+    _historyQueue.add(transfer);
+  }
+
+  @visibleForTesting
+  Set<int> unackedHistoryPeersForTest(int wireSeq) {
+    for (final transfer in _historyQueue) {
+      if (transfer.wireSeq == wireSeq) return transfer.unackedTargets;
+    }
+    return const <int>{};
+  }
+
   void _handleScanResult(BleAdvertisement d) {
     final now = _now();
     scanEventCount++;
@@ -554,8 +630,30 @@ class ConvoyMeshService extends ChangeNotifier {
     final previouslyValid = peer.rxPackets > 0;
     peer.markHeard(now: now, rssi: d.rssi, address: d.id);
 
-    var valid = false, acceptedFix = false, acceptedHistory = false;
+    var valid = false,
+        acceptedFix = false,
+        acceptedHistory = false,
+        acceptedHistoryAck = false;
     final rejected = <String>[];
+
+    if (pkt.isHistoryAck) {
+      if (_seqAcceptable(
+          pkt.seq, peer.lastHistoryAckSeq, peer.lastHistoryAckSeen, now)) {
+        peer.lastHistoryAckSeq = pkt.seq;
+        peer.lastHistoryAckSeen = now;
+        peer.rxHistoryAckPackets++;
+        rxHistoryAckPackets++;
+        valid = true;
+        if (pkt.ackTargetUserId == _myId && pkt.ackHistorySeq != null) {
+          acceptedHistoryAck = _acceptHistoryAck(
+            fromPeerId: pkt.userId,
+            historySeq: pkt.ackHistorySeq!,
+          );
+        }
+      } else {
+        rejected.add('history_ack_sequence');
+      }
+    }
 
     if (pkt.hasName) {
       if (_seqAcceptable(pkt.seq, peer.lastNameSeq, peer.lastNameSeen, now)) {
@@ -571,6 +669,9 @@ class ConvoyMeshService extends ChangeNotifier {
     }
 
     if (pkt.isHistory) {
+      // ACK means "radio packet received", not "point accepted into trail".
+      // Even duplicates are ACKed again so a lost ACK can be repaired.
+      _queueHistoryAck(targetUserId: pkt.userId, historySeq: pkt.seq);
       final newSequence =
           _seqAcceptable(pkt.seq, peer.lastHistorySeq, peer.lastHistorySeen, now);
       if (newSequence) {
@@ -642,7 +743,7 @@ class ConvoyMeshService extends ChangeNotifier {
       }
     }
 
-    if (!pkt.hasName && !pkt.hasFix) {
+    if (!pkt.hasName && !pkt.hasFix && !pkt.isHistoryAck) {
       if (_seqAcceptable(pkt.seq, peer.lastPingSeq, peer.lastPingSeen, now)) {
         peer.lastPingSeq = pkt.seq;
         peer.lastPingSeen = now;
@@ -659,6 +760,7 @@ class ConvoyMeshService extends ChangeNotifier {
       'accepted_packet': valid,
       'accepted_fix': acceptedFix,
       'accepted_history': acceptedHistory,
+      'accepted_history_ack': acceptedHistoryAck,
       'rejected_parts': rejected,
     });
 
@@ -690,18 +792,61 @@ class ConvoyMeshService extends ChangeNotifier {
     if (selected.isEmpty) return;
 
     for (final point in selected) {
-      final exists = _historyQueue.any((queued) =>
-          (queued.ts.difference(point.ts).inMilliseconds).abs() <= 500 &&
-          PeerState.distanceMeters(queued.lat, queued.lon, point.lat, point.lon) < 1);
-      if (!exists) _historyQueue.add(point);
+      _HistoryTransfer? existing;
+      for (final queued in _historyQueue) {
+        if ((queued.point.ts.difference(point.ts).inMilliseconds).abs() <= 500 &&
+            PeerState.distanceMeters(queued.point.lat, queued.point.lon, point.lat, point.lon) < 1) {
+          existing = queued;
+          break;
+        }
+      }
+      if (existing == null) {
+        _historyQueue.add(_HistoryTransfer(point: point, targets: {peerId}));
+      } else {
+        existing.targets.add(peerId);
+      }
     }
-    _historyQueue.sort((a, b) => a.ts.compareTo(b.ts));
+    _historyQueue.sort((a, b) => a.point.ts.compareTo(b.point.ts));
     DiagnosticRecorder.instance.record('ble', 'history_queued', data: {
       'peer_id': peerId,
       'gap_seconds': now.difference(since).inSeconds,
       'queued_points': selected.length,
       'pending_total': _historyQueue.length,
     });
+  }
+
+  void _queueHistoryAck({required int targetUserId, required int historySeq}) {
+    final exists = _historyAckQueue.any(
+      (ack) => ack.targetUserId == targetUserId && ack.historySeq == historySeq,
+    );
+    if (!exists) {
+      _historyAckQueue.add(
+        _HistoryAckRequest(targetUserId: targetUserId, historySeq: historySeq),
+      );
+    }
+  }
+
+  bool _acceptHistoryAck({required int fromPeerId, required int historySeq}) {
+    var matched = false;
+    final completed = <_HistoryTransfer>[];
+    for (final transfer in _historyQueue) {
+      if (transfer.wireSeq != historySeq || !transfer.targets.contains(fromPeerId)) {
+        continue;
+      }
+      matched = true;
+      transfer.acknowledgedBy.add(fromPeerId);
+      DiagnosticRecorder.instance.record('ble', 'history_acknowledged', data: {
+        'history_seq': historySeq,
+        'peer_id': fromPeerId,
+        'attempts': transfer.attempts,
+        'remaining_peer_ids': transfer.unackedTargets.toList()..sort(),
+      });
+      if (transfer.complete) completed.add(transfer);
+    }
+    for (final transfer in completed) {
+      _historyQueue.remove(transfer);
+    }
+    return matched;
   }
 
   @visibleForTesting
@@ -780,6 +925,8 @@ class ConvoyMeshService extends ChangeNotifier {
     _gcTimer = null;
     _scanRetry?.cancel();
     _scanRetry = null;
+    _historyAckQueue.clear();
+    _historyQueue.clear();
     await _statusSub?.cancel();
     _statusSub = null;
     await _stopScan();
@@ -847,6 +994,27 @@ class ConvoyMeshService extends ChangeNotifier {
   }
 }
 
+class _HistoryTransfer {
+  _HistoryTransfer({required this.point, required Set<int> targets})
+      : targets = {...targets};
+
+  final TrackPoint point;
+  final Set<int> targets;
+  final Set<int> acknowledgedBy = {};
+  int? wireSeq;
+  int attempts = 0;
+  Duration? lastAttemptAt;
+
+  Set<int> get unackedTargets => targets.difference(acknowledgedBy);
+  bool get complete => unackedTargets.isEmpty;
+}
+
+class _HistoryAckRequest {
+  const _HistoryAckRequest({required this.targetUserId, required this.historySeq});
+  final int targetUserId;
+  final int historySeq;
+}
+
 class PeerState {
   final int userId;
   PeerState({required this.userId});
@@ -858,8 +1026,13 @@ class PeerState {
       lastFixSeq = -1,
       lastNameSeq = -1,
       lastPingSeq = -1,
-      lastHistorySeq = -1;
-  int rxPackets = 0, rxFixPackets = 0, rxNamePackets = 0, rxHistoryPackets = 0;
+      lastHistorySeq = -1,
+      lastHistoryAckSeq = -1;
+  int rxPackets = 0,
+      rxFixPackets = 0,
+      rxNamePackets = 0,
+      rxHistoryPackets = 0,
+      rxHistoryAckPackets = 0;
   DateTime lastSeen = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime lastHeardAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime? lastFixSeen,
@@ -867,6 +1040,7 @@ class PeerState {
       lastNameSeen,
       lastPingSeen,
       lastHistorySeen,
+      lastHistoryAckSeen,
       lastPositionPacketAt;
   final List<PeerPoint> trail = [];
   final List<({DateTime at, int value})> _signal = [];
