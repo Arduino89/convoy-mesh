@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
+import '../location/gps_visual_state.dart';
 import '../services/convoy_mesh_service.dart';
 import '../services/location_fusion_service.dart';
 
@@ -14,7 +16,38 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   final _map = MapController();
-  bool _centered = false, _onlineBasemap = true;
+  bool _centered = false, _onlineBasemap = true, _centerOnNextFresh = false;
+
+  Future<void> _locate(ConvoyMeshService mesh, LocationFusionService loc) async {
+    _centerOnNextFresh = true;
+    if (!mesh.isOutingActive) {
+      final permission = await ph.Permission.locationWhenInUse.request();
+      if (!permission.isGranted) {
+        _centerOnNextFresh = false;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Concedi il permesso Posizione per cercare il GPS.')),
+          );
+        }
+        return;
+      }
+      await loc.start();
+    }
+
+    if (!mounted) return;
+    final fix = loc.last;
+    if (fix?.serviceEnabled == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Attiva la Posizione del telefono per cercare il GPS.')),
+      );
+      return;
+    }
+    if (fix?.hasFreshFixAt(DateTime.now()) == true && fix?.lat != null && fix?.lon != null) {
+      _centerOnNextFresh = false;
+      _map.move(LatLng(fix!.lat!, fix.lon!), _map.camera.zoom);
+    }
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +57,14 @@ class _MapPageState extends State<MapPage> {
       animation: Listenable.merge([mesh, loc]),
       builder: (context, _) {
         final me = mesh.myLast;
+        final now = DateTime.now();
         final mePos = me?.lat != null && me?.lon != null ? LatLng(me!.lat!, me.lon!) : null;
-        final myFresh = me?.hasFreshFixAt(DateTime.now()) ?? false;
+        final myFresh = me?.hasFreshFixAt(now) ?? false;
+        final gpsVisual = GpsVisualState.from(loc.last, now);
         final centre = mePos ?? const LatLng(45.25, 10.75);
-        if (!_centered && mePos != null) {
+        if ((!_centered || _centerOnNextFresh) && myFresh && mePos != null) {
           _centered = true;
+          _centerOnNextFresh = false;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) _map.move(mePos, 16);
           });
@@ -96,7 +132,10 @@ class _MapPageState extends State<MapPage> {
           for (var i = 1; i < points.length; i++) {
             final a = points[i - 1];
             final b = points[i];
-            // Sender-side GPS reacquisition intentionally starts a new segment.
+            final timeGap = b.ts.difference(a.ts);
+            // Missing HISTORY packets must remain a visible gap, not a made-up
+            // straight line spanning a long period with no observations.
+            if (timeGap.isNegative || timeGap > const Duration(seconds: 30)) continue;
             if (a.segment != b.segment && !a.recovered && !b.recovered) continue;
             final start = LatLng(a.lat, a.lon);
             final end = LatLng(b.lat, b.lon);
@@ -143,14 +182,21 @@ class _MapPageState extends State<MapPage> {
           ));
         }
 
+        final gpsText = switch (gpsVisual.mode) {
+          GpsVisualMode.off => 'GPS non agganciato. Tocca il mirino per cercare la posizione.',
+          GpsVisualMode.searching => 'Ricerca GPS in corso…',
+          GpsVisualMode.stable => '${gpsVisual.label}. Incertezza ±${(me?.accuracyM ?? 0).toStringAsFixed(0)} m.',
+          GpsVisualMode.unstable => '${gpsVisual.label}. Incertezza ±${(me?.accuracyM ?? 0).toStringAsFixed(0)} m.',
+        };
+
         return Scaffold(
           appBar: AppBar(
             title: const Text('Mappa'),
             actions: [
               IconButton(
-                tooltip: 'Centra sulla mia posizione',
-                onPressed: mePos == null ? null : () => _map.move(mePos, _map.camera.zoom),
-                icon: const Icon(Icons.my_location),
+                tooltip: '${gpsVisual.label} • tocca per localizzarti',
+                onPressed: () => _locate(mesh, loc),
+                icon: _GpsStatusIcon(state: gpsVisual),
               ),
               IconButton(
                 tooltip: 'Cancella la mia traccia',
@@ -173,9 +219,7 @@ class _MapPageState extends State<MapPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  mePos == null
-                      ? 'Aggancio GPS in corso. Nessuna posizione affidabile da mostrare.'
-                      : 'Cerchi = incertezza stimata. ${myFresh ? 'Mia misura recente.' : 'Mia misura non aggiornata: ${ConvoyMeshService.ageLabel(me?.measurementAt)}.'} Tratteggio = percorso recuperato dopo una riconnessione.',
+                  '$gpsText Cerchi = incertezza stimata. Tratteggio = percorso recuperato dopo una riconnessione.',
                   style: const TextStyle(fontSize: 12),
                 ),
               ),
@@ -248,4 +292,62 @@ class _MapPageState extends State<MapPage> {
           ],
         ),
       );
+}
+
+class _GpsStatusIcon extends StatefulWidget {
+  const _GpsStatusIcon({required this.state});
+
+  final GpsVisualState state;
+
+  @override
+  State<_GpsStatusIcon> createState() => _GpsStatusIconState();
+}
+
+class _GpsStatusIconState extends State<_GpsStatusIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(vsync: this);
+  late final Animation<double> _opacity = Tween<double>(begin: 0.35, end: 1).animate(
+    CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _configure();
+  }
+
+  @override
+  void didUpdateWidget(covariant _GpsStatusIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state.mode != widget.state.mode ||
+        oldWidget.state.blinkPeriod != widget.state.blinkPeriod) {
+      _configure();
+    }
+  }
+
+  void _configure() {
+    final period = widget.state.blinkPeriod;
+    if (period == null) {
+      _controller.stop();
+      _controller.value = 1;
+      return;
+    }
+    _controller.duration = period;
+    _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colour = widget.state.isGreen ? Colors.green : Colors.red;
+    return FadeTransition(
+      opacity: _opacity,
+      child: Icon(Icons.my_location, color: colour),
+    );
+  }
 }
