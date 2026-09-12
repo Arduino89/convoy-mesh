@@ -87,6 +87,8 @@ Before the outing:
 4. Open Convoy, grant requested permissions, then open **Test log** on each phone. Verify both show build beginning `3e056f88…`. A clean install should not show a recovered `File pronto` card.
 5. Still without starting an Outing, confirm the diagnostic button is enabled as `Avvia test • max 4 min` once Nearby is active and the phones discover each other.
 
+**Do not start the actual walking/separation test until all five preflight checks match on both phones.** If one phone shows a different version/build/UI state, stop there and correct installation first.
+
 Recommended single outing:
 
 6. Start Test log on both phones while still in Nearby.
