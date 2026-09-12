@@ -10,7 +10,7 @@ Current validated executable source: `3e056f88ab44a4fbb9989058a9191e2bebc3cba4`,
 
 Unlike earlier milestones that accidentally reused `0.7.0+7`, this candidate has an explicit higher Android package version. Android App info should show **0.7.6**, and diagnostic JSONL records `0.7.6+8`. The in-app diagnostic page also displays the exact `BUILD_COMMIT`; verify the same build on both phones before any field test.
 
-The old/new build mismatch was caught before physical testing: one phone still showed build `93dfb23…` while the other showed `5eba40…`. Therefore the controlled field gate now requires a **clean install on both phones**, not an in-place upgrade.
+The old/new build mismatch was caught before physical testing: one phone still showed build `93dfb23…` while the other showed `5eba40…`. Therefore the controlled field gate requires a **clean install on both phones**, not an in-place upgrade. Do not begin the walking/separation test unless both phones show version `0.7.6`, build prefix `3e056f88`, matching Nearby/Test-log behaviour and no recovered old `File pronto` state.
 
 Read `CONTINUITY.md` before continuing work. This is not a certified release: emulator checks and physical-device evidence are separate gates.
 
