@@ -81,7 +81,7 @@ class DiagnosticRecorder extends ChangeNotifier {
     _stopwatch = Stopwatch()..start();
     _active = true;
     _append('session', 'start', {
-      'schema_version': 2, 'app_version': '0.7.0+7', 'build_commit': buildCommit,
+      'schema_version': 2, 'app_version': '0.7.6+8', 'build_commit': buildCommit,
       'max_duration_ms': maxDuration.inMilliseconds, 'disk_buffer_max_ms': 1000,
       'persistent_storage': isPersistent,
       'timezone_offset_minutes': DateTime.now().timeZoneOffset.inMinutes,
