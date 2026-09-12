@@ -31,7 +31,7 @@ class _MapPageState extends State<MapPage> {
         }
         return;
       }
-      await loc.start();
+      await loc.startPreview();
     }
 
     if (!mounted) return;

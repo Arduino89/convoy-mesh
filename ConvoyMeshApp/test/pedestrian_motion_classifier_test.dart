@@ -87,4 +87,23 @@ void main() {
     expect(classifier.isReliableAt(const Duration(seconds: 2)), isTrue);
     expect(classifier.isReliableAt(const Duration(seconds: 5)), isFalse);
   });
+  test('sensor delivery gap cannot satisfy slow-motion hold time by itself', () {
+    final classifier = PedestrianMotionClassifier();
+    for (var ms = 0; ms <= 400; ms += 100) {
+      expect(feed(classifier, 0.36, ms).moving, isFalse);
+    }
+
+    // A ten-second pause is missing evidence, not ten seconds of walking.
+    final resumed = feed(classifier, 0.36, 10000);
+    expect(resumed.moving, isFalse);
+    expect(classifier.isReliableAt(const Duration(seconds: 10)), isFalse);
+
+    PedestrianMotionUpdate? update;
+    for (var ms = 10100; ms <= 14100; ms += 100) {
+      update = feed(classifier, 0.36, ms);
+    }
+    expect(update!.moving, isTrue,
+        reason: 'Fresh continuous evidence after the gap may detect slow walking.');
+  });
+
 }

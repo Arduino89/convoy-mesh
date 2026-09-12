@@ -140,6 +140,54 @@ PY
   echo "UI control not found: $text" >&2
   return 1
 }
+wait_and_tap_location_permission() {
+  local name=$1
+  local deadline=$((SECONDS + 60))
+  while (( SECONDS < deadline )); do
+    timeout 15 adb shell uiautomator dump /sdcard/convoy-permission.xml >/dev/null 2>&1 || true
+    timeout 15 adb shell cat /sdcard/convoy-permission.xml > "$OUT/ui-$name.xml" 2>/dev/null || true
+    local bounds
+    bounds=$(python3 - "$OUT/ui-$name.xml" <<'PY2'
+import re, sys, xml.etree.ElementTree as ET
+path = sys.argv[1]
+try:
+    root = ET.parse(path).getroot()
+except Exception:
+    raise SystemExit(1)
+preferred = []
+fallback = []
+for node in root.iter('node'):
+    rid = node.attrib.get('resource-id','')
+    text = node.attrib.get('text','').lower()
+    target = None
+    if rid.endswith('permission_allow_foreground_only_button'):
+        target = preferred
+    elif ('while using' in text or 'durante l\'uso' in text) and 'allow' in text or 'mentre usi' in text:
+        target = fallback
+    if target is not None:
+        m = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.attrib.get('bounds',''))
+        if m:
+            target.append(tuple(map(int,m.groups())))
+for candidates in (preferred, fallback):
+    if candidates:
+        x1,y1,x2,y2 = candidates[0]
+        print((x1+x2)//2, (y1+y2)//2)
+        raise SystemExit(0)
+raise SystemExit(1)
+PY2
+) || true
+    if [ -n "$bounds" ]; then
+      read -r x y <<< "$bounds"
+      timeout 15 adb shell input tap "$x" "$y"
+      printf '%s\n' "TAP: location permission at $x,$y" >> "$OUT/readiness.txt"
+      return 0
+    fi
+    sleep 2
+  done
+  echo 'Location permission request not shown on clean install' >&2
+  return 1
+}
+
 capture_diag() {
   local name=$1
   timeout 15 adb shell run-as "$PACKAGE" find . -type f > "$OUT/diag-files-$name.txt"
@@ -160,17 +208,27 @@ count_matches() {
 
 timeout 90 adb install -r "$APK" | tee "$OUT/install.txt"
 grep -q 'Success' "$OUT/install.txt"
-for permission in ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION BLUETOOTH_SCAN BLUETOOTH_CONNECT BLUETOOTH_ADVERTISE POST_NOTIFICATIONS; do
+# Grant Bluetooth first but deliberately leave location ungranted. Nearby itself
+# must request location on a clean Android 12+ install because Convoy uses BLE
+# observations as proximity/location evidence and does not declare neverForLocation.
+for permission in BLUETOOTH_SCAN BLUETOOTH_CONNECT BLUETOOTH_ADVERTISE POST_NOTIFICATIONS; do
   timeout 15 adb shell pm grant "$PACKAGE" "android.permission.$permission"
 done
+timeout 15 adb shell pm revoke "$PACKAGE" android.permission.ACCESS_FINE_LOCATION >/dev/null 2>&1 || true
+timeout 15 adb shell pm revoke "$PACKAGE" android.permission.ACCESS_COARSE_LOCATION >/dev/null 2>&1 || true
 timeout 15 adb shell cmd location set-location-enabled true
 timeout 15 adb shell input keyevent KEYCODE_WAKEUP
 timeout 15 adb shell wm dismiss-keyguard
 timeout 15 adb logcat -c
 
-# Opening the app must enter lightweight Nearby mode: process alive, no FGS yet.
-launch_app_process nearby
-sleep 4
+# Opening the app must request location before Nearby discovery, then remain a
+# lightweight process with no foreground service.
+launch_app_process nearby-first-run
+wait_and_tap_location_permission location-first-run
+sleep 3
+timeout 15 adb shell pm check-permission android.permission.ACCESS_FINE_LOCATION "$PACKAGE" \
+  > "$OUT/location-permission.txt"
+grep -q 'granted' "$OUT/location-permission.txt"
 assert_no_runtime nearby
 timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 
@@ -255,5 +313,5 @@ if grep -E 'FATAL EXCEPTION|Fatal signal|Unhandled Exception|EXCEPTION CAUGHT BY
   echo 'App exception detected' >&2
   exit 1
 fi
-printf '%s\n' 'PASS: exact APK installed; diagnostic started in Nearby and survived Outing stop; explicit Outing promoted to FGS; process/owner survived verified screen-off; GPS fixes and local trail grew while screen was off; resumed without detected app exception.' > "$OUT/result.txt"
+printf '%s\n' 'PASS: exact APK clean-install location request passed; diagnostic started in Nearby and survived Outing stop; explicit Outing promoted to FGS; process/owner survived verified screen-off; GPS fixes and local trail grew while screen was off; resumed without detected app exception.' > "$OUT/result.txt"
 printf '%s\n' 'NOT TESTED: real BLE peer-to-peer, real GNSS error, OEM energy policies, battery endurance, real multi-device HISTORY ACK loss/retry.' >> "$OUT/result.txt"

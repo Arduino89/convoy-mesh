@@ -10,10 +10,16 @@ import 'package:flutter/services.dart';
 class NativeBleAdvertiser {
   static const MethodChannel _channel = MethodChannel('convoy_mesh/system');
 
-  static Future<void> replace(Uint8List manufacturerPayload) async {
+  static Future<void> replace(
+    Uint8List manufacturerPayload, {
+    int? ttlMs,
+  }) async {
     final ok = await _channel.invokeMethod<bool>(
       'replaceNativeAdvertising',
-      <String, Object?>{'payload': manufacturerPayload},
+      <String, Object?>{
+        'payload': manufacturerPayload,
+        if (ttlMs != null) 'ttlMs': ttlMs,
+      },
     );
     if (ok != true) {
       throw StateError('Advertising BLE nativo non avviato');

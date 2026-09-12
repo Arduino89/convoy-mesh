@@ -199,6 +199,87 @@ void main() {
           reason: 'Duplicate HISTORY must not duplicate the recovered trail point.');
     });
 
+
+    test('out-of-order unseen HISTORY is stored and ACKed instead of discarded', () {
+      final now = DateTime.now().toUtc();
+      final service = ConvoyMeshService.forTest(now: () => now)..setIdentityForTest(99);
+
+      service.ingestForTest(ConvoyBleCodec.buildHistoryManufacturerData(
+        userId: 42,
+        seq: 101,
+        lat: 45.0010,
+        lon: 10,
+        accuracyM: 5,
+        historyAgeSeconds: 10,
+      ));
+      service.ingestForTest(ConvoyBleCodec.buildHistoryManufacturerData(
+        userId: 42,
+        seq: 100,
+        lat: 45.0005,
+        lon: 10,
+        accuracyM: 5,
+        historyAgeSeconds: 20,
+      ));
+
+      final peer = service.peers[42]!;
+      expect(peer.rxHistoryPackets, 2);
+      expect(peer.trail.where((p) => p.recovered), hasLength(2));
+      expect(service.pendingHistoryAcks, 2);
+      expect(peer.trail.first.ts.isBefore(peer.trail.last.ts), isTrue);
+    });
+
+    test('unusable HISTORY is not ACKed as successfully conserved', () {
+      final now = DateTime.now().toUtc();
+      final service = ConvoyMeshService.forTest(now: () => now)..setIdentityForTest(99);
+
+      service.ingestForTest(ConvoyBleCodec.buildHistoryManufacturerData(
+        userId: 42,
+        seq: 55,
+        lat: 45,
+        lon: 10,
+        accuracyM: 120,
+        historyAgeSeconds: 20,
+      ));
+
+      expect(service.pendingHistoryAcks, 0);
+      expect(service.peers[42]!.rxHistoryPackets, 0);
+    });
+
+
+    test('ACK control queue remains globally bounded under duplicate pressure', () {
+      final now = DateTime.now().toUtc();
+      final service = ConvoyMeshService.forTest(now: () => now)..setIdentityForTest(99);
+      for (var seq = 0; seq < 100; seq++) {
+        service.ingestForTest(ConvoyBleCodec.buildHistoryManufacturerData(
+          userId: 42,
+          seq: seq,
+          lat: 45 + seq / 1000000,
+          lon: 10,
+          accuracyM: 5,
+          historyAgeSeconds: 100 - seq,
+        ));
+      }
+      expect(service.pendingHistoryAcks, lessThanOrEqualTo(64));
+    });
+
+    test('clearing local trail invalidates queued outgoing HISTORY', () {
+      final now = DateTime.now().toUtc();
+      final service = ConvoyMeshService.forTest(now: () => now)..setIdentityForTest(99);
+      service.queueHistoryForTest(
+        TrackPoint(
+          lat: 45,
+          lon: 10,
+          ts: now.subtract(const Duration(seconds: 10)),
+          accuracyM: 5,
+        ),
+        peerId: 42,
+        wireSeq: 7,
+      );
+      expect(service.pendingHistoryPoints, 1);
+      service.clearMyTrail();
+      expect(service.pendingHistoryPoints, 0);
+    });
+
     test('ACK from intended peer clears only the matching transfer', () {
       final now = DateTime.now().toUtc();
       final service = ConvoyMeshService.forTest(now: () => now)..setIdentityForTest(99);

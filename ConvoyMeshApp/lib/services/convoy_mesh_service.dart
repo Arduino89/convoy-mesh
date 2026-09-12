@@ -54,7 +54,8 @@ class ConvoyMeshService extends ChangeNotifier {
   StreamSubscription<BleAdvertisement>? _scanSub;
   StreamSubscription<FusedLocation>? _locSub;
   Timer? _txTimer, _gcTimer, _scanRetry;
-  Duration? _lastRuntimePulse, _lastScanRestart, _lastHistoryTx;
+  Duration? _lastRuntimePulse, _lastScanRestart, _lastHistoryTx, _lastHistoryAckTx;
+  bool _preferAckControl = true;
   bool? _lastLocationEnabled;
 
   static const peerOnlineTtl = Duration(seconds: 30);
@@ -65,9 +66,14 @@ class ConvoyMeshService extends ChangeNotifier {
   static const seqResetGrace = Duration(seconds: 20);
   static const trailRetention = Duration(minutes: 90);
   static const historySendEvery = Duration(seconds: 2);
+  static const historyAckSendEvery = Duration(seconds: 2);
   static const historyRetryEvery = Duration(seconds: 4);
   static const historyMaxAttempts = 4;
   static const maxHistoryCatchupPoints = 28;
+  static const maxPendingHistoryTransfers = 96;
+  static const maxPendingHistoryAcks = 64;
+  static const positionFreshSeconds = 15;
+  static const positionRadioSafetySeconds = 2;
   static const maxPeerWalkingSpeedKmh = 15.0;
   static const hardPeerRejectSpeedKmh = 40.0;
 
@@ -128,6 +134,8 @@ class ConvoyMeshService extends ChangeNotifier {
     _scheduler = BleTxScheduler();
     _lastRuntimePulse = null;
     _lastHistoryTx = null;
+    _lastHistoryAckTx = null;
+    _preferAckControl = true;
 
     await _statusSub?.cancel();
     _statusSub = _ble.statusStream.listen((status) {
@@ -178,7 +186,7 @@ class ConvoyMeshService extends ChangeNotifier {
     _outingActive = true;
     final epoch = _generation;
     try {
-      await LocationFusionService.instance.start();
+      await LocationFusionService.instance.startOuting(resetTrack: true);
       if (!_running || epoch != _generation || !_outingActive) {
         await LocationFusionService.instance.disposeService();
         return;
@@ -248,6 +256,8 @@ class ConvoyMeshService extends ChangeNotifier {
     _myId = _newId();
     _seq = 0;
     _peers.clear();
+    _historyQueue.clear();
+    _historyAckQueue.clear();
     await (await SharedPreferences.getInstance()).setInt('my_id', _myId);
     spamMyNameNow();
   }
@@ -265,6 +275,9 @@ class ConvoyMeshService extends ChangeNotifier {
 
   void clearMyTrail() {
     LocationFusionService.instance.clearTrack();
+    _historyQueue.clear();
+    _lastHistoryTx = null;
+    DiagnosticRecorder.instance.record('ble', 'history_cleared_with_local_trail');
     notifyListeners();
   }
 
@@ -303,34 +316,59 @@ class ConvoyMeshService extends ChangeNotifier {
 
       if (kind != null) {
         _seq = (_seq + 1) & 0xFFFF;
-        final payload = switch (kind) {
-          BleTxKind.position => ConvoyBleCodec.buildPositionManufacturerData(
-              userId: _myId,
-              seq: _seq,
-              lat: f!.lat,
-              lon: f.lon,
-              accuracyM: f.accuracyM,
-              fixAgeSeconds: _now().difference(f.measurementAt!).inSeconds,
-            ),
-          BleTxKind.name => ConvoyBleCodec.buildNameManufacturerData(
-              userId: _myId,
-              seq: _seq,
-              name: _myName,
-            ),
-          BleTxKind.ping => ConvoyBleCodec.buildPingManufacturerData(
-              userId: _myId,
-              seq: _seq,
-            ),
-        };
+        int? radioTtlMs;
+        late final Uint8List payload;
+        if (kind == BleTxKind.position) {
+          final fixAgeSeconds = _now().difference(f!.measurementAt!).inSeconds;
+          radioTtlMs = positionAdvertisementTtlMs(fixAgeSeconds);
+          payload = ConvoyBleCodec.buildPositionManufacturerData(
+            userId: _myId,
+            seq: _seq,
+            lat: f.lat,
+            lon: f.lon,
+            accuracyM: f.accuracyM,
+            fixAgeSeconds: fixAgeSeconds,
+          );
+        } else if (kind == BleTxKind.name) {
+          payload = ConvoyBleCodec.buildNameManufacturerData(
+            userId: _myId,
+            seq: _seq,
+            name: _myName,
+          );
+        } else {
+          payload = ConvoyBleCodec.buildPingManufacturerData(
+            userId: _myId,
+            seq: _seq,
+          );
+        }
         final label = kind == BleTxKind.position ? 'POS' : kind.name.toUpperCase();
-        final succeeded = await _sendPayload(payload, label, _seq, epoch);
+        final succeeded = await _sendPayload(
+          payload,
+          label,
+          _seq,
+          epoch,
+          radioTtlMs: radioTtlMs,
+        );
         if (succeeded) _scheduler.didSend(kind, _clock.elapsed);
         return;
       }
 
-      // ACKs are transport control: send them promptly in idle radio slots,
-      // but never ahead of a due live POS/NAME/PING packet.
-      if (_historyAckQueue.isNotEmpty) {
+      _historyQueue.removeWhere((transfer) {
+        final age = _now().difference(transfer.point.ts).inSeconds;
+        return transfer.complete || age < 0 || age > trailRetention.inSeconds;
+      });
+
+      final ackDue = _historyAckQueue.isNotEmpty &&
+          (_lastHistoryAckTx == null ||
+              _clock.elapsed - _lastHistoryAckTx! >= historyAckSendEvery);
+      final historyDue = _outingActive &&
+          _historyQueue.isNotEmpty &&
+          (_lastHistoryTx == null ||
+              _clock.elapsed - _lastHistoryTx! >= historySendEvery);
+
+      // Control traffic shares idle slots fairly. Live POS/NAME/PING above still
+      // has strict priority, while ACK and HISTORY alternate when both are due.
+      if (ackDue && (!historyDue || _preferAckControl)) {
         final ack = _historyAckQueue.removeAt(0);
         _seq = (_seq + 1) & 0xFFFF;
         final payload = ConvoyBleCodec.buildHistoryAckManufacturerData(
@@ -340,21 +378,16 @@ class ConvoyMeshService extends ChangeNotifier {
           historySeq: ack.historySeq,
         );
         final succeeded = await _sendPayload(payload, 'HISTORY_ACK', _seq, epoch);
-        if (!succeeded) _historyAckQueue.insert(0, ack);
+        if (succeeded) {
+          _lastHistoryAckTx = _clock.elapsed;
+          _preferAckControl = false;
+        } else {
+          _historyAckQueue.insert(0, ack);
+        }
         return;
       }
 
-      if (!_outingActive || _historyQueue.isEmpty ||
-          (_lastHistoryTx != null &&
-              _clock.elapsed - _lastHistoryTx! < historySendEvery)) {
-        return;
-      }
-
-      _historyQueue.removeWhere((transfer) {
-        final age = _now().difference(transfer.point.ts).inSeconds;
-        return transfer.complete || age < 0 || age > trailRetention.inSeconds;
-      });
-      if (_historyQueue.isEmpty) return;
+      if (!historyDue) return;
 
       _HistoryTransfer? transfer;
       for (final candidate in _historyQueue) {
@@ -402,6 +435,7 @@ class ConvoyMeshService extends ChangeNotifier {
         transfer.attempts++;
         transfer.lastAttemptAt = _clock.elapsed;
         _lastHistoryTx = _clock.elapsed;
+        _preferAckControl = true;
         DiagnosticRecorder.instance.record('ble', 'history_attempt', data: {
           'history_seq': transfer.wireSeq,
           'attempt': transfer.attempts,
@@ -421,7 +455,13 @@ class ConvoyMeshService extends ChangeNotifier {
     }
   }
 
-  Future<bool> _sendPayload(Uint8List payload, String kind, int seq, int epoch) async {
+  Future<bool> _sendPayload(
+    Uint8List payload,
+    String kind,
+    int seq,
+    int epoch, {
+    int? radioTtlMs,
+  }) async {
     var success = false;
     _advOp = _advOp.then((_) async {
       if (!_running || epoch != _generation || _bleStatus != BleStatus.ready) return;
@@ -436,9 +476,11 @@ class ConvoyMeshService extends ChangeNotifier {
         'device_id': _myId,
         'payload_hex': ConvoyBleCodec.previewHex(payload),
         'fix_source_utc': myLast?.measurementAt?.toUtc().toIso8601String(),
+        'radio_ttl_ms': radioTtlMs,
       });
       try {
-        await NativeBleAdvertiser.replace(payload).timeout(const Duration(seconds: 5));
+        await NativeBleAdvertiser.replace(payload, ttlMs: radioTtlMs)
+            .timeout(const Duration(seconds: 5));
         if (!_running || epoch != _generation) {
           await _stopAdvertising();
           return;
@@ -541,11 +583,18 @@ class ConvoyMeshService extends ChangeNotifier {
   }
 
   @visibleForTesting
-  void ingestForTest(Uint8List payload, {int rssi = -65}) => _handleScanResult(
+  void ingestForTest(
+    Uint8List payload, {
+    int rssi = -65,
+    int nativeDeliveryDelayMs = 0,
+  }) =>
+      _handleScanResult(
         BleAdvertisement(
           id: 'synthetic',
           rssi: rssi,
           manufacturerData: payload,
+          observedElapsedNanos: 0,
+          deliveredElapsedNanos: nativeDeliveryDelayMs * 1000000,
         ),
       );
 
@@ -610,6 +659,8 @@ class ConvoyMeshService extends ChangeNotifier {
       'rssi': d.rssi,
       'source_age_s': pkt.isHistory ? pkt.historyAgeSeconds : pkt.fixAgeSeconds,
       'observed_elapsed_nanos': d.observedElapsedNanos,
+      'delivered_elapsed_nanos': d.deliveredElapsedNanos,
+      'native_scan_delay_ms': d.nativeDeliveryDelayMs,
       'payload_hex': parsed.inputPreviewHex,
     });
     if (pkt.userId == 0) {
@@ -637,21 +688,18 @@ class ConvoyMeshService extends ChangeNotifier {
     final rejected = <String>[];
 
     if (pkt.isHistoryAck) {
-      if (_seqAcceptable(
-          pkt.seq, peer.lastHistoryAckSeq, peer.lastHistoryAckSeen, now)) {
-        peer.lastHistoryAckSeq = pkt.seq;
-        peer.lastHistoryAckSeen = now;
-        peer.rxHistoryAckPackets++;
-        rxHistoryAckPackets++;
-        valid = true;
-        if (pkt.ackTargetUserId == _myId && pkt.ackHistorySeq != null) {
-          acceptedHistoryAck = _acceptHistoryAck(
-            fromPeerId: pkt.userId,
-            historySeq: pkt.ackHistorySeq!,
-          );
-        }
-      } else {
-        rejected.add('history_ack_sequence');
+      // ACKs are idempotent control messages. Never apply the monotonic live
+      // sequence filter here: radio reordering must not make an older ACK vanish.
+      peer.lastHistoryAckSeq = pkt.seq;
+      peer.lastHistoryAckSeen = now;
+      peer.rxHistoryAckPackets++;
+      rxHistoryAckPackets++;
+      valid = true;
+      if (pkt.ackTargetUserId == _myId && pkt.ackHistorySeq != null) {
+        acceptedHistoryAck = _acceptHistoryAck(
+          fromPeerId: pkt.userId,
+          historySeq: pkt.ackHistorySeq!,
+        );
       }
     }
 
@@ -669,15 +717,17 @@ class ConvoyMeshService extends ChangeNotifier {
     }
 
     if (pkt.isHistory) {
-      // ACK means "radio packet received", not "point accepted into trail".
-      // Even duplicates are ACKed again so a lost ACK can be repaired.
-      _queueHistoryAck(targetUserId: pkt.userId, historySeq: pkt.seq);
-      final newSequence =
-          _seqAcceptable(pkt.seq, peer.lastHistorySeq, peer.lastHistorySeen, now);
-      if (newSequence) {
-        peer.lastHistorySeq = pkt.seq;
-        peer.lastHistorySeen = now;
+      final alreadyStored = peer.hasStoredHistorySequence(
+        pkt.seq,
+        now: now,
+        retention: trailRetention,
+      );
+      if (alreadyStored) {
+        // Re-ACK an idempotent duplicate so a lost ACK can be repaired.
+        _queueHistoryAck(targetUserId: pkt.userId, historySeq: pkt.seq);
         valid = true;
+        rejected.add('history_duplicate');
+      } else {
         final age = pkt.historyAgeSeconds;
         final accuracy = pkt.accuracyM ?? double.infinity;
         if (age != null &&
@@ -693,14 +743,23 @@ class ConvoyMeshService extends ChangeNotifier {
             measuredAt: now.subtract(Duration(seconds: age)),
             retention: trailRetention,
           );
+          peer.rememberStoredHistorySequence(
+            pkt.seq,
+            now: now,
+            retention: trailRetention,
+          );
+          peer.lastHistorySeq = pkt.seq;
+          peer.lastHistorySeen = now;
           peer.rxHistoryPackets++;
           rxHistoryPackets++;
           acceptedHistory = true;
+          valid = true;
+          // ACK now means the usable point is represented locally, not merely
+          // that a radio callback happened. Out-of-order unseen IDs are valid.
+          _queueHistoryAck(targetUserId: pkt.userId, historySeq: pkt.seq);
         } else {
           rejected.add('history_unusable');
         }
-      } else {
-        rejected.add('history_sequence');
       }
     } else if (pkt.hasFix) {
       final newSequence =
@@ -709,10 +768,15 @@ class ConvoyMeshService extends ChangeNotifier {
         peer.lastFixSeq = pkt.seq;
         peer.lastPositionPacketAt = now;
         valid = true;
-        final measured = pkt.fixAgeSeconds == null
+        final nativeDelaySeconds = (d.nativeDeliveryDelayMs + 999) ~/ 1000;
+        final effectiveAgeSeconds = pkt.fixAgeSeconds == null
+            ? null
+            : pkt.fixAgeSeconds! + nativeDelaySeconds;
+        final measured = effectiveAgeSeconds == null
             ? now
-            : now.subtract(Duration(seconds: pkt.fixAgeSeconds!));
-        final usableAge = (pkt.fixAgeSeconds ?? 0) <= 15;
+            : now.subtract(Duration(seconds: effectiveAgeSeconds));
+        final usableAge =
+            effectiveAgeSeconds == null || effectiveAgeSeconds <= positionFreshSeconds;
         final plausible = !peer.hasFix ||
             peer.lastFixSeen == null ||
             isPeerMovementPlausible(
@@ -800,7 +864,16 @@ class ConvoyMeshService extends ChangeNotifier {
           break;
         }
       }
-      if (existing == null) {
+      if (existing == null ||
+          (existing.attempts >= historyMaxAttempts &&
+              !existing.targets.contains(peerId))) {
+        if (_historyQueue.length >= maxPendingHistoryTransfers) {
+          DiagnosticRecorder.instance.record('ble', 'history_queue_saturated', data: {
+            'peer_id': peerId,
+            'limit': maxPendingHistoryTransfers,
+          });
+          break;
+        }
         _historyQueue.add(_HistoryTransfer(point: point, targets: {peerId}));
       } else {
         existing.targets.add(peerId);
@@ -820,6 +893,14 @@ class ConvoyMeshService extends ChangeNotifier {
       (ack) => ack.targetUserId == targetUserId && ack.historySeq == historySeq,
     );
     if (!exists) {
+      if (_historyAckQueue.length >= maxPendingHistoryAcks) {
+        final evicted = _historyAckQueue.removeAt(0);
+        DiagnosticRecorder.instance.record('ble', 'history_ack_queue_evicted', data: {
+          'target_user_id': evicted.targetUserId,
+          'history_seq': evicted.historySeq,
+          'limit': maxPendingHistoryAcks,
+        });
+      }
       _historyAckQueue.add(
         _HistoryAckRequest(targetUserId: targetUserId, historySeq: historySeq),
       );
@@ -847,6 +928,13 @@ class ConvoyMeshService extends ChangeNotifier {
       _historyQueue.remove(transfer);
     }
     return matched;
+  }
+
+  @visibleForTesting
+  static int positionAdvertisementTtlMs(int fixAgeSeconds) {
+    final remaining =
+        positionFreshSeconds - positionRadioSafetySeconds - fixAgeSeconds;
+    return max(1000, min(180000, remaining * 1000));
   }
 
   @visibleForTesting
@@ -1044,6 +1132,7 @@ class PeerState {
       lastPositionPacketAt;
   final List<PeerPoint> trail = [];
   final List<({DateTime at, int value})> _signal = [];
+  final Map<int, DateTime> _storedHistorySequences = {};
 
   bool get hasFix => lat != null && lon != null;
 
@@ -1074,6 +1163,25 @@ class PeerState {
       _signal.add((at: now, value: rssi));
       if (_signal.length > 20) _signal.removeAt(0);
     }
+  }
+
+
+  bool hasStoredHistorySequence(
+    int seq, {
+    required DateTime now,
+    required Duration retention,
+  }) {
+    _storedHistorySequences.removeWhere((_, at) => now.difference(at) > retention);
+    return _storedHistorySequences.containsKey(seq);
+  }
+
+  void rememberStoredHistorySequence(
+    int seq, {
+    required DateTime now,
+    required Duration retention,
+  }) {
+    _storedHistorySequences.removeWhere((_, at) => now.difference(at) > retention);
+    _storedHistorySequences[seq] = now;
   }
 
   void addPointIfValid({required Duration retention}) {

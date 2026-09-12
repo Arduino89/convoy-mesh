@@ -37,13 +37,35 @@ class LocationFusionService extends ChangeNotifier {
   StreamSubscription<UserAccelerometerEvent>? _motionSub;
   Timer? _ageTimer;
   bool _running = false, _hasPerm = false, _serviceEnabled = false;
+  bool _recordTrack = false;
   int _generation = 0, _positionGeneration = 0, _segment = 0;
   final Stopwatch _clock = Stopwatch()..start();
   static const int updateSeconds = 5;
   static const int trackRetentionMinutes = 90;
   bool get _motionReliable => _motion.isReliableAt(_clock.elapsed);
+  bool get isRecordingTrack => _running && _recordTrack;
 
-  Future<void> start() => _startFuture ??= _startInternal();
+  Future<void> startPreview() => _start(recordTrack: false, resetTrack: false);
+
+  Future<void> startOuting({bool resetTrack = true}) =>
+      _start(recordTrack: true, resetTrack: resetTrack);
+
+  /// Compatibility alias for older callers: a generic start means an outing.
+  Future<void> start() => startOuting();
+
+  Future<void> _start({required bool recordTrack, required bool resetTrack}) {
+    if (_running) {
+      if (_recordTrack == recordTrack) return Future.value();
+      return Future.error(StateError('Arresta la localizzazione corrente prima di cambiare modalità.'));
+    }
+    _recordTrack = recordTrack;
+    if (resetTrack) {
+      _track.clear();
+      _segment = 0;
+    }
+    return _startFuture ??= _startInternal();
+  }
+
   Future<void> _startInternal() async {
     _running = true;
     final epoch = ++_generation;
@@ -143,7 +165,7 @@ class LocationFusionService extends ChangeNotifier {
     );
     if (result.decision == 'reacquired') _segment++;
     var added = false;
-    if (result.addToTrack && result.isFreshAt(received) && result.lat != null &&
+    if (_recordTrack && result.addToTrack && result.isFreshAt(received) && result.lat != null &&
         result.lon != null && result.accuracyM != null) {
       final previous = _track.isEmpty ? null : _track.last;
       final distance = previous == null || previous.segment != _segment
@@ -182,6 +204,7 @@ class LocationFusionService extends ChangeNotifier {
       'fresh': result.isFreshAt(received),
       'track_added': added,
       'track_points_total': _track.length,
+      'record_track': _recordTrack,
       'moving': _motion.moving,
       'motion_reliable': _motionReliable,
       'motion_score': _motion.score,
@@ -250,6 +273,7 @@ class LocationFusionService extends ChangeNotifier {
     await _posSub?.cancel();
     _posSub = null;
     _motion.reset();
+    _recordTrack = false;
     _startFuture = null;
     _emit(_estimator.snapshot('stopped'));
   }

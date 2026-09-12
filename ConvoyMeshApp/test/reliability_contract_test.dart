@@ -70,6 +70,33 @@ void main() {
       expect(fix(now, now, permission: false).hasFreshFixAt(now), isFalse);
       expect(fix(now, now, enabled: false).hasFreshFixAt(now), isFalse);
     });
+
+    test('POS radio lifetime shrinks as source measurement approaches freshness limit', () {
+      expect(ConvoyMeshService.positionAdvertisementTtlMs(0), 13000);
+      expect(ConvoyMeshService.positionAdvertisementTtlMs(10), 3000);
+      expect(ConvoyMeshService.positionAdvertisementTtlMs(14), 1000);
+      expect(ConvoyMeshService.positionAdvertisementTtlMs(30), 1000);
+    });
+
+
+    test('native scan callback delay contributes to received POS age', () {
+      final now = DateTime.now();
+      final service = ConvoyMeshService.forTest(now: () => now);
+      service.ingestForTest(
+        ConvoyBleCodec.buildPositionManufacturerData(
+          userId: 42,
+          seq: 1,
+          lat: 45,
+          lon: 10,
+          accuracyM: 5,
+          fixAgeSeconds: 10,
+        ),
+        nativeDeliveryDelayMs: 6000,
+      );
+      expect(service.peers[42]!.hasFix, isFalse,
+          reason: '10 s source age + 6 s native delivery delay is already stale.');
+    });
+
     test('a heartbeat does not alter a previously accepted source fix', () {
       var now = DateTime.now();
       final service = ConvoyMeshService.forTest(now: () => now);

@@ -41,15 +41,9 @@ class PedestrianPositionEstimator {
 
   final List<GpsObservation> _window = [];
   GpsObservation? _anchor;
-  GpsObservation? _origin;
   DateTime? _supportedAt, _lastInputAt;
   double? _displayAccuracy;
 
-  // Loop-closure evidence is intentionally tiny and bounded. It is only used
-  // after real accepted movement away from the outing origin.
-  double _maxAcceptedExcursionFromOriginM = 0;
-  double? _previousRawDistanceToOriginM;
-  int _originReturnEvidence = 0;
 
   PositionEstimate snapshot(String decision) => PositionEstimate(
         lat: _anchor?.lat,
@@ -116,34 +110,16 @@ class PedestrianPositionEstimator {
       if (consensus == null) {
         return snapshot(anchor == null ? 'acquiring' : 'reacquiring');
       }
-      final result = _accept(
+      return _accept(
         consensus,
         sample.at,
         anchor == null ? 'acquired' : 'reacquired',
         false,
       );
-      if (_origin == null) {
-        _origin = GpsObservation(
-          consensus.lat,
-          consensus.lon,
-          consensus.accuracyM,
-          consensus.at,
-        );
-      }
-      return result;
     }
 
     final gpsWalking = _hasWalkingEvidence();
 
-    // Before applying the normal moving/stationary update, check whether a
-    // completed excursion is coherently returning inside the uncertainty region
-    // of the outing origin. This is NOT an arbitrary snap-to-start: it requires
-    // accepted movement away from origin, uncertainty overlap and at least two
-    // consecutive approaching raw fixes. It addresses the common phone-GNSS
-    // behaviour where the same physical point is reported 10-20 m apart before
-    // and after a short loop.
-    final closed = _maybeCloseOrigin(sample);
-    if (closed != null) return closed;
 
     if ((!motionReliable || !moving) && !gpsWalking) {
       final consensus = _consensus();
@@ -203,82 +179,6 @@ class PedestrianPositionEstimator {
     );
   }
 
-  PositionEstimate? _maybeCloseOrigin(GpsObservation sample) {
-    final origin = _origin;
-    final anchor = _anchor;
-    if (origin == null || anchor == null) return null;
-
-    final distanceToOrigin = _distance(origin, sample);
-    final previousDistance = _previousRawDistanceToOriginM;
-    _previousRawDistanceToOriginM = distanceToOrigin;
-
-    // RSS/GNSS "accuracy" values are radii/uncertainty estimates, not truth.
-    // Use root-sum-square to test whether the start and current measurement
-    // regions plausibly overlap, then cap the gate to avoid huge poor-GPS snaps.
-    final combinedUncertainty = sqrt(
-      origin.accuracyM * origin.accuracyM +
-          sample.accuracyM * sample.accuracyM,
-    );
-    final closureGateM = max(8.0, min(25.0, combinedUncertainty * 1.15));
-    final excursionRequiredM = max(15.0, closureGateM * 1.15);
-
-    if (_maxAcceptedExcursionFromOriginM < excursionRequiredM) {
-      _originReturnEvidence = 0;
-      return null;
-    }
-
-    final approaching = previousDistance == null ||
-        distanceToOrigin <= previousDistance + 2.0;
-    final insideGate = distanceToOrigin <= closureGateM;
-
-    if (insideGate && approaching) {
-      _originReturnEvidence++;
-    } else if (distanceToOrigin > closureGateM * 1.5) {
-      _originReturnEvidence = 0;
-    } else if (!approaching && _originReturnEvidence > 0) {
-      _originReturnEvidence--;
-    }
-
-    if (_originReturnEvidence < 2) return null;
-
-    // Require that the recent raw window also contains at least two samples
-    // compatible with the origin. This prevents one low-accuracy endpoint from
-    // closing the loop by itself.
-    final recentNearOrigin = _window
-        .where((p) {
-          final combined = sqrt(
-            origin.accuracyM * origin.accuracyM +
-                p.accuracyM * p.accuracyM,
-          );
-          final gate = max(8.0, min(25.0, combined * 1.15));
-          return _distance(origin, p) <= gate;
-        })
-        .length;
-    if (recentNearOrigin < 2) return null;
-
-    final inferredAccuracy = max(
-      origin.accuracyM,
-      max(sample.accuracyM, distanceToOrigin),
-    );
-    final reconciled = GpsObservation(
-      origin.lat,
-      origin.lon,
-      inferredAccuracy,
-      sample.at,
-    );
-
-    _originReturnEvidence = 0;
-    _maxAcceptedExcursionFromOriginM = 0;
-    _previousRawDistanceToOriginM = 0;
-
-    return _accept(
-      reconciled,
-      sample.at,
-      'loop_closed_origin',
-      true,
-    );
-  }
-
   bool _hasWalkingEvidence() {
     if (_window.length < 5) return false;
     final points = _window.sublist(_window.length - 5);
@@ -324,14 +224,6 @@ class PedestrianPositionEstimator {
     _anchor = point;
     _displayAccuracy = point.accuracyM;
     _supportedAt = support;
-
-    final origin = _origin;
-    if (origin != null && track && decision != 'loop_closed_origin') {
-      _maxAcceptedExcursionFromOriginM = max(
-        _maxAcceptedExcursionFromOriginM,
-        _distance(origin, point),
-      );
-    }
 
     return PositionEstimate(
       lat: point.lat,

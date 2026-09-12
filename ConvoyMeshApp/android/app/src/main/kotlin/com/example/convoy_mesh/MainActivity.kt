@@ -55,7 +55,8 @@ class MainActivity : FlutterActivity() {
                             val args = call.arguments as? Map<*, *>
                             val payload = args?.get("payload") as? ByteArray
                                 ?: throw IllegalArgumentException("Payload advertising mancante")
-                            nativeAdvertiser.replace(payload) { ok, error ->
+                            val ttlMs = (args["ttlMs"] as? Number)?.toInt() ?: 0
+                            nativeAdvertiser.replace(payload, ttlMs) { ok, error ->
                                 if (ok) result.success(true)
                                 else result.error("BLE_ADVERTISE_FAILED", error, null)
                             }

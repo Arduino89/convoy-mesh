@@ -28,7 +28,7 @@ class ConvoyBleAdvertiser(context: Context) {
     private var callback: AdvertiseCallback? = null
     private var generation = 0
 
-    fun replace(payload: ByteArray, done: (Boolean, String?) -> Unit) {
+    fun replace(payload: ByteArray, timeoutMs: Int = 0, done: (Boolean, String?) -> Unit) {
         stopInternal()
         val epoch = generation
         try {
@@ -36,6 +36,7 @@ class ConvoyBleAdvertiser(context: Context) {
             // Legacy advertising has a 31-byte limit. Flags consume 3 bytes and
             // manufacturer AD framing consumes 4, leaving 24 bytes for Convoy.
             require(payload.size <= 24) { "Payload BLE troppo grande: ${payload.size} byte" }
+            require(timeoutMs in 0..180000) { "TTL advertising non valido: $timeoutMs ms" }
 
             val adapter = (app.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
             val native = adapter?.bluetoothLeAdvertiser
@@ -45,7 +46,7 @@ class ConvoyBleAdvertiser(context: Context) {
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
                 .setConnectable(false)
-                .setTimeout(0)
+                .setTimeout(timeoutMs)
                 .build()
 
             val data = AdvertiseData.Builder()

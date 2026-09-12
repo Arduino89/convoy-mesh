@@ -82,16 +82,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   /// Foreground lobby: nearby people are visible as soon as both apps are open.
   /// It advertises identity/presence only; GPS/background begin with an outing.
   Future<void> _ensureNearby() async {
-    if (_mesh.isRunning) return;
     try {
       await _runtime.refreshCapabilities();
       final sdk = _runtime.sdkInt ?? 31;
-      if (sdk < 31) {
-        final location = await ph.Permission.locationWhenInUse.request();
-        if (!location.isGranted) {
-          throw StateError('Concedi il permesso Posizione: su Android precedenti serve anche per trovare dispositivi BLE vicini.');
-        }
-      } else {
+      if (sdk >= 31) {
         final permissions = await [
           ph.Permission.bluetoothScan,
           ph.Permission.bluetoothConnect,
@@ -101,8 +95,24 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           throw StateError('Concedi il permesso Dispositivi vicini.');
         }
       }
+
+      // Convoy deliberately uses BLE observations as proximity/location
+      // evidence, so the manifest does not claim neverForLocation. Request the
+      // matching location permission even in Nearby; this does NOT start GPS
+      // tracking or the foreground service. It also makes clean installs behave
+      // like devices that previously granted location through an outing.
+      final location = await ph.Permission.locationWhenInUse.request();
+      if (!location.isGranted) {
+        throw StateError(
+          'Concedi il permesso Posizione per trovare dispositivi Convoy vicini. '
+          'In modalità Vicini non viene avviato il tracking GPS continuo.',
+        );
+      }
+
       if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
-      await _mesh.startNearby();
+      if (!_mesh.isRunning) {
+        await _mesh.startNearby();
+      }
       await _mesh.refreshNow(reason: 'app_open_nearby');
       if (mounted) setState(() => _error = null);
     } catch (e) {

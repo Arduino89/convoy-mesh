@@ -9,6 +9,7 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import io.flutter.plugin.common.EventChannel
 
 /**
@@ -58,11 +59,13 @@ class ConvoyBleScanner(context: Context) : EventChannel.StreamHandler {
                         ?: record.getManufacturerSpecificData(MANUFACTURER_ID_SWAPPED)
                         ?: findConvoyManufacturerPayload(record.bytes)
                         ?: return
+                    val deliveredElapsedNanos = SystemClock.elapsedRealtimeNanos()
                     val event = mapOf(
                         "id" to result.device.address,
                         "rssi" to result.rssi,
                         "data" to data,
                         "observed_elapsed_nanos" to result.timestampNanos,
+                        "delivered_elapsed_nanos" to deliveredElapsedNanos,
                     )
                     handler.post { if (epoch == generation) events.success(event) }
                 }

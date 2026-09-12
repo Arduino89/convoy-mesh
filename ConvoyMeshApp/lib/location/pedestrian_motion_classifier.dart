@@ -61,6 +61,21 @@ class PedestrianMotionClassifier {
       );
     }
 
+    final previousSampleAt = _lastSampleAt;
+    final sampleGap = previousSampleAt == null ? null : now - previousSampleAt;
+    if (sampleGap != null && sampleGap > reliableMaxAge) {
+      // Sensor delivery can pause under scheduler pressure/suspend. A wall-clock
+      // gap is not evidence that weak motion continued for the whole interval.
+      // Keep the last coarse state, but force fresh samples before it becomes
+      // reliable again and discard all partially satisfied hold windows.
+      _samples = 0;
+      _hasScore = false;
+      _score = 0;
+      _strongSince = null;
+      _slowSince = null;
+      _quietSince = null;
+    }
+
     _lastSampleAt = now;
     if (_samples < 1000000) _samples++;
     _score = _hasScore ? _score * 0.85 + magnitude * 0.15 : magnitude;

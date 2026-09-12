@@ -32,27 +32,25 @@ void main() {
   double metres(PositionEstimate position) =>
       (position.lat! - 45) * metresPerDegree;
 
-  test('short real excursion can close at origin despite a biased GNSS return', () {
+  test('biased GNSS return near origin is never rewritten to the start point', () {
     final estimator = acquired();
 
-    // Synthetic analogue of the 2026-09-09 phone trace: accepted movement
-    // reaches ~20-25 m, then the user physically returns but GNSS still reports
-    // points ~14-16 m from its own starting estimate. The two uncertainty
-    // regions overlap, and two consecutive approaching fixes support closure.
+    // Synthetic analogue of the 2026-09-09 trace. Even if the physical user
+    // did return to the start, GNSS uncertainty alone cannot prove identity of
+    // place. Keep the measured/filtered position instead of fabricating an
+    // exact loop closure at the outing origin.
     feed(estimator, 10, 15);
     feed(estimator, 20, 20);
     feed(estimator, 25, 25);
     feed(estimator, 24, 30);
     feed(estimator, 21, 35);
     final near = feed(estimator, 16, 40);
-    expect(near.decision, isNot('loop_closed_origin'));
+    final returned = feed(estimator, 14, 45);
 
-    final closed = feed(estimator, 14, 45);
-    expect(closed.decision, 'loop_closed_origin');
-    expect(metres(closed).abs(), lessThan(0.5));
-    expect(closed.addToTrack, isTrue);
-    // Reconciliation must not pretend to be more accurate than the evidence.
-    expect(closed.accuracyM, greaterThanOrEqualTo(14));
+    expect(near.decision, isNot('loop_closed_origin'));
+    expect(returned.decision, isNot('loop_closed_origin'));
+    expect(metres(returned).abs(), greaterThan(5),
+        reason: 'Uncertainty compatibility must not rewrite the marker to origin.');
   });
 
   test('high-quality GNSS passing near origin is not snapped outside uncertainty', () {
