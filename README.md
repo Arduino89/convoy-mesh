@@ -6,11 +6,16 @@ Android/Flutter app for **walking and hiking groups in low-connectivity areas**.
 
 The `fix/v0.4-stability` branch and PR #1 contain the **0.7.6+8 hardening candidate**.
 
-Current validated executable source: `3e056f88ab44a4fbb9989058a9191e2bebc3cba4`, workflow run #105 (`34701227901`), APK SHA-256 `6fd9baa63e41e62259ac8d11db9993b034605625c91be478b3f51ee594fbc3f8`. The automated gate passed completely; real two-phone validation is still required before merge. Later documentation commits do not replace this executable identity.
+Validated executable identity (immutable for the next physical gate):
 
-Unlike earlier milestones that accidentally reused `0.7.0+7`, this candidate has an explicit higher Android package version. Android App info should show **0.7.6**, and diagnostic JSONL records `0.7.6+8`. The in-app diagnostic page also displays the exact `BUILD_COMMIT`; verify the same build on both phones before any field test.
+- source: `3e056f88ab44a4fbb9989058a9191e2bebc3cba4`
+- workflow: run #105 (`34701227901`)
+- APK SHA-256: `6fd9baa63e41e62259ac8d11db9993b034605625c91be478b3f51ee594fbc3f8`
+- Android package: `0.7.6+8` (App info shows `0.7.6`)
 
-The old/new build mismatch was caught before physical testing: one phone still showed build `93dfb23…` while the other showed `5eba40…`. Therefore the controlled field gate requires a **clean install on both phones**, not an in-place upgrade. Do not begin the walking/separation test unless both phones show version `0.7.6`, build prefix `3e056f88`, matching Nearby/Test-log behaviour and no recovered old `File pronto` state.
+The automated gate passed completely; real two-phone validation is still required before merge. Later documentation commits do not replace the executable identity above.
+
+Earlier milestones accidentally reused `0.7.0+7`. That allowed one physical phone to remain on old build `93dfb23…` while the other ran `5eba40…`, even though the public Android version did not expose the mismatch. The problem was caught before field testing from the different Test-log UI/build hashes. The controlled field gate therefore requires **clean install on both phones** and explicit build verification before walking.
 
 Read `CONTINUITY.md` before continuing work. This is not a certified release: emulator checks and physical-device evidence are separate gates.
 
@@ -47,11 +52,11 @@ Read `CONTINUITY.md` before continuing work. This is not a certified release: em
 
 ## App use
 
-Launch the app and grant the requested location/Bluetooth permissions. Nearby discovery runs while the app is foregrounded without continuous GPS. The outing status and **Avvia uscita / Termina uscita** control are visible above the tabs.
+Launch the app and grant requested location/Bluetooth permissions. Nearby discovery runs while the app is foregrounded without continuous GPS. The outing status and **Avvia uscita / Termina uscita** control are visible above the tabs.
 
-The **Test log** tab owns diagnostic recording explicitly. A recording may begin in Nearby, continue through an Outing and remain active after `Termina uscita`; end it from the Test log page when the physical test is complete.
+The **Test log** tab owns diagnostic recording explicitly. A recording may begin in Nearby, continue through an Outing and remain active after `Termina uscita`; end it from Test log when the physical test is complete.
 
-The Test log page shows the exact build identifier and persistent-storage state. It can export the last file after a restart. A `File pronto` card can legitimately appear after an in-place upgrade because previous diagnostic JSONL files are retained; use clean installs for the controlled two-phone gate. Logs contain coordinates; they are not uploaded automatically and must not be committed to this public repository.
+A `File pronto` card can legitimately survive an in-place upgrade because old diagnostic JSONL files are retained. For the controlled gate, clean install both phones so no old file/state masks a build mismatch.
 
 ## Validation
 
@@ -63,9 +68,9 @@ flutter analyze --no-fatal-infos --no-fatal-warnings
 flutter build apk --debug --dart-define=BUILD_COMMIT=local-review
 ```
 
-Run #105 passed **107 Flutter tests**, analyzer execution, exact APK build/fingerprint/upload and the Android API 35 emulator smoke. The smoke uses a clean install, requests location from Nearby, keeps Nearby free of a foreground runtime, starts diagnostics before the outing, promotes the outing to the foreground service, survives verified screen-off in the same process, records GPS fixes and local trail growth while asleep, resumes, and returns to Nearby without implicitly ending the diagnostic session.
+Run #105 passed **107 Flutter tests**, analyzer execution, exact APK build/fingerprint/upload and Android API 35 emulator smoke. The smoke uses a clean install, requests location from Nearby, keeps Nearby free of a foreground runtime, starts diagnostics before the outing, promotes the outing to the foreground service, survives verified screen-off in the same process, records GPS fixes and local trail growth while asleep, resumes, and returns to Nearby without implicitly ending diagnostics.
 
-Analyzer warnings/infos are reported but not blocking under the current policy. Do not describe this as warning-free analysis. CI archives the exact source revision, resolved dependency lock, Flutter version, test output, analysis output and APK checksum. Its emulator step is not a real two-phone radio or mountain-GNSS test.
+Analyzer warnings/infos are reported but nonblocking under the current policy. Do not describe this as warning-free analysis. CI archives exact source, dependency lock, Flutter version, test/analyzer output and APK checksum. Emulator success is not a real two-phone radio or mountain-GNSS test.
 
 Private logs can be replayed locally through the production GPS estimator:
 
@@ -83,7 +88,7 @@ Older logs may lack source timestamps or estimator state. The replay reports tho
 - `ConvoyMeshApp/lib/location/pedestrian_motion_classifier.dart`: strong/slow/quiet motion hysteresis with stale-sensor handling.
 - `ConvoyMeshApp/lib/services/location_fusion_service.dart`: sensor/provider lifecycle, preview/outing separation and measurement freshness.
 - `ConvoyMeshApp/android/app/src/main/kotlin/com/example/convoy_mesh/`: foreground ownership, filtered scanning, native advertising TTL and platform bridge.
-- `ConvoyMeshApp/lib/services/diagnostic_recorder.dart`: local diagnostic persistence and export.
+- `ConvoyMeshApp/lib/services/diagnostic_recorder.dart`: local diagnostic persistence, version/build stamp and export.
 - `ConvoyMeshApp/test/`: unit, receive-path, estimator, persistence and UI regressions.
 - `tools/android_smoke.sh`: bounded synthetic clean-install/Nearby/Outing/screen-off/resume test.
 
