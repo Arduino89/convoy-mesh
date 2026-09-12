@@ -4,9 +4,11 @@ Android/Flutter app for **walking and hiking groups in low-connectivity areas**.
 
 ## Current work
 
-The `fix/v0.4-stability` branch and PR #1 contain the **0.7.6 hardening candidate**. This is an internal milestone label: the exact test candidate is identified by source HEAD + APK checksum, not by the `pubspec.yaml` version string alone.
+The `fix/v0.4-stability` branch and PR #1 contain the **0.7.6+8 hardening candidate**.
 
-Current validated executable source: `5eba40d3e9e81f3be2e85592bd6f4bcb3caad25d`, workflow run #100 (`34697873143`), APK SHA-256 `d3456d97d8c369739b750290bfeb7bfd6b15adb3f5d2ccbe40f4170b0caa9276`. The automated gate passed; real two-phone validation is still required before merge.
+Current validated executable source: `3e056f88ab44a4fbb9989058a9191e2bebc3cba4`, workflow run #105 (`34701227901`), APK SHA-256 `6fd9baa63e41e62259ac8d11db9993b034605625c91be478b3f51ee594fbc3f8`. The automated gate passed completely; real two-phone validation is still required before merge.
+
+Unlike earlier milestones that accidentally reused `0.7.0+7`, this candidate has an explicit higher Android package version. Android App info should show **0.7.6**, and diagnostic JSONL records `0.7.6+8`. The in-app diagnostic page also displays the exact `BUILD_COMMIT`; verify the same build on both phones before any field test.
 
 Read `CONTINUITY.md` before continuing work. This is not a certified release: emulator checks and physical-device evidence are separate gates.
 
@@ -15,7 +17,7 @@ Read `CONTINUITY.md` before continuing work. This is not a certified release: em
 - One scheduler owns POS, NAME and PING. Repeated name requests cannot occupy every position slot.
 - Presence and GPS freshness are independent: receiving a heartbeat must not refresh an old coordinate.
 - GPS measurements use the provider's timestamp. UI events have a separate timestamp.
-- POS advertising now has a bounded native lifetime based on remaining freshness; receive-side age also includes Android scan-delivery delay, so an old repeated payload cannot become artificially young for a new receiver.
+- POS advertising has a bounded native lifetime based on remaining freshness; receive-side age also includes Android scan-delivery delay, so an old repeated payload cannot become artificially young for a new receiver.
 - HISTORY has application-level ACK/retry. An unseen out-of-order HISTORY sequence is stored instead of being rejected by live-state sequencing; duplicates are idempotent and can be re-ACKed after ACK loss.
 - HISTORY and ACK queues have explicit global bounds and share idle radio slots while live POS/NAME/PING retain priority.
 - The pedestrian estimator waits for a short spatial consensus, rejects isolated outliers, and permits a better stationary cluster to correct a poor initial anchor without drawing a false walking trail.
@@ -47,7 +49,7 @@ Launch the app and grant the requested location/Bluetooth permissions. Nearby di
 
 The **Test log** tab owns diagnostic recording explicitly. A recording may begin in Nearby, continue through an Outing and remain active after `Termina uscita`; end it from the Test log page when the physical test is complete.
 
-The Test log page shows the build identifier and persistent-storage state. It can export the last file after a restart. Logs contain coordinates; they are not uploaded automatically and must not be committed to this public repository.
+The Test log page shows the exact build identifier and persistent-storage state. It can export the last file after a restart. A `File pronto` card can legitimately appear after an in-place upgrade because previous diagnostic JSONL files are retained; use clean installs for the controlled two-phone gate. Logs contain coordinates; they are not uploaded automatically and must not be committed to this public repository.
 
 ## Validation
 
@@ -59,9 +61,9 @@ flutter analyze --no-fatal-infos --no-fatal-warnings
 flutter build apk --debug --dart-define=BUILD_COMMIT=local-review
 ```
 
-Run #100 passed **107 Flutter tests**, analyzer execution, exact APK build/fingerprint/upload and the Android API 35 emulator smoke. The clean-install smoke requested and granted location permission, kept Nearby free of a foreground runtime, started diagnostics before the outing, promoted the outing to the foreground service, survived verified screen-off in the same process, recorded GPS fixes `3 → 18` and local trail additions `0 → 1` while asleep, resumed, and returned to Nearby without implicitly ending the diagnostic session.
+Run #105 passed **107 Flutter tests**, analyzer execution, exact APK build/fingerprint/upload and the Android API 35 emulator smoke. The smoke uses a clean install, requests location from Nearby, keeps Nearby free of a foreground runtime, starts diagnostics before the outing, promotes the outing to the foreground service, survives verified screen-off in the same process, records GPS fixes and local trail growth while asleep, resumes, and returns to Nearby without implicitly ending the diagnostic session.
 
-Analyzer warnings/infos are currently reported but not blocking; run #100 reports 5 warnings + 15 infos. Do not describe this as warning-free analysis. CI archives the exact source revision, resolved dependency lock, Flutter version, test output, analysis output and APK checksum. Its emulator step is not a real two-phone radio or mountain-GNSS test.
+Analyzer warnings/infos are reported but not blocking under the current policy. Do not describe this as warning-free analysis. CI archives the exact source revision, resolved dependency lock, Flutter version, test output, analysis output and APK checksum. Its emulator step is not a real two-phone radio or mountain-GNSS test.
 
 Private logs can be replayed locally through the production GPS estimator:
 
