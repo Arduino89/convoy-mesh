@@ -1,14 +1,18 @@
-// lib/ble/convoy_ble_codec.dart
 import 'dart:convert';
 import 'dart:typed_data';
 
 class ConvoyPacket {
-  final int userId;
-  final int seq;
-  final double? lat;
-  final double? lon;
-  final double? accuracyM;
+  final int userId, seq;
+  final double? lat, lon, accuracyM;
   final String? name;
+  /// Null for legacy/live packets where source measurement age is unknown.
+  final int? fixAgeSeconds;
+  /// HISTORY packets are filtered trail points sent after peers reconnect.
+  final bool isHistory;
+  final int? historyAgeSeconds;
+  /// HISTORY_ACK confirms radio receipt of one HISTORY wire sequence.
+  final bool isHistoryAck;
+  final int? ackTargetUserId, ackHistorySeq;
 
   const ConvoyPacket({
     required this.userId,
@@ -17,17 +21,25 @@ class ConvoyPacket {
     required this.lon,
     required this.accuracyM,
     required this.name,
+    this.fixAgeSeconds,
+    this.isHistory = false,
+    this.historyAgeSeconds,
+    this.isHistoryAck = false,
+    this.ackTargetUserId,
+    this.ackHistorySeq,
   });
 
   bool get hasFix => lat != null && lon != null;
   bool get hasName => name != null && name!.trim().isNotEmpty;
-
-  String get kindLabel {
-    if (hasFix && hasName) return 'POS+NAME';
-    if (hasFix) return 'POS';
-    if (hasName) return 'NAME';
-    return 'PING';
-  }
+  String get kindLabel => isHistoryAck
+      ? 'HISTORY_ACK'
+      : isHistory
+          ? 'HISTORY'
+          : hasFix
+          ? (hasName ? 'POS+NAME' : 'POS')
+          : hasName
+              ? 'NAME'
+              : 'PING';
 }
 
 class ConvoyParseResult {
@@ -48,44 +60,24 @@ class ConvoyParseResult {
   bool get ok => packet != null;
 }
 
-/// Payload super-snello in Manufacturer Data (BLE ADV).
+/// Compact manufacturer payload.
 ///
-/// Obiettivo di questa versione:
-/// - NON dipendere dal serviceUuid nello scan/advertising.
-/// - Tenere il payload abbastanza piccolo per BLE advertising classico.
-/// - Separare pacchetto posizione e pacchetto nome.
-/// - Accettare in RX sia payload "CM..." puro, sia manufacturerData con
-///   manufacturerId prefissato, es. "0A 0C CM...".
+/// Flags:
+/// bit0 = coordinates, bit1 = name, bit2 = recovered HISTORY point,
+/// bit3 = HISTORY_ACK.
 ///
-/// Layout payload little endian, senza eventuale manufacturerId esterno:
-/// [0]      : magic0 = 0x43 ('C')
-/// [1]      : magic1 = 0x4D ('M') => "CM" = Convoy Mesh
-/// [2]      : version = 0x02
-/// [3]      : flags (bit0 hasFix, bit1 hasName)
-/// [4..7]   : userId (uint32)
-/// [8..9]   : seq (uint16)
-/// [10..13] : latE7 (int32)  solo se hasFix
-/// [14..17] : lonE7 (int32)  solo se hasFix
-/// [18..19] : accDm (uint16) solo se hasFix, decimetri
-/// [..]     : nameLen (uint8) + UTF-8 bytes solo se hasName
+/// HISTORY deliberately uses a new flag bit. Older Convoy parsers reject it
+/// instead of accidentally treating an old trail point as the current position.
+/// HISTORY payload: 10B header + 10B fix + 2B age = 22B. With legacy BLE
+/// manufacturer framing it remains inside the 31-byte advertising budget.
 class ConvoyBleCodec {
-  /// Lo teniamo come costante progetto/debug, ma nella patch BLE Stability
-  /// NON viene più inserito nell'advertising per risparmiare bytes.
-  static const String serviceUuid = '0000FEED-0000-1000-8000-00805F9B34FB';
-
-  static const int manufacturerId = 0x0C0A; // arbitrario, stabile
-
-  static const int version = 0x02;
-  static const int _magic0 = 0x43; // C
-  static const int _magic1 = 0x4D; // M
-
-  // Payload dati, esclusi overhead BLE/manufacturerId.
-  // Posizione: 10 header + 10 fix = 20 bytes.
-  // Nome: 10 header + 1 len + max 12 = 23 bytes.
-  static const int maxNameBytes = 12;
-
-  // Accettiamo fino a 20 in RX per compatibilità con eventuali pacchetti v0.1.
-  static const int _maxAcceptedNameBytes = 20;
+  static const serviceUuid = '0000FEED-0000-1000-8000-00805F9B34FB';
+  static const manufacturerId = 0x0C0A;
+  static const version = 0x02;
+  static const maxNameBytes = 12;
+  static const _maxAcceptedNameBytes = 20;
+  static const _historyFlag = 0x04;
+  static const _historyAckFlag = 0x08;
 
   static Uint8List buildPositionManufacturerData({
     required int userId,
@@ -93,8 +85,9 @@ class ConvoyBleCodec {
     required double? lat,
     required double? lon,
     required double? accuracyM,
+    int? fixAgeSeconds,
   }) {
-    return buildManufacturerData(
+    final bytes = buildManufacturerData(
       userId: userId,
       seq: seq,
       lat: lat,
@@ -102,40 +95,77 @@ class ConvoyBleCodec {
       accuracyM: accuracyM,
       name: null,
     );
+    if (lat != null && lon != null && fixAgeSeconds != null) {
+      return Uint8List.fromList([
+        ...bytes,
+        0xA3,
+        fixAgeSeconds.clamp(0, 254).toInt(),
+      ]);
+    }
+    return bytes;
   }
+
+  static Uint8List buildHistoryManufacturerData({
+    required int userId,
+    required int seq,
+    required double lat,
+    required double lon,
+    required double accuracyM,
+    required int historyAgeSeconds,
+  }) =>
+      buildManufacturerData(
+        userId: userId,
+        seq: seq,
+        lat: lat,
+        lon: lon,
+        accuracyM: accuracyM,
+        name: null,
+        history: true,
+        historyAgeSeconds: historyAgeSeconds,
+      );
+
+  static Uint8List buildHistoryAckManufacturerData({
+    required int userId,
+    required int seq,
+    required int targetUserId,
+    required int historySeq,
+  }) =>
+      buildManufacturerData(
+        userId: userId,
+        seq: seq,
+        lat: null,
+        lon: null,
+        accuracyM: null,
+        name: null,
+        historyAck: true,
+        ackTargetUserId: targetUserId,
+        ackHistorySeq: historySeq,
+      );
 
   static Uint8List buildNameManufacturerData({
     required int userId,
     required int seq,
     required String name,
-  }) {
-    return buildManufacturerData(
-      userId: userId,
-      seq: seq,
-      lat: null,
-      lon: null,
-      accuracyM: null,
-      name: name,
-    );
-  }
+  }) =>
+      buildManufacturerData(
+        userId: userId,
+        seq: seq,
+        lat: null,
+        lon: null,
+        accuracyM: null,
+        name: name,
+      );
 
-  static Uint8List buildPingManufacturerData({
-    required int userId,
-    required int seq,
-  }) {
-    return buildManufacturerData(
-      userId: userId,
-      seq: seq,
-      lat: null,
-      lon: null,
-      accuracyM: null,
-      name: null,
-    );
-  }
+  static Uint8List buildPingManufacturerData({required int userId, required int seq}) =>
+      buildManufacturerData(
+        userId: userId,
+        seq: seq,
+        lat: null,
+        lon: null,
+        accuracyM: null,
+        name: null,
+      );
 
-  /// Metodo generico mantenuto per compatibilità interna.
-  /// Nel servizio BLE preferiamo usare i builder dedicati per evitare
-  /// pacchetti POS+NAME troppo grandi.
   static Uint8List buildManufacturerData({
     required int userId,
     required int seq,
@@ -143,182 +173,138 @@ class ConvoyBleCodec {
     required double? lon,
     required double? accuracyM,
     required String? name,
+    bool history = false,
+    int? historyAgeSeconds,
+    bool historyAck = false,
+    int? ackTargetUserId,
+    int? ackHistorySeq,
   }) {
     final hasFix = lat != null && lon != null;
-    final cleanedName = _cleanName(name);
-    final hasName = cleanedName != null;
+    final cleaned = name?.trim();
+    final hasName = cleaned != null && cleaned.isNotEmpty;
+    if (history && (!hasFix || hasName || historyAgeSeconds == null || historyAck)) {
+      throw ArgumentError('HISTORY requires coordinates, age and no name/ACK');
+    }
+    if (historyAck &&
+        (history || hasFix || hasName || ackTargetUserId == null || ackHistorySeq == null)) {
+      throw ArgumentError('HISTORY_ACK requires target user, history sequence and no fix/name');
+    }
+    if (hasFix && (!lat.isFinite || !lon.isFinite || lat.abs() > 90 || lon.abs() > 180)) {
+      throw ArgumentError('Invalid position');
+    }
 
-    final flags = (hasFix ? 0x01 : 0) | (hasName ? 0x02 : 0);
-
+    final flags = (hasFix ? 1 : 0) |
+        (hasName ? 2 : 0) |
+        (history ? _historyFlag : 0) |
+        (historyAck ? _historyAckFlag : 0);
     final bytes = <int>[
-      _magic0,
-      _magic1,
+      0x43,
+      0x4D,
       version,
       flags,
-      ..._u32le(userId),
-      ..._u16le(seq),
+      ..._u32(userId),
+      ..._u16(seq),
     ];
 
     if (hasFix) {
-      final latE7 = (lat * 1e7).round();
-      final lonE7 = (lon * 1e7).round();
-
-      final acc = (accuracyM ?? 9999).clamp(0.0, 6553.5);
-      final accDm = (acc * 10).round();
-
-      bytes.addAll(_i32le(latE7));
-      bytes.addAll(_i32le(lonE7));
-      bytes.addAll(_u16le(accDm));
+      final accuracy = accuracyM != null && accuracyM.isFinite && accuracyM >= 0
+          ? accuracyM
+          : 6553.5;
+      bytes.addAll([
+        ..._u32((lat * 1e7).round()),
+        ..._u32((lon * 1e7).round()),
+        ..._u16((accuracy.clamp(0.0, 6553.5) * 10).round()),
+      ]);
     }
 
     if (hasName) {
-      final nameBytes = _utf8Capped(cleanedName, maxNameBytes);
-      bytes.add(nameBytes.length);
-      bytes.addAll(nameBytes);
+      final data = <int>[];
+      for (final rune in cleaned.runes) {
+        final part = utf8.encode(String.fromCharCode(rune));
+        if (data.length + part.length > maxNameBytes) break;
+        data.addAll(part);
+      }
+      bytes.addAll([data.length, ...data]);
     }
 
+    if (history) {
+      bytes.addAll(_u16(historyAgeSeconds!.clamp(0, 65535).toInt()));
+    }
+    if (historyAck) {
+      bytes.addAll(_u32(ackTargetUserId!));
+      bytes.addAll(_u16(ackHistorySeq!.clamp(0, 65535).toInt()));
+    }
     return Uint8List.fromList(bytes);
   }
 
-  static ConvoyPacket? tryParseManufacturerData(Uint8List data) {
-    return parseManufacturerData(data).packet;
-  }
+  static ConvoyPacket? tryParseManufacturerData(Uint8List data) =>
+      parseManufacturerData(data).packet;
 
-  /// Parser diagnostico.
-  ///
-  /// Nota importante: alcuni stack/plugin BLE espongono manufacturerData già
-  /// senza manufacturerId, quindi il payload inizia da "CM". Altri lo espongono
-  /// con i 2 byte manufacturerId davanti. Per questo cerchiamo "CM" a offset 0,
-  /// offset 2, e infine nei primi byte del buffer.
   static ConvoyParseResult parseManufacturerData(Uint8List data) {
-    final preview = previewHex(data);
     final offset = findPayloadOffset(data);
-
-    if (offset == null) {
-      return ConvoyParseResult(
-        packet: null,
-        reason: 'no_magic',
-        magicOffset: null,
-        inputLength: data.length,
-        inputPreviewHex: preview,
-      );
-    }
-
-    if (data.length < offset + 10) {
-      return ConvoyParseResult(
-        packet: null,
-        reason: 'short_after_magic',
-        magicOffset: offset,
-        inputLength: data.length,
-        inputPreviewHex: preview,
-      );
-    }
-
-    final ver = data[offset + 2];
-    if (ver != 0x01 && ver != version) {
-      return ConvoyParseResult(
-        packet: null,
-        reason: 'bad_version_$ver',
-        magicOffset: offset,
-        inputLength: data.length,
-        inputPreviewHex: preview,
-      );
-    }
+    ConvoyParseResult error(String reason) => ConvoyParseResult(
+          packet: null,
+          reason: reason,
+          magicOffset: offset,
+          inputLength: data.length,
+          inputPreviewHex: previewHex(data),
+        );
+    if (offset == null) return error('no_magic');
+    if (data.length < offset + 10) return error('short_after_magic');
 
     final flags = data[offset + 3];
-    if ((flags & ~0x03) != 0) {
-      return ConvoyParseResult(
-        packet: null,
-        reason: 'bad_flags_$flags',
-        magicOffset: offset,
-        inputLength: data.length,
-        inputPreviewHex: preview,
-      );
-    }
+    final hasFix = flags & 1 != 0;
+    final hasName = flags & 2 != 0;
+    final isHistory = flags & _historyFlag != 0;
+    final isHistoryAck = flags & _historyAckFlag != 0;
+    if (flags & ~0x0F != 0) return error('bad_flags_$flags');
+    if (isHistory && (!hasFix || hasName || isHistoryAck)) return error('bad_history_flags');
+    if (isHistoryAck && (hasFix || hasName || isHistory)) return error('bad_history_ack_flags');
 
-    final hasFix = (flags & 0x01) != 0;
-    final hasName = (flags & 0x02) != 0;
-
-    final userId = _readU32le(data, offset + 4);
-    final seq = _readU16le(data, offset + 8);
-
+    final userId = _readU32(data, offset + 4);
+    final seq = _readU16(data, offset + 8);
     var idx = offset + 10;
-
-    double? lat;
-    double? lon;
-    double? acc;
+    double? lat, lon, accuracy;
+    String? name;
 
     if (hasFix) {
-      if (data.length < idx + 10) {
-        return ConvoyParseResult(
-          packet: null,
-          reason: 'short_fix',
-          magicOffset: offset,
-          inputLength: data.length,
-          inputPreviewHex: preview,
-        );
-      }
-
-      final latE7 = _readI32le(data, idx);
-      final lonE7 = _readI32le(data, idx + 4);
-      final accDm = _readU16le(data, idx + 8);
-
-      lat = latE7 / 1e7;
-      lon = lonE7 / 1e7;
-      acc = accDm / 10.0;
-
-      if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-        return ConvoyParseResult(
-          packet: null,
-          reason: 'bad_coordinates',
-          magicOffset: offset,
-          inputLength: data.length,
-          inputPreviewHex: preview,
-        );
-      }
-
+      if (data.length < idx + 10) return error('short_fix');
+      lat = _readI32(data, idx) / 1e7;
+      lon = _readI32(data, idx + 4) / 1e7;
+      accuracy = _readU16(data, idx + 8) / 10;
+      if (lat.abs() > 90 || lon.abs() > 180) return error('bad_coordinates');
       idx += 10;
     }
 
-    String? name;
     if (hasName) {
-      if (data.length < idx + 1) {
-        return ConvoyParseResult(
-          packet: null,
-          reason: 'short_name_len',
-          magicOffset: offset,
-          inputLength: data.length,
-          inputPreviewHex: preview,
-        );
-      }
-
-      final len = data[idx];
-      idx += 1;
-
-      if (len > _maxAcceptedNameBytes) {
-        return ConvoyParseResult(
-          packet: null,
-          reason: 'bad_name_len_$len',
-          magicOffset: offset,
-          inputLength: data.length,
-          inputPreviewHex: preview,
-        );
-      }
-
-      if (data.length < idx + len) {
-        return ConvoyParseResult(
-          packet: null,
-          reason: 'short_name',
-          magicOffset: offset,
-          inputLength: data.length,
-          inputPreviewHex: preview,
-        );
-      }
-
+      if (data.length < idx + 1) return error('short_name_len');
+      final len = data[idx++];
+      if (len > _maxAcceptedNameBytes) return error('bad_name_len_$len');
+      if (data.length < idx + len) return error('short_name');
       name = utf8.decode(data.sublist(idx, idx + len), allowMalformed: true).trim();
       if (name.isEmpty) name = null;
       idx += len;
     }
+
+    int? historyAge;
+    if (isHistory) {
+      if (data.length != idx + 2) return error('bad_history_length');
+      historyAge = _readU16(data, idx);
+      idx += 2;
+    }
+
+    int? ackTargetUserId, ackHistorySeq;
+    if (isHistoryAck) {
+      if (data.length != idx + 6) return error('bad_history_ack_length');
+      ackTargetUserId = _readU32(data, idx);
+      ackHistorySeq = _readU16(data, idx + 4);
+      idx += 6;
+    }
+
+    final int? age = !isHistory && hasFix && !hasName &&
+            data.length == idx + 2 && data[idx] == 0xA3
+        ? data[idx + 1]
+        : null;
 
     return ConvoyParseResult(
       packet: ConvoyPacket(
@@ -326,87 +312,54 @@ class ConvoyBleCodec {
         seq: seq,
         lat: lat,
         lon: lon,
-        accuracyM: acc,
+        accuracyM: accuracy,
         name: name,
+        fixAgeSeconds: age,
+        isHistory: isHistory,
+        historyAgeSeconds: historyAge,
+        isHistoryAck: isHistoryAck,
+        ackTargetUserId: ackTargetUserId,
+        ackHistorySeq: ackHistorySeq,
       ),
       reason: 'ok',
       magicOffset: offset,
       inputLength: data.length,
-      inputPreviewHex: preview,
+      inputPreviewHex: previewHex(data),
     );
   }
 
   static int? findPayloadOffset(Uint8List data) {
-    bool looksLikePacketAt(int o) {
-      if (o < 0 || data.length < o + 4) return false;
-      if (data[o] != _magic0 || data[o + 1] != _magic1) return false;
-      final ver = data[o + 2];
-      if (ver != 0x01 && ver != version) return false;
-      final flags = data[o + 3];
-      return (flags & ~0x03) == 0;
+    bool valid(int p) => p >= 0 &&
+        data.length >= p + 4 &&
+        data[p] == 0x43 &&
+        data[p + 1] == 0x4D &&
+        (data[p + 2] == 1 || data[p + 2] == version) &&
+        data[p + 3] & ~0x0F == 0;
+    if (valid(0)) return 0;
+    if (valid(2)) return 2;
+    for (var i = 1; i <= (data.length - 4).clamp(0, 8); i++) {
+      if (valid(i)) return i;
     }
-
-    // Caso A: plugin consegna solo payload manufacturer-specific: CM...
-    if (looksLikePacketAt(0)) return 0;
-
-    // Caso B: plugin consegna manufacturerId + payload: 0A 0C CM...
-    if (looksLikePacketAt(2)) return 2;
-
-    // Caso C: fallback diagnostico, cerchiamo nei primi byte senza essere troppo
-    // aggressivi per evitare falsi positivi in manufacturerData casuali.
-    final maxStart = (data.length - 4).clamp(0, 8);
-    for (var i = 1; i <= maxStart; i++) {
-      if (looksLikePacketAt(i)) return i;
-    }
-
     return null;
   }
 
   static String previewHex(Uint8List data, {int maxBytes = 24}) {
     if (data.isEmpty) return '-';
-    final n = data.length < maxBytes ? data.length : maxBytes;
-    final parts = <String>[];
-    for (var i = 0; i < n; i++) {
-      parts.add(data[i].toRadixString(16).padLeft(2, '0').toUpperCase());
-    }
-    if (data.length > n) parts.add('...');
+    final parts = data
+        .take(maxBytes)
+        .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
+        .toList();
+    if (data.length > maxBytes) parts.add('...');
     return parts.join(' ');
   }
 
-  static String? _cleanName(String? s) {
-    final t = s?.trim();
-    if (t == null || t.isEmpty) return null;
-    return t;
-  }
-
-  static List<int> _utf8Capped(String s, int maxBytes) {
-    final out = <int>[];
-    for (final rune in s.runes) {
-      final part = utf8.encode(String.fromCharCode(rune));
-      if (out.length + part.length > maxBytes) break;
-      out.addAll(part);
-    }
-    return out;
-  }
-
-  static List<int> _u16le(int v) => [v & 0xFF, (v >> 8) & 0xFF];
-
-  static List<int> _u32le(int v) => [
-        v & 0xFF,
-        (v >> 8) & 0xFF,
-        (v >> 16) & 0xFF,
-        (v >> 24) & 0xFF,
-      ];
-
-  static List<int> _i32le(int v) => _u32le(v);
-
-  static int _readU16le(Uint8List b, int o) => b[o] | (b[o + 1] << 8);
-
-  static int _readU32le(Uint8List b, int o) =>
-      b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24);
-
-  static int _readI32le(Uint8List b, int o) {
-    final u = _readU32le(b, o);
-    return (u & 0x80000000) != 0 ? (u - 0x100000000) : u;
+  static List<int> _u16(int n) => [n & 255, (n >> 8) & 255];
+  static List<int> _u32(int n) => [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >> 24) & 255];
+  static int _readU16(Uint8List b, int p) => b[p] | (b[p + 1] << 8);
+  static int _readU32(Uint8List b, int p) =>
+      b[p] | (b[p + 1] << 8) | (b[p + 2] << 16) | (b[p + 3] << 24);
+  static int _readI32(Uint8List b, int p) {
+    final n = _readU32(b, p);
+    return n & 0x80000000 != 0 ? n - 0x100000000 : n;
   }
 }

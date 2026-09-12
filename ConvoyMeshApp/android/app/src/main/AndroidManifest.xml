@@ -1,73 +1,36 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.convoy_mesh">
-
-    <!-- INTERNET (tile map OSM) -->
+    xmlns:tools="http://schemas.android.com/tools" package="com.example.convoy_mesh">
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- LOCATION -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
-    <!-- (Android 14+) se un giorno fai tracking continuo in foreground -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-
-    <!-- BLE (Android 12+) -->
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation"
-        android:required="false" />
-
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_CONNECT"
-        android:required="false" />
-
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_ADVERTISE"
-        android:required="false" />
-
-    <uses-feature
-        android:name="android.hardware.bluetooth_le"
-        android:required="false" />
-
-    <application
-        android:label="convoy_mesh"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <!-- This app does derive proximity/location, so neverForLocation would be incorrect. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" tools:remove="android:usesPermissionFlags" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <application android:label="Convoy Mesh" android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher" android:allowBackup="false"
         android:enableOnBackInvokedCallback="true">
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:launchMode="singleTop"
-            android:taskAffinity=""
-            android:theme="@style/LaunchTheme"
+        <service android:name=".ConvoyForegroundService" android:exported="false"
+            android:stopWithTask="false" android:foregroundServiceType="location|connectedDevice" />
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop"
+            android:taskAffinity="" android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-            android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
-
-            <meta-data
-                android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme" />
-
+            android:hardwareAccelerated="true" android:windowSoftInputMode="adjustResize">
+            <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
-
-        <meta-data
-            android:name="flutterEmbedding"
-            android:value="2" />
-
+        <meta-data android:name="flutterEmbedding" android:value="2" />
     </application>
-
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT" />
-            <data android:mimeType="text/plain" />
-        </intent>
-    </queries>
-
+    <queries><intent><action android:name="android.intent.action.PROCESS_TEXT" /><data android:mimeType="text/plain" /></intent></queries>
 </manifest>
-

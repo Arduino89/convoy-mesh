@@ -1,8 +1,7 @@
 name: convoy_mesh
-description: Convoy Mesh - BLE + Map test
+description: Convoy Mesh - walking groups, BLE and GPS
 publish_to: "none"
-
-version: 1.0.0+1
+version: 0.7.6+8
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -10,29 +9,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # Permessi runtime (location + BT)
   permission_handler: ^11.4.0
-
-  # BLE (scan + connessioni)
   flutter_reactive_ble: ^5.4.0
-
-  # Mappa + tile OSM
   flutter_map: ^6.2.1
-
   latlong2: ^0.9.1
-
-  # GPS posizione
   geolocator: ^14.0.2
-
   flutter_ble_peripheral: ^2.0.1
-
   shared_preferences: ^2.2.3
-
   app_settings: ^5.1.1
-
   sensors_plus: ^7.0.0
-
+  share_plus: 11.1.0
+  cross_file: 0.3.5+4
 
 dev_dependencies:
   flutter_test:
@@ -41,5 +28,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-
