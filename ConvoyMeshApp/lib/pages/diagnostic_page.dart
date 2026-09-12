@@ -27,7 +27,7 @@ class DiagnosticPage extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Text('Telefono: $name • ID $id'),
-              const Text('0.7.0 candidato • test diagnostici di massimo 4 minuti'),
+              const Text('0.7.6 candidato • test diagnostici di massimo 4 minuti'),
               Text('Build: ${DiagnosticRecorder.buildCommit}'),
               const SizedBox(height: 8),
               Text(recorder.isPersistent ? 'Log salvato progressivamente sul telefono.' :
