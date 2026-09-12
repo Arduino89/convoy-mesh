@@ -6,7 +6,7 @@ Android/Flutter app for **walking and hiking groups in low-connectivity areas**.
 
 The `fix/v0.4-stability` branch and PR #1 contain the **0.7.6+8 hardening candidate**.
 
-Current validated executable source: `3e056f88ab44a4fbb9989058a9191e2bebc3cba4`, workflow run #105 (`34701227901`), APK SHA-256 `6fd9baa63e41e62259ac8d11db9993b034605625c91be478b3f51ee594fbc3f8`. The automated gate passed completely; real two-phone validation is still required before merge.
+Current validated executable source: `3e056f88ab44a4fbb9989058a9191e2bebc3cba4`, workflow run #105 (`34701227901`), APK SHA-256 `6fd9baa63e41e62259ac8d11db9993b034605625c91be478b3f51ee594fbc3f8`. The automated gate passed completely; real two-phone validation is still required before merge. Later documentation commits do not replace this executable identity.
 
 Unlike earlier milestones that accidentally reused `0.7.0+7`, this candidate has an explicit higher Android package version. Android App info should show **0.7.6**, and diagnostic JSONL records `0.7.6+8`. The in-app diagnostic page also displays the exact `BUILD_COMMIT`; verify the same build on both phones before any field test.
 
