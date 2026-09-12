@@ -226,9 +226,8 @@ timeout 15 adb logcat -c
 launch_app_process nearby-first-run
 wait_and_tap_location_permission location-first-run
 sleep 3
-timeout 15 adb shell pm check-permission android.permission.ACCESS_FINE_LOCATION "$PACKAGE" \
-  > "$OUT/location-permission.txt"
-grep -q 'granted' "$OUT/location-permission.txt"
+timeout 15 adb shell dumpsys package "$PACKAGE" > "$OUT/location-permission.txt"
+grep -Eq 'android\.permission\.ACCESS_(FINE|COARSE)_LOCATION: granted=true' "$OUT/location-permission.txt"
 assert_no_runtime nearby
 timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 
