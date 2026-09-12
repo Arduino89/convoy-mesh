@@ -13,9 +13,9 @@ Later README/CONTINUITY edits are documentation-only and do not supersede the ex
 
 ## WHY THE PACKAGE VERSION WAS BUMPED
 
-The previous physical-prep attempt exposed that two different source builds, old `93dfb23e921b0da23f0b29788f353e8fb28c8d8a` and newer `5eba40d3e9e81f3be2e85592bd6f4bcb3caad25d`, both declared `0.7.0+7`. One phone therefore remained on the old build while the other had the new code, even though the package UI did not make the mismatch obvious.
+The previous physical-prep attempt exposed that two different source builds, old `93dfb23e921b0da23f0b29788f353e8fb28c8d8a` and newer `5eba40d3e9e81f3be2e85592bd6f4bcb3caad25d`, both declared `0.7.0+7`. One phone therefore remained on the old build while the other had the new code, even though Android App info showed the same public version string.
 
-The mismatch was caught before the field test because the Test log pages differed and their displayed `BUILD_COMMIT` values were `93dfb23…` versus `5eba40…`. The old build also showed disabled text `Avvia prima l’uscita`, while the hardened build permits diagnostics to start in Nearby.
+The mismatch was caught before the field test because the Test log pages differed and their displayed `BUILD_COMMIT` values were `93dfb23…` versus `5eba40…`. The old build showed disabled text `Avvia prima l’uscita`, while the hardened build permits diagnostics to start in Nearby.
 
 `0.7.6+8` intentionally increments both version name and version code and stamps the same version into diagnostic JSONL. For the controlled gate, use a clean install on **both** phones and verify identical build commit before starting.
 
