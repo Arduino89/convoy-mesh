@@ -1,0 +1,46 @@
+name: Ledger Foundation
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'ConvoyMeshApp/lib/ledger/**'
+      - 'ConvoyMeshApp/test/ledger_*.dart'
+      - '.github/workflows/ledger-foundation.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'ConvoyMeshApp/lib/ledger/**'
+      - 'ConvoyMeshApp/test/ledger_*.dart'
+      - '.github/workflows/ledger-foundation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ledger-reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: ConvoyMeshApp
+        run: flutter pub get
+
+      - name: Analyze ledger foundation only
+        working-directory: ConvoyMeshApp
+        run: dart analyze lib/ledger/ledger_foundation.dart test/ledger_foundation_test.dart
+
+      - name: Run ledger foundation tests
+        working-directory: ConvoyMeshApp
+        run: flutter test test/ledger_foundation_test.dart --reporter expanded
