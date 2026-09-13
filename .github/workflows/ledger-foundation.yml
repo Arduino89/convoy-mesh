@@ -39,8 +39,8 @@ jobs:
 
       - name: Analyze ledger foundation only
         working-directory: ConvoyMeshApp
-        run: dart analyze lib/ledger/ledger_foundation.dart test/ledger_foundation_test.dart
+        run: dart analyze lib/ledger/ledger_foundation.dart test/ledger_foundation_test.dart test/ledger_foundation_fuzz_test.dart
 
       - name: Run ledger foundation tests
         working-directory: ConvoyMeshApp
-        run: flutter test test/ledger_foundation_test.dart --reporter expanded
+        run: flutter test test/ledger_foundation_test.dart test/ledger_foundation_fuzz_test.dart --reporter expanded
