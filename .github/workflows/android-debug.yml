@@ -9,7 +9,9 @@ on:
       - 'tools/android_smoke.sh'
       - '.github/workflows/android-debug.yml'
   push:
-    branches: [ main ]
+    # The experimental PR targets fix/v0.4-stability, so only this push event
+    # builds it. Avoid duplicate push + pull_request candidate artifacts.
+    branches: [ main, experiment/pedestrian-acquisition-v1 ]
     paths:
       - 'ConvoyMeshApp/**'
       - 'tools/android_smoke.sh'
@@ -30,6 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Capture exact source
@@ -38,6 +41,7 @@ jobs:
           git archive --format=zip HEAD -o build-evidence/source.zip
           git rev-parse HEAD > build-evidence/checkout-sha.txt
           printf '%s\n' '${{ github.event.pull_request.head.sha || github.sha }}' > build-evidence/head-sha.txt
+          cmp build-evidence/checkout-sha.txt build-evidence/head-sha.txt
           bash -n tools/android_smoke.sh
 
       - name: Upload source snapshot
@@ -46,7 +50,7 @@ jobs:
           name: convoy-source-snapshot
           path: build-evidence
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
 
       - name: Set up Java 17
         uses: actions/setup-java@v5
@@ -63,13 +67,17 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Same SDK as baseline run #105, not a moving stable channel.
+          flutter-version: '3.47.4'
           cache: true
 
       - name: Install dependencies
         working-directory: ConvoyMeshApp
         run: |
           flutter --version --machine > ../build-evidence/flutter-version.json
-          flutter pub get
+          # Preserve the recovered run #105 resolution, including the four
+          # transitive versions that a fresh resolution would otherwise update.
+          flutter pub get --enforce-lockfile
           cp pubspec.lock ../build-evidence/resolved-pubspec.lock
 
       - name: Test
@@ -87,13 +95,13 @@ jobs:
             flutter-test.log
             ConvoyMeshApp/coverage/lcov.info
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 90
 
       - name: Analyze
         working-directory: ConvoyMeshApp
         run: |
           set -o pipefail
-          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee ../flutter-analyze.log
+          flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings 2>&1 | tee ../flutter-analyze.log
 
       - name: Upload analyze log
         if: always()
@@ -102,16 +110,36 @@ jobs:
           name: flutter-analyze-log
           path: flutter-analyze.log
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 90
 
       - name: Build debug APK
         working-directory: ConvoyMeshApp
-        run: flutter build apk --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }}
+        env:
+          ORG_GRADLE_PROJECT_convoyExperimental: 'true'
+        run: flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Fingerprint APK
+      - name: Verify APK identity, signature and compatibility
         run: |
-          sha256sum ConvoyMeshApp/build/app/outputs/flutter-apk/app-debug.apk > build-evidence/apk-sha256.txt
+          set -o pipefail
+          APK=ConvoyMeshApp/build/app/outputs/flutter-apk/app-debug.apk
+          SDK_ROOT=${ANDROID_HOME:-$ANDROID_SDK_ROOT}
+          BUILD_TOOLS=$(find "$SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee build-evidence/apk-signature.txt
+          "$BUILD_TOOLS/aapt" dump badging "$APK" | tee build-evidence/apk-badging.txt
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          info = Path('build-evidence/apk-badging.txt').read_text()
+          assert "package: name='com.example.convoy_mesh.pedestrianexp1'" in info
+          assert "versionCode='9'" in info and "versionName='0.7.7-exp1'" in info
+          assert "application-label:'Convoy Mesh Exp'" in info
+          minimum = int(re.search(r"^sdkVersion:'(\d+)'", info, re.M).group(1))
+          assert minimum <= 29, f'Unsupported on the API 29 field phone: {minimum}'
+          assert "'arm64-v8a'" in info and "'x86_64'" in info
+          PY
+          sha256sum "$APK" > build-evidence/apk-sha256.txt
           printf '%s\n' 'Candidate debug APK. Automated checks are not real-device BLE/GNSS certification.' > build-evidence/validation-scope.txt
+          printf '%s\n' 'Side-by-side package: not an update of com.example.convoy_mesh. Old app/data remain installed. Independent permissions, identity and storage. Use only one Convoy app at a time. Debug key is not retained; future rebuilds are not guaranteed compatible updates. Baseline run #105 APK is unavailable (artifact 10300013706 returns 404); its certificate cannot be compared.' > build-evidence/install-policy.txt
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
@@ -121,7 +149,7 @@ jobs:
             ConvoyMeshApp/build/app/outputs/flutter-apk/app-debug.apk
             build-evidence/apk-sha256.txt
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
 
       - name: Upload build provenance
         if: always()
@@ -134,8 +162,11 @@ jobs:
             build-evidence/flutter-version.json
             build-evidence/resolved-pubspec.lock
             build-evidence/validation-scope.txt
+            build-evidence/apk-signature.txt
+            build-evidence/apk-badging.txt
+            build-evidence/install-policy.txt
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
 
   android-emulator-smoke:
     needs: build
@@ -145,6 +176,7 @@ jobs:
       - name: Checkout test script
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Prepare diagnostics and KVM
@@ -183,7 +215,7 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: bash tools/android_smoke.sh emulator-artifacts/candidate.apk
+          script: EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk com.example.convoy_mesh.pedestrianexp1
 
       - name: Remove duplicate APK from diagnostics
         if: always()
@@ -196,4 +228,4 @@ jobs:
           name: emulator-diagnostics
           path: emulator-artifacts
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90

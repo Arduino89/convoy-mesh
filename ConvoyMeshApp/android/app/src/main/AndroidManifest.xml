@@ -15,7 +15,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
-    <application android:label="Convoy Mesh" android:name="${applicationName}"
+    <application android:label="${convoyAppLabel}" android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher" android:allowBackup="false"
         android:enableOnBackInvokedCallback="true">
         <service android:name=".ConvoyForegroundService" android:exported="false"

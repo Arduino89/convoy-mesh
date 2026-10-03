@@ -2,6 +2,7 @@
 // recordings from a person. Run with `dart run tool/pedestrian_candidate_probe.dart`.
 // Imports the estimator used by LocationFusionService, not a replica of it.
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:convoy_mesh/location/pedestrian_motion_classifier.dart';
@@ -333,7 +334,7 @@ List<ProbeResult> candidateCases() => [
 ];
 
 void main(List<String> arguments) {
-  print(
+  stdout.writeln(
     const JsonEncoder.withIndent('  ').convert({
       'label': arguments.isEmpty ? 'working_tree' : arguments.first,
       'evidence':

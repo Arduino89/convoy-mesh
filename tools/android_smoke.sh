@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 APK=${1:?APK path required}
-PACKAGE=com.example.convoy_mesh
+PACKAGE=${2:-com.example.convoy_mesh}
+ACTIVITY=com.example.convoy_mesh.MainActivity
 OUT=emulator-artifacts
 mkdir -p "$OUT"
 PID=''
@@ -20,8 +21,8 @@ trap collect EXIT
 runtime_ready() {
   local name=$1
   timeout 15 adb shell dumpsys activity services "$PACKAGE" > "$OUT/services-$name.txt" || return 1
-  awk '
-    /\* ServiceRecord\{/ { own = /com\.example\.convoy_mesh\/[^ ]*ConvoyForegroundService/ }
+  awk -v package="$PACKAGE" '
+    /\* ServiceRecord\{/ { own = index($0, package "/") && /ConvoyForegroundService/ }
     own { print }
   ' "$OUT/services-$name.txt" > "$OUT/owner-$name.txt"
   grep -q 'isForeground=true' "$OUT/owner-$name.txt"
@@ -92,13 +93,13 @@ assert_no_runtime() {
 }
 launch_app_process() {
   local name=$1
-  timeout 30 adb shell am start -n "$PACKAGE/.MainActivity" | tee "$OUT/launch-$name.txt"
+  timeout 30 adb shell am start -n "$PACKAGE/$ACTIVITY" | tee "$OUT/launch-$name.txt"
   if grep -E 'Error:|Exception' "$OUT/launch-$name.txt"; then return 1; fi
   wait_for_process "$name"
 }
 launch_app_runtime() {
   local name=$1
-  timeout 30 adb shell am start -n "$PACKAGE/.MainActivity" | tee "$OUT/launch-$name.txt"
+  timeout 30 adb shell am start -n "$PACKAGE/$ACTIVITY" | tee "$OUT/launch-$name.txt"
   if grep -E 'Error:|Exception' "$OUT/launch-$name.txt"; then return 1; fi
   wait_for_runtime "$name"
 }
@@ -242,6 +243,30 @@ if grep -q '"category":"session","event":"stop"' "$OUT/diag-nearby-test.jsonl"; 
   exit 1
 fi
 
+# Exercise the real preview path before the outing resets the estimator/track.
+# These are synthetic emulator coordinates, never a person's field recording.
+wait_and_tap_text 'Mappa' open-map
+wait_and_tap_text 'Posizione non agganciata • tocca per localizzarti' start-preview
+for i in 1 2 3 4; do
+  timeout 10 adb emu geo fix 10.0 45.0 >> "$OUT/gps-injection.txt" 2>&1
+  sleep 5
+done
+assert_no_runtime preview
+capture_diag preview
+python3 - "$OUT/diag-preview.jsonl" "${EXPECTED_BUILD_COMMIT:-}" <<'PY'
+import json, sys
+rows = [json.loads(line) for line in open(sys.argv[1]) if line.strip()]
+start = next(r['data'] for r in rows if r['category'] == 'session' and r['event'] == 'start')
+if sys.argv[2]:
+    assert start['build_commit'] == sys.argv[2], start
+assert start['app_version'] == '0.7.7-exp1+9', start
+fixes = [r['data'] for r in rows if r['category'] == 'gps' and r['event'] == 'fix']
+assert fixes and any(f['fresh'] for f in fixes), 'Preview did not acquire a real provider fix'
+assert all(not f['record_track'] and not f['track_added'] and f['track_points_total'] == 0 for f in fixes)
+snapshots = [r['data'] for r in rows if r['category'] == 'runtime' and r['event'] == 'snapshot']
+assert all(not s['outing_active'] and not s['foreground_service'] and s['local_trail_points'] == 0 for s in snapshots)
+PY
+
 # Explicitly start an outing through the real UI. Only now must FGS appear.
 wait_and_tap_text 'Avvia uscita' start-outing
 wait_for_runtime outing
@@ -285,6 +310,22 @@ if [ "$AFTER_TRACK" -le "$BASE_TRACK" ]; then
   echo "Local trail did not grow while screen was off ($BASE_TRACK -> $AFTER_TRACK)" >&2
   exit 1
 fi
+python3 - "$OUT/diag-screen-off.jsonl" <<'PY'
+import json, sys
+from datetime import datetime
+rows = [json.loads(line) for line in open(sys.argv[1]) if line.strip()]
+fixes = [r['data'] for r in rows if r['category'] == 'gps' and r['event'] == 'fix']
+outing = [f for f in fixes if f['record_track']]
+assert outing and outing[0]['track_points_total'] == 0, 'Preview leaked into outing history'
+assert not outing[0]['track_added'], 'First outing observation was prematurely confirmed'
+added = [f for f in outing if f['track_added']]
+assert added, 'Outing produced no track evidence'
+for f in added:
+    assert f['fresh'] and f['display_lat'] is not None and f['display_lon'] is not None
+    received = datetime.fromisoformat(f['received_ts_utc'].replace('Z', '+00:00'))
+    supported = datetime.fromisoformat(f['supported_ts_utc'].replace('Z', '+00:00'))
+    assert 0 <= (received - supported).total_seconds() <= 15, f
+PY
 printf '%s\n' "SCREEN_OFF_EVIDENCE: gps_fix=$BASE_FIXES->$AFTER_FIXES track_added=$BASE_TRACK->$AFTER_TRACK" >> "$OUT/readiness.txt"
 
 timeout 15 adb shell input keyevent KEYCODE_WAKEUP
@@ -312,5 +353,5 @@ if grep -E 'FATAL EXCEPTION|Fatal signal|Unhandled Exception|EXCEPTION CAUGHT BY
   echo 'App exception detected' >&2
   exit 1
 fi
-printf '%s\n' 'PASS: exact APK clean-install location request passed; diagnostic started in Nearby and survived Outing stop; explicit Outing promoted to FGS; process/owner survived verified screen-off; GPS fixes and local trail grew while screen was off; resumed without detected app exception.' > "$OUT/result.txt"
-printf '%s\n' 'NOT TESTED: real BLE peer-to-peer, real GNSS error, OEM energy policies, battery endurance, real multi-device HISTORY ACK loss/retry.' >> "$OUT/result.txt"
+printf '%s\n' 'PASS: exact APK/build stamp and clean-install location request passed; preview acquired without FGS/trail and did not leak into Outing; diagnostic started in Nearby and survived Outing stop; explicit Outing promoted to FGS; process/owner survived verified screen-off; fresh GPS fixes and local trail grew while screen was off; resumed without detected app exception.' > "$OUT/result.txt"
+printf '%s\n' 'NOT TESTED: real BLE peer-to-peer, real GNSS error, IMU motion, forced Doze, OEM energy policies, battery endurance, real multi-device HISTORY ACK loss/retry; dropout/segment correctness is a separate synthetic unit-test gate.' >> "$OUT/result.txt"
