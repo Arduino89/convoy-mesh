@@ -247,11 +247,15 @@ class PedestrianPositionEstimator {
     List<GpsObservation>? observations,
   }) {
     final source = observations ?? _window;
-    final evidence = horizon == null
+    final recent = horizon == null
         ? source
         : source
               .where((p) => source.last.at.difference(p.at) <= horizon)
               .toList();
+    // Prefer the nominal 20 s motion span. If a delivery gap leaves fewer
+    // samples, retain evidence from the bounded 25 s window instead of waiting
+    // for five entirely new callbacks. Acquisition supplies its own support.
+    final evidence = recent.length >= count ? recent : source;
     if (evidence.length <= count) return [...evidence];
     final start = evidence.first.at.microsecondsSinceEpoch;
     final span = evidence.last.at.microsecondsSinceEpoch - start;

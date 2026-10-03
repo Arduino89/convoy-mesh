@@ -181,10 +181,10 @@ void main() {
       'walking resumes after a ${gap}s sample gap without permanent freeze',
       () {
         final result = probe.shortDropout(gap);
-        expect(result.metrics()['first_fresh_after_resume_s'], isNotNull);
+        expect(result.metrics()['first_new_support_after_resume_s'], isNotNull);
         expect(
-          result.metrics()['first_fresh_after_resume_s'],
-          lessThanOrEqualTo(25),
+          result.metrics()['first_new_support_after_resume_s'],
+          lessThanOrEqualTo(gap == 10 ? 5 : 25),
         );
         expect(result.points.last.error, lessThan(8));
         expect(result.points.last.estimate.addToTrack, isTrue);

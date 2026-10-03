@@ -99,6 +99,7 @@ class ProbeResult {
     double? largestError;
     double? largestFreshError;
     double? recoveryDelay;
+    double? newSupportDelay;
     var staleDisplays = 0;
     var trackCandidates = 0;
     var candidatePath = 0.0;
@@ -120,6 +121,12 @@ class ProbeResult {
           point.fix.seconds >= recoveryStartsAt! &&
           fresh) {
         recoveryDelay ??= point.fix.seconds - recoveryStartsAt!;
+        final resumedAt = syntheticEpoch.add(Duration(microseconds:
+            (recoveryStartsAt! * Duration.microsecondsPerSecond).round()));
+        if (point.estimate.supportedAt != null &&
+            !point.estimate.supportedAt!.isBefore(resumedAt)) {
+          newSupportDelay ??= point.fix.seconds - recoveryStartsAt!;
+        }
       }
       if (point.estimate.addToTrack) {
         trackCandidates++;
@@ -142,6 +149,7 @@ class ProbeResult {
       'max_fresh_error_m': largestFreshError,
       'stale_display_observations': staleDisplays,
       if (recoveryStartsAt != null) 'first_fresh_after_resume_s': recoveryDelay,
+      if (recoveryStartsAt != null) 'first_new_support_after_resume_s': newSupportDelay,
       'final_north_m': points.last.north,
       'final_east_m': points.last.east,
       'track_candidates': trackCandidates,
@@ -244,12 +252,17 @@ ProbeResult hairpinWithoutImu() => ProbeResult('gps_only_hairpin_return', [
     SyntheticFix(t + 10, t <= 50 ? 1.2 * t : 60 - 1.2 * (t - 50), 0),
 ], motionStartsAt: 10);
 
-ProbeResult shortDropout(double gap) => ProbeResult(
-  'moving_dropout_${gap}s',
+ProbeResult shortDropout(double gap, {bool burst = false}) => ProbeResult(
+  'moving_dropout_${gap}s${burst ? "_then_1Hz_burst" : ""}',
   [
     for (final t in [0.0, 5.0, 10.0]) SyntheticFix(t, 0, 0),
     for (var t = 15.0; t <= 120; t += 5)
-      if (t <= 40 || t >= 40 + gap) SyntheticFix(t, (t - 10) * 1.2, 0),
+      if (t <= 40 || t >= 40 + gap) ...[
+        SyntheticFix(t, (t - 10) * 1.2, 0),
+        if (burst && t >= 40 + gap && t < 60)
+          for (var extra = 1; extra < 5; extra++)
+            SyntheticFix(t + extra, (t + extra - 10) * 1.2, 0),
+      ],
   ],
   motionStartsAt: 10,
   recoveryStartsAt: 40 + gap,
@@ -324,6 +337,7 @@ List<ProbeResult> candidateCases() => [
   cornersWithoutImu(),
   hairpinWithoutImu(),
   shortDropout(10),
+  shortDropout(10, burst: true),
   shortDropout(20),
   initialOutlier(),
   dropout(),
