@@ -151,6 +151,115 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Split the exact APK for bounded downloads
+        run: |
+          # Transport parts only: no second build, signing or APK variant.
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          apk = Path('ConvoyMeshApp/build/app/outputs/flutter-apk/app-debug.apk')
+          output = Path('build-evidence/apk-parts')
+          output.mkdir()
+          chunk_bytes = 24 * 1024 * 1024
+          assert 0 < apk.stat().st_size <= 8 * chunk_bytes, 'APK exceeds bounded transport capacity'
+          parts = []
+          digest = hashlib.sha256()
+          with apk.open('rb') as source:
+              while data := source.read(chunk_bytes):
+                  name = f'part-{len(parts):02}'
+                  (output / name).write_bytes(data)
+                  digest.update(data)
+                  parts.append({'file': name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+          expected = Path('build-evidence/apk-sha256.txt').read_text().split()[0]
+          assert digest.hexdigest() == expected, 'APK changed after fingerprinting'
+          manifest = {
+              'source_sha': Path('build-evidence/checkout-sha.txt').read_text().strip(),
+              'apk_file': apk.name, 'apk_bytes': apk.stat().st_size,
+              'apk_sha256': expected, 'parts': parts,
+          }
+          Path('build-evidence/apk-transport-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+          PY
+
+      - name: Upload APK transport part 00
+        if: ${{ hashFiles('build-evidence/apk-parts/part-00') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-apk-part-00
+          path: build-evidence/apk-parts/part-00
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload APK transport part 01
+        if: ${{ hashFiles('build-evidence/apk-parts/part-01') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-apk-part-01
+          path: build-evidence/apk-parts/part-01
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload APK transport part 02
+        if: ${{ hashFiles('build-evidence/apk-parts/part-02') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-apk-part-02
+          path: build-evidence/apk-parts/part-02
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload APK transport part 03
+        if: ${{ hashFiles('build-evidence/apk-parts/part-03') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-apk-part-03
+          path: build-evidence/apk-parts/part-03
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload APK transport part 04
+        if: ${{ hashFiles('build-evidence/apk-parts/part-04') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-apk-part-04
+          path: build-evidence/apk-parts/part-04
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload APK transport part 05
+        if: ${{ hashFiles('build-evidence/apk-parts/part-05') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-apk-part-05
+          path: build-evidence/apk-parts/part-05
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload APK transport part 06
+        if: ${{ hashFiles('build-evidence/apk-parts/part-06') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-apk-part-06
+          path: build-evidence/apk-parts/part-06
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload APK transport part 07
+        if: ${{ hashFiles('build-evidence/apk-parts/part-07') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-apk-part-07
+          path: build-evidence/apk-parts/part-07
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Upload build provenance
         if: always()
         uses: actions/upload-artifact@v7
@@ -165,6 +274,7 @@ jobs:
             build-evidence/apk-signature.txt
             build-evidence/apk-badging.txt
             build-evidence/install-policy.txt
+            build-evidence/apk-transport-manifest.json
           if-no-files-found: error
           retention-days: 90
 
