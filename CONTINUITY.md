@@ -2,7 +2,7 @@
 
 ## STATUS
 
-**0.7.7-exp1+9 experimental pedestrian candidate**, [draft PR #4](https://github.com/Arduino89/convoy-mesh/pull/4), `experiment/pedestrian-acquisition-v1`. 147/147 tests passed locally and in CI. [Android run #120](https://github.com/Arduino89/convoy-mesh/actions/runs/37116465888) completed with **build/signature/package checks passed, emulator smoke FAILED**. Physical two-phone evidence pending; APK delivery gate remains blocked. No production or merge approval.
+**0.7.7-exp1+9 experimental pedestrian candidate**, [draft PR #4](https://github.com/Arduino89/convoy-mesh/pull/4), `experiment/pedestrian-acquisition-v1`. **149/149 CI tests pass**. [Android run #121](https://github.com/Arduino89/convoy-mesh/actions/runs/37198612027), attempt 1, **SUCCESS** for both build and emulator jobs. Exact APK bytes, source and signature independently verified; automated delivery gate passed. Physical two-phone evidence pending. No production or merge approval.
 
 User authorized implementation, branch, commits, draft PR and build on 2026-10-03, replacing the earlier read-only phase. Fix demonstrated acquisition/cadence defects first; preserve provider/5 s request/BLE/HISTORY. Do not restart from main or PR #3.
 
@@ -37,16 +37,19 @@ Experiment installs beside it as `com.example.convoy_mesh.pedestrianexp1` / **Co
 - `d0d6818`: service tests and isolated clock; preview/freshness/segments/log lifetime covered.
 - `8ab7c06`: isolated version/package, SDK/dependency pins, signature checks and stronger smoke.
 - `844e3a9`: short-gap support; recovery metric requires new support, not just an unexpired old anchor.
-- Candidate: 147/147 pass locally and in run #120; analyzer completed under existing nonfatal policy.
-- Run #120 built source `d330ec111e8558fa4df804817bfe36a38f980618`, verified APK signature, package/version, minSDK 24 and arm64/x86_64. Compiled artifact identity is in README. Emulator/field gates did not pass.
+- Candidate: 147/147 passed locally and in run #120; all 149 pass in run #121 after two real-service regressions were added. Analyzer completed with the same 21 nonfatal findings.
+- Independent replay matched all 18 run #120 outing observations without Android lifecycle. The slow synthetic stimulus, not GPS suspension, reproduced the missing trail; no production threshold was lowered.
+- `9ca9107`: ordinary GPS-walk smoke with a positive screen-on control, post-sleep diagnostic boundary, strict fresh-trail/source-motion assertions, plus reliable quiet-IMU ordinary-walk and isolated-jump service tests.
+- Run #121 built/tested exact source `9ca9107f229af91354116278c9970b39d0a4e81e`; signature/package/version/minSDK 24/arm64 checks and API35 emulator passed. Post-sleep GPS 14 -> 28 and trail 4 -> 18; all 14 new points fresh over 69.01 s / 86.52 m. Resume, preview isolation and diagnostic survival after outing stop passed.
+- Reconstructed APK matches CI and emulator SHA-256 `9737bf12b116a4321f0e7a54f9b09b1d0e13ff0c95e682aba3ba0d9b793dba11` / 164,372,655 bytes. Independent signed-content/RSA verification passed. Keep the exact delivered APK; README holds install identity.
 
 ## CURRENT WORK
 
-Triage run #120 job `111184795867`: `Local trail did not grow while screen was off (0 -> 0)`. Diagnostics show GPS fixes continued (8 -> 22), Outing/foreground owner remained active, and the classifier reported `moving=false`, `motion_reliable=true` during injected GPS movement. This identifies the failed assertion, not yet whether the cause is a motion-filter defect or inconsistent emulator inputs. Recover evidence from artifacts `emulator-diagnostics` / `convoy-build-provenance` on that run. Compiled APK exists; it is not a passed delivery candidate. Runs #118/#119 were cancelled by later branch pushes; no experiment run was active at the 2026-10-04 recovery check. Original Work execution/error telemetry is unavailable here.
+Deliver the verified experimental APK for Cama/Francesca's physical trial. Run #120 diagnosis is complete: ~0.44 m/s with reliable quiet IMU gives only ~8.9 m over 20 s, below the existing 10 m GPS-motion gate. Run #121 corrected the smoke to ordinary walking and passed stronger assertions without changing the application thresholds. Historical runs #118/#119 were cancelled by later pushes; run #120 failed. Original Work execution/error telemetry remains unavailable, so its chat interruption cause is unverified.
 
 ## NEXT GATE
 
-Resolve the exact run #120 screen-off/trail failure from its diagnostics and reproduce it through the real estimator/service, then pass the Android gate without weakening its trail assertion. Only after that: deliver a hash-verified APK and use the three existing Cama/Francesca sessions in `docs/pedestrian-exp1.md`. Physical targets remain Mi9Lite/API29 and M2101K6G/API33; field evidence precedes accuracy claims or merge.
+Use the three existing Cama/Francesca sessions in `docs/pedestrian-exp1.md`, each below four minutes, on Mi9Lite/API29 and M2101K6G/API33. Confirm both logs show 0.7.7-exp1+9 / `9ca9107`, preserve private exports and annotate failures. Field evidence precedes accuracy claims or merge; no need to rerun the passed automated gate unless executable changes or new counterexamples warrant it.
 
 ## DO NOT
 
@@ -54,7 +57,7 @@ No merge of PR #4 or #1. No old main/ledger base. Do not present old APK as impr
 
 ## OPEN RISKS / DEBT
 
-- Blocking Android evidence: run #120 screen-off GPS movement produced no trail; diagnosis pending. Do not infer GPS suspension or treat APK creation as smoke success.
+- Automated screen-off evidence now passes for ordinary injected walking; very slow walking/quiet IMU and real GNSS/BLE/OEM behavior are not certified by it.
 - GPS-only 0.3 m/s/accuracy 10 m still misses track movement; synthetic fresh error reaches 24 m.
 - Tight curves/returns defeat net/path; coherent drift is observationally ambiguous. Exact cadence invariance is unproven; gain remains per sample.
 - Acquisition is heuristic, not calibrated confidence. No physical accuracy/battery benefit measured.
@@ -68,4 +71,4 @@ No automatic removal of branches/builds. Keep the exact delivered APK; CI retent
 
 ## LAST CHECKPOINT
 
-2026-10-04: recovered PR #4, its six implementation/documentation commits, exact build provenance and emulator diagnostics after Cama reported the Work chat stopped updating. Run #120 finished 2026-10-03 10:36:07 UTC (12:36:07 Europe/Rome): compilation/tests/identity passed, screen-off trail assertion failed. This recovery changes documentation only; executable source remains `d330ec11`. No merge, rebuild or field validation. Chat/UI interruption cause is unverified; the concrete pending gate is recorded above.
+2026-10-04: user authorized corrections, verification and delivery. Recovered PR #4, reproduced all 18 failed-run outing fixes independently, corrected only the ordinary-walk smoke scenario and added two actual-service regressions. Run #121 attempt 1 passed all 149 tests and both Android jobs. Exact source `9ca9107`, APK/hash/signature and post-sleep receipts checked; APK retained for handoff. This checkpoint is documentation only. No merge or physical validation; chat/UI interruption cause remains unverified.
