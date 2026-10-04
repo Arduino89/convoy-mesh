@@ -6,9 +6,16 @@ Android/Flutter for **walking and hiking groups in low-connectivity areas**: off
 
 **0.7.7-exp1+9**, [draft PR #4](https://github.com/Arduino89/convoy-mesh/pull/4), branch `experiment/pedestrian-acquisition-v1`. Based on PR #1 application line `c3ef471754d7e1a4b3cf2558e5c2fadbb9d4f0a7`, not old main or PR #3 ledger. **No merge.**
 
-Local verification: **147/147 tests pass**. The unchanged application baseline plus the same 34 new regressions passes122 and fails 19; all 107 original tests pass. Android build, signature and exact-APK emulator gate are in progress. Physical two-phone validation remains pending.
+Local verification: **147/147 tests pass**. The unchanged application baseline plus the same 34 new regressions passes122 and fails 19; all 107 original tests pass. [Android run #120](https://github.com/Arduino89/convoy-mesh/actions/runs/37116465888) passed compilation, tests, signature and package/compatibility checks, but **failed the screen-off emulator trail assertion**. Physical two-phone validation remains pending; the compiled APK has not passed the delivery gate.
 
 Read [CONTINUITY](CONTINUITY.md), [implementation, measured limits and field protocol](docs/pedestrian-exp1.md), and [synthetic comparison CSV](docs/pedestrian-exp1-results.csv).
+
+### Recovered build checkpoint — 4 October 2026
+
+- Compiled source: `d330ec111e8558fa4df804817bfe36a38f980618`; run #120 / `37116465888`, completed 3 October at 10:36 UTC (12:36 Europe/Rome).
+- APK SHA-256 recorded by CI: `c7d10f1d05bff26aed6fe666b842a4f33c3c5170d28bc3ac4c94e4e427e42cb0`; 164,372,659 bytes. Artifact `convoy-mesh-debug-apk` / `11272445105` exists; this recovery read its provenance, not the full APK bytes.
+- Failure: `Local trail did not grow while screen was off (0 -> 0)`. The retained emulator diagnostics show new GPS fixes (8 -> 22), active Outing/foreground ownership and no added track points. Motion classification remained stationary despite injected coordinates; root cause still needs reproduction.
+- Next: resolve and retest this failed gate before delivering the experimental APK as verified. Documentation-only recovery commits do not change this executable identity. No merge or field validation.
 
 ### Previous candidate preserved
 

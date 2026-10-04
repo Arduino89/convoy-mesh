@@ -1,8 +1,10 @@
 # Localizzazione pedonale — candidata sperimentale 1
 
-Checkpoint 3 ottobre 2026. PR **#4**, branch `experiment/pedestrian-acquisition-v1`, base applicativa PR #1 `c3ef471754d7e1a4b3cf2558e5c2fadbb9d4f0a7`. Il suo codice applicativo coincide con la candidata precedente **0.7.6+8**, sorgente `3e056f88ab44a4fbb9989058a9191e2bebc3cba4`. Non usa main né il ledger della PR #3. Nessun merge autorizzato.
+Checkpoint recuperato il 4 ottobre 2026. PR **#4**, branch `experiment/pedestrian-acquisition-v1`, base applicativa PR #1 `c3ef471754d7e1a4b3cf2558e5c2fadbb9d4f0a7`. Il suo codice applicativo coincide con la candidata precedente **0.7.6+8**, sorgente `3e056f88ab44a4fbb9989058a9191e2bebc3cba4`. Non usa main né il ledger della PR #3. Nessun merge autorizzato.
 
-Nuova versione **0.7.7-exp1+9**, nome Android **Convoy Mesh Exp**, package `com.example.convoy_mesh.pedestrianexp1`. L'identità esatta dell'APK verificato sarà registrata in README e CONTINUITY dopo la CI. Fino a quel checkpoint, build/emulatore sono pendenti.
+Nuova versione **0.7.7-exp1+9**, nome Android **Convoy Mesh Exp**, package `com.example.convoy_mesh.pedestrianexp1`. Il [run #120](https://github.com/Arduino89/convoy-mesh/actions/runs/37116465888), sorgente `d330ec111e8558fa4df804817bfe36a38f980618`, ha completato compilazione, 147 test e verifiche di firma/package/compatibilità, ma ha **fallito il test della traccia a schermo spento**. L'APK compilato esiste e la sua identità è in README; non ha ancora superato il gate di consegna.
+
+Errore alle 12:36 del 3 ottobre (Europe/Rome): `Local trail did not grow while screen was off (0 -> 0)`. Nei diagnostici dell'emulatore arrivano 14 nuovi fix GPS (8 -> 22), con uscita/servizio ancora attivi, mentre `moving=false` e `motion_reliable=true` accompagnano il percorso GPS iniettato. Questo localizza il fallimento; non stabilisce ancora se serva correggere il filtro o gli ingressi sintetici dell'emulatore. Riprodurre e risolvere il gate prima delle prove fisiche sotto indicate. La causa dell'interruzione della chat Work non è verificabile dai log CI.
 
 ## Correzione e limiti delle sue assunzioni
 
