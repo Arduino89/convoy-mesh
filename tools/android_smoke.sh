@@ -273,45 +273,68 @@ wait_for_runtime outing
 assert_runtime outing
 timeout 15 adb exec-out screencap -p > "$OUT/outing-screen.png"
 
-# Give the estimator a stationary acquisition cluster before screen-off.
+# Give the estimator a stationary acquisition cluster, then prove that the
+# trajectory records a trail while the screen is still on. This is the control
+# for the same continuous GPS-only walk below, not a slow-walking/IMU test.
 for i in 1 2 3; do
   timeout 10 adb emu geo fix 10.0 45.0 >> "$OUT/gps-injection.txt" 2>&1
+  sleep 5
+done
+for i in $(seq 1 6); do
+  latitude=$(python3 -c "print(45.0 + $i * 0.00006)")
+  timeout 10 adb emu geo fix 10.0 "$latitude" >> "$OUT/gps-injection.txt" 2>&1
   sleep 5
 done
 capture_diag before-screen-off
 BASE_FIXES=$(count_matches '"category":"gps","event":"fix"' "$OUT/diag-before-screen-off.jsonl")
 BASE_TRACK=$(count_matches '"track_added":true' "$OUT/diag-before-screen-off.jsonl")
-BASE_LINES=$(wc -l < "$OUT/diag-before-screen-off.jsonl")
+if [ "$BASE_TRACK" -eq 0 ]; then
+  echo 'Control trajectory produced no trail before screen-off' >&2
+  exit 1
+fi
+printf '%s\n' "SCREEN_ON_CONTROL: gps_fix=$BASE_FIXES track_added=$BASE_TRACK; injected step=0.00006 latitude degrees/5s (~1.33m/s), IMU motion not simulated" >> "$OUT/readiness.txt"
 
 timeout 15 adb shell input keyevent KEYCODE_HOME
 timeout 15 adb shell input keyevent KEYCODE_SLEEP
 sleep 2
 timeout 15 adb shell dumpsys power > "$OUT/power-screen-off.txt"
 grep -Eq 'mWakefulness=(Asleep|Dozing)' "$OUT/power-screen-off.txt"
+# Establish the log boundary only AFTER Android reports sleep. Transition
+# records from HOME/SLEEP cannot count as successful screen-off evidence.
+capture_diag screen-off-start
+OFF_BASE_LINES=$(wc -l < "$OUT/diag-screen-off-start.jsonl")
+OFF_BASE_FIXES=$(count_matches '"category":"gps","event":"fix"' "$OUT/diag-screen-off-start.jsonl")
+OFF_BASE_TRACK=$(count_matches '"track_added":true' "$OUT/diag-screen-off-start.jsonl")
 
-# Keep a physically plausible slow walk (~2.2 m / 5 s) while the screen is off.
+# Continue the SAME ordinary walk (~6.7 m / 5 s) while the screen is off.
+# The previous ~0.44 m/s stimulus advanced only ~8.9 m in the 20 s GPS evidence
+# window, below its 10 m gate, while emulator IMU remained still. It also failed
+# without screen-off; preserve that measured limitation, not a lifecycle claim.
 # This proves more than process survival: GPS fixes must continue and the local
-# filtered trail must gain at least one point for future HISTORY catch-up.
-for i in $(seq 1 14); do
-  latitude=$(python3 -c "print(45.0 + $i * 0.00002)")
+# filtered trail must gain fresh points from the post-screen-off tail.
+for i in $(seq 7 20); do
+  latitude=$(python3 -c "print(45.0 + $i * 0.00006)")
   timeout 10 adb emu geo fix 10.0 "$latitude" >> "$OUT/gps-injection.txt" 2>&1
   sleep 5
 done
 assert_runtime screen-off
+timeout 15 adb shell dumpsys power > "$OUT/power-screen-off-end.txt"
+grep -Eq 'mWakefulness=(Asleep|Dozing)' "$OUT/power-screen-off-end.txt"
 sleep 2
 capture_diag screen-off
+tail -n +$((OFF_BASE_LINES + 1)) "$OUT/diag-screen-off.jsonl" > "$OUT/diag-screen-off-tail.jsonl"
 AFTER_FIXES=$(count_matches '"category":"gps","event":"fix"' "$OUT/diag-screen-off.jsonl")
 AFTER_TRACK=$(count_matches '"track_added":true' "$OUT/diag-screen-off.jsonl")
-if [ "$AFTER_FIXES" -le "$BASE_FIXES" ]; then
-  echo "No new GPS fixes while screen was off ($BASE_FIXES -> $AFTER_FIXES)" >&2
+if [ "$AFTER_FIXES" -le "$OFF_BASE_FIXES" ]; then
+  echo "No new GPS fixes while screen was off ($OFF_BASE_FIXES -> $AFTER_FIXES)" >&2
   exit 1
 fi
-if [ "$AFTER_TRACK" -le "$BASE_TRACK" ]; then
-  echo "Local trail did not grow while screen was off ($BASE_TRACK -> $AFTER_TRACK)" >&2
+if [ "$AFTER_TRACK" -le "$OFF_BASE_TRACK" ]; then
+  echo "Local trail did not grow while screen was off ($OFF_BASE_TRACK -> $AFTER_TRACK)" >&2
   exit 1
 fi
-python3 - "$OUT/diag-screen-off.jsonl" <<'PY'
-import json, sys
+python3 - "$OUT/diag-screen-off.jsonl" "$OUT/diag-screen-off-tail.jsonl" <<'PY'
+import json, math, sys
 from datetime import datetime
 rows = [json.loads(line) for line in open(sys.argv[1]) if line.strip()]
 fixes = [r['data'] for r in rows if r['category'] == 'gps' and r['event'] == 'fix']
@@ -320,13 +343,32 @@ assert outing and outing[0]['track_points_total'] == 0, 'Preview leaked into out
 assert not outing[0]['track_added'], 'First outing observation was prematurely confirmed'
 added = [f for f in outing if f['track_added']]
 assert added, 'Outing produced no track evidence'
-for f in added:
+tail = [json.loads(line) for line in open(sys.argv[2]) if line.strip()]
+off_fixes = [r['data'] for r in tail if r['category'] == 'gps' and r['event'] == 'fix']
+off_added = [f for f in off_fixes if f['track_added']]
+assert len(off_fixes) >= 8 and len(off_added) >= 3, 'Insufficient new screen-off GPS/trail evidence'
+source_times = [datetime.fromisoformat(f['source_ts_utc'].replace('Z', '+00:00')) for f in off_fixes]
+assert all(b > a for a, b in zip(source_times, source_times[1:])), 'Non-increasing source times'
+span = (source_times[-1] - source_times[0]).total_seconds()
+assert span >= 45, f'Screen-off source evidence too short: {span}s'
+def distance(a, b):
+    lat1, lat2 = math.radians(a['raw_lat']), math.radians(b['raw_lat'])
+    dlat, dlon = lat2 - lat1, math.radians(b['raw_lon'] - a['raw_lon'])
+    h = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+    return 6371000 * 2 * math.asin(min(1, math.sqrt(h)))
+net = distance(off_fixes[0], off_fixes[-1])
+assert net >= 45 and 0.8 <= net / span <= 2.0, f'Wrong delivered walking stimulus: {net}m/{span}s'
+for a, b, t0, t1 in zip(off_fixes, off_fixes[1:], source_times, source_times[1:]):
+    assert distance(a, b) / (t1 - t0).total_seconds() <= 4.2, 'Injected trajectory contains a jump'
+for f in off_added:
+    assert f['record_track'], 'Screen-off point was not owned by Outing'
     assert f['fresh'] and f['display_lat'] is not None and f['display_lon'] is not None
     received = datetime.fromisoformat(f['received_ts_utc'].replace('Z', '+00:00'))
     supported = datetime.fromisoformat(f['supported_ts_utc'].replace('Z', '+00:00'))
     assert 0 <= (received - supported).total_seconds() <= 15, f
+print(f'SCREEN_OFF_DELIVERED: fixes={len(off_fixes)} new_tracks={len(off_added)} source_span={span:.2f}s net={net:.2f}m speed={net/span:.2f}m/s')
 PY
-printf '%s\n' "SCREEN_OFF_EVIDENCE: gps_fix=$BASE_FIXES->$AFTER_FIXES track_added=$BASE_TRACK->$AFTER_TRACK" >> "$OUT/readiness.txt"
+printf '%s\n' "SCREEN_OFF_EVIDENCE: gps_fix=$OFF_BASE_FIXES->$AFTER_FIXES track_added=$OFF_BASE_TRACK->$AFTER_TRACK" >> "$OUT/readiness.txt"
 
 timeout 15 adb shell input keyevent KEYCODE_WAKEUP
 timeout 15 adb shell wm dismiss-keyguard
@@ -354,4 +396,4 @@ if grep -E 'FATAL EXCEPTION|Fatal signal|Unhandled Exception|EXCEPTION CAUGHT BY
   exit 1
 fi
 printf '%s\n' 'PASS: exact APK/build stamp and clean-install location request passed; preview acquired without FGS/trail and did not leak into Outing; diagnostic started in Nearby and survived Outing stop; explicit Outing promoted to FGS; process/owner survived verified screen-off; fresh GPS fixes and local trail grew while screen was off; resumed without detected app exception.' > "$OUT/result.txt"
-printf '%s\n' 'NOT TESTED: real BLE peer-to-peer, real GNSS error, IMU motion, forced Doze, OEM energy policies, battery endurance, real multi-device HISTORY ACK loss/retry; dropout/segment correctness is a separate synthetic unit-test gate.' >> "$OUT/result.txt"
+printf '%s\n' 'NOT TESTED: very slow walking with quiet/unavailable IMU, real BLE peer-to-peer, real GNSS error, IMU motion, forced Doze, OEM energy policies, battery endurance, real multi-device HISTORY ACK loss/retry; dropout/segment correctness is a separate synthetic unit-test gate.' >> "$OUT/result.txt"

@@ -46,14 +46,19 @@ class _Harness {
     now: () => now,
   );
 
-  void receive(int sourceSeconds, double eastMeters, {int? receivedSeconds}) {
+  void receive(
+    int sourceSeconds,
+    double eastMeters, {
+    int? receivedSeconds,
+    double accuracy = 3,
+  }) {
     now = epoch.add(Duration(seconds: receivedSeconds ?? sourceSeconds));
     platform.positions.add(
       Position(
         latitude: 0,
         longitude: eastMeters / 111195,
         timestamp: epoch.add(Duration(seconds: sourceSeconds)),
-        accuracy: 3,
+        accuracy: accuracy,
         altitude: 0,
         altitudeAccuracy: 0,
         heading: 0,
@@ -62,6 +67,13 @@ class _Harness {
         speedAccuracy: 0,
       ),
     );
+  }
+
+  Future<void> quietImu() async {
+    for (var i = 0; i < 6; i++) {
+      sensors.events.add(UserAccelerometerEvent(0, 0, 0, DateTime.now()));
+    }
+    await Future<void>.delayed(Duration.zero);
   }
 
   void walk({required int from, required int until, double origin = 0}) {
@@ -98,7 +110,7 @@ void main() {
         expect(call.method, 'checkPermissionStatus');
         return 1; // PermissionStatus.granted.
       });
-      // The sensor stream supplies no IMU: actual GPS-only fallback is used.
+      // Tests may supply quiet IMU; otherwise actual GPS-only fallback is used.
       try {
         await body(harness);
       } finally {
@@ -154,6 +166,51 @@ void main() {
     await h.service.startOuting();
     expect(h.service.trackPoints, isEmpty);
     expect(h.service.last!.lat, isNull);
+  });
+
+  contractTest('ordinary GPS walk records with a reliable quiet IMU', (
+    h,
+  ) async {
+    await h.service.startOuting();
+    await h.quietImu();
+    for (final second in [0, 5, 10, 15]) {
+      h.receive(second, 0, accuracy: 5);
+    }
+    expect(h.service.last!.motionReliable, isTrue);
+    expect(h.service.last!.isMoving, isFalse);
+    expect(h.service.trackPoints, isEmpty);
+    for (var second = 20; second <= 90; second += 5) {
+      await h.quietImu();
+      h.receive(second, (second - 15) * 1.2, accuracy: 5);
+    }
+    expect(h.service.last!.gpsDecision, 'gps_motion');
+    expect(h.service.last!.motionReliable, isTrue);
+    expect(h.service.last!.isMoving, isFalse);
+    expect(h.service.last!.hasFreshFixAt(h.now), isTrue);
+    expect(h.service.trackPoints.length, greaterThanOrEqualTo(3));
+    expect(h.service.trackPoints.last.lon, greaterThan(75 / 111195));
+    expect(h.service.trackPoints.last.ts, h.now);
+  });
+
+  contractTest('quiet IMU and an isolated GPS jump do not write a trail', (
+    h,
+  ) async {
+    await h.service.startOuting();
+    await h.quietImu();
+    for (final second in [0, 5, 10]) {
+      h.receive(second, 0, accuracy: 5);
+    }
+    final supported = h.service.last!.measurementAt;
+    h.receive(15, 20, accuracy: 5);
+    expect(h.service.last!.motionReliable, isTrue);
+    expect(h.service.last!.isMoving, isFalse);
+    expect(h.service.last!.measurementAt, supported);
+    for (var second = 20; second <= 90; second += 5) {
+      await h.quietImu();
+      h.receive(second, 0, accuracy: 5);
+    }
+    expect(h.service.trackPoints, isEmpty);
+    expect(h.service.last!.hasFreshFixAt(h.now), isTrue);
   });
 
   contractTest(
