@@ -111,7 +111,7 @@ jobs:
                    'Limiti: passo molto lento, curve strette e GNSS/BLE/OEM reali richiedono prove fisiche. '
                    'La firma debug attuale non garantisce aggiornamenti tra future build: '
                    'prima di disinstallare esportare i log. Nessun merge o rilascio di produzione.\n\n'
-                   f'[Protocollo e QA](https://github.com/{os.environ["GH_REPO"]}/blob/{source}/docs/pedestrian-exp1.md).\n')
+                   f'[Protocollo e QA](https://github.com/{os.environ["GH_REPO"]}/blob/experiment/pedestrian-acquisition-v1/docs/pedestrian-exp1.md).\n')
           Path('notes.md').write_text(notes)
           with open(os.environ['GITHUB_ENV'], 'a') as env:
               env.write(f'ARCHIVE_TAG={tag}\nCANDIDATE_VERSION={version}+{code}\n')
