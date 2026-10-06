@@ -14,15 +14,20 @@ Estimator: static consensus plus majority-supported moving acquisition; first/re
 
 Diagnostics remain independent of outing lifetime, local and capped at four minutes. Process-loss outing reconstruction is still absent.
 
+Experimental distribution: native GitHub Releases, fixed tag `experimental-latest` and asset `Convoy-Mesh-Experimental.apk`; a separate versioned prerelease preserves each promoted APK. The branch-local `.github/workflows/experimental-download.yml` explicitly selects an approved successful CI run/source/hash, validates and publishes existing bytes. No automatic publication of ordinary builds, rebuild or signing change.
+
 ## CANONICAL SOURCES
 
-- [README](README.md): current install/artifact checkpoint.
+- [README](README.md): current install/artifact checkpoint and fixed download URL.
+- [Experimental download](https://github.com/Arduino89/convoy-mesh/releases/tag/experimental-latest); `.github/workflows/experimental-download.yml`: reviewed distribution, archived version and byte verification.
 - [Experiment rationale, measured limits and field protocol](docs/pedestrian-exp1.md).
 - [Synthetic CSV](docs/pedestrian-exp1-results.csv); regenerate with `ConvoyMeshApp/tool/pedestrian_candidate_probe.dart`.
 - `ConvoyMeshApp/test/`, `.github/workflows/android-debug.yml`, `tools/android_smoke.sh`: actual estimator/service and APK/emulator evidence.
 - PR #1 continuity at `c3ef471` retains older milestone details; this is the current handoff, not another changelog.
 
 ## STABILIZED DECISIONS
+
+Cama authorized public experimental APK distribution with one fixed download link on 2026-10-06. Reuse-first level 4: native GitHub Releases/Actions; no website, account service or updater added. Promote only an explicitly reviewed candidate; versioned archive assets are not overwritten. Keep DRAFT/no merge. The debug signing limitation remains; fixed URLs do not guarantee Android update compatibility.
 
 Walking/hiking only, offline BLE, no road/origin snapping. Uncertainty overlap does not prove identical position; RSSI is not metres. Do not compare clocks across phones. No ledger/GATT/CoC/fusion-library/rendering changes here. Real logs and coordinates stay private.
 
@@ -45,7 +50,7 @@ Experiment installs beside it as `com.example.convoy_mesh.pedestrianexp1` / **Co
 
 ## CURRENT WORK
 
-The exact experimental APK has been recovered for delivery on 2026-10-06; the next work is Cama/Francesca's physical trial. GitHub access is working and PR #4's stale run #120 description has been reconciled with run #121. Reuse-first level 2: reuse the already-verified APK and existing protocol; no application changes or new build. Run #120 diagnosis is complete: ~0.44 m/s with reliable quiet IMU gives only ~8.9 m over 20 s, below the existing 10 m GPS-motion gate. Run #121 corrected the smoke to ordinary walking and passed stronger assertions without changing the application thresholds. Historical runs #118/#119 were cancelled by later pushes; run #120 failed. Original Work execution/error telemetry remains unavailable, so its chat interruption cause is unverified.
+The exact experimental APK was delivered and published on 2026-10-06 at https://github.com/Arduino89/convoy-mesh/releases/download/experimental-latest/Convoy-Mesh-Experimental.apk. Publisher run `37437992245` passed, including re-download/hash verification. Archived tag `experimental-0.7.7-exp1-9-9ca9107` preserves the same bytes. The next work is Cama/Francesca's physical trial. GitHub access is working and PR #4's stale run #120 description has been reconciled with run #121. Reuse-first level 2: reuse the already-verified APK and existing protocol; no application changes or new build. Run #120 diagnosis is complete: ~0.44 m/s with reliable quiet IMU gives only ~8.9 m over 20 s, below the existing 10 m GPS-motion gate. Run #121 corrected the smoke to ordinary walking and passed stronger assertions without changing the application thresholds. Historical runs #118/#119 were cancelled by later pushes; run #120 failed. Original Work execution/error telemetry remains unavailable, so its chat interruption cause is unverified.
 
 ## NEXT GATE
 
@@ -71,4 +76,4 @@ No automatic removal of branches/builds. Keep the exact delivered APK; CI retent
 
 ## LAST CHECKPOINT
 
-2026-10-06: resumed after Cama reported the prior session lost its GitHub connection. Rechecked live PR #4 (open/draft), run #121 jobs and archived provenance/test/emulator receipts. Recovered the already-saved exact APK and verified 164,372,655 bytes, ZIP integrity and SHA-256 matching both CI and emulator input. Latest application changes remain `9ca9107`; `0046367` changes documentation only. Reconciled the stale PR body with README and the passed run #121. No application edits, redundant CI, merge or physical validation. Next gate remains the three private physical sessions; internal chat telemetry is unavailable.
+2026-10-06: resumed after Cama reported the prior session lost its GitHub connection. Rechecked live PR #4 (open/draft), run #121 jobs and archived provenance/test/emulator receipts. Recovered the already-saved exact APK and verified 164,372,655 bytes, ZIP integrity and SHA-256 matching both CI and emulator input. Latest application changes remain `9ca9107`; `0046367` changes documentation only. Reconciled the stale PR body with README and the passed run #121. User then authorized fixed-link experimental distribution. Native GitHub Releases now serves the exact APK; publishing run `37437992245` passed and public asset metadata confirms size/hash. A later publisher-only revision points rolling notes at current QA. Versioned archive and explicit reviewed promotion are documented; no application edits, rebuild, signing change, merge or physical validation. Next gate remains the three private physical sessions; internal chat telemetry is unavailable.
