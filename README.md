@@ -2,6 +2,14 @@
 
 Android/Flutter for **walking and hiking groups in low-connectivity areas**: offline BLE exchanges and GNSS coordinates. No vehicle assumptions or road snapping. Not a replacement for mountain-safety precautions.
 
+## Download on both phones
+
+[Download the current experimental APK](https://github.com/Arduino89/convoy-mesh/releases/download/experimental-latest/Convoy-Mesh-Experimental.apk) — fixed public link; no GitHub account required. [Version and instructions](https://github.com/Arduino89/convoy-mesh/releases/tag/experimental-latest).
+
+The filename/link remain the same when a reviewed candidate is promoted. Versioned prereleases retain earlier APKs; check the actual version/build inside the app. This is an experimental distribution channel, not a stable release. Android still requires confirmation to install. The current debug signing limitation below remains: a fixed download URL does not guarantee future in-place upgrade compatibility.
+
+Publication reuses native GitHub Releases and the already-verified CI artifact, without rebuilding or signing it again. `.github/workflows/experimental-download.yml` publishes only the explicit run/source/checksum approved in that file; ordinary application builds do not automatically become downloads. After review, update those three values on the existing experiment branch. The workflow checks both successful Android jobs, exact source/hash/package/signature provenance, archives the version, updates `experimental-latest`, and downloads the published asset to recheck its hash. Only the rolling distribution tag may move. This branch-local push workflow does not depend on merging into main.
+
 ## Current work
 
 **0.7.7-exp1+9**, [draft PR #4](https://github.com/Arduino89/convoy-mesh/pull/4), branch `experiment/pedestrian-acquisition-v1`. Based on PR #1 application line `c3ef471754d7e1a4b3cf2558e5c2fadbb9d4f0a7`, not old main or PR #3 ledger. **No merge.**
