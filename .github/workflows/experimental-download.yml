@@ -1,0 +1,149 @@
+name: Publish experimental download
+
+# Explicitly reviewed delivery, not automatic publication of every build.
+# For the next candidate, update the three approved identity values below.
+on:
+  push:
+    branches: [experiment/pedestrian-acquisition-v1]
+    paths: [.github/workflows/experimental-download.yml]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: convoy-experimental-download
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      CANDIDATE_RUN: '37198612027'
+      CANDIDATE_SOURCE: '9ca9107f229af91354116278c9970b39d0a4e81e'
+      CANDIDATE_SHA256: '9737bf12b116a4321f0e7a54f9b09b1d0e13ff0c95e682aba3ba0d9b793dba11'
+    steps:
+      - name: Require completed build and Android gate
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/actions/runs/$CANDIDATE_RUN" > run.json
+          gh api "repos/$GH_REPO/actions/runs/$CANDIDATE_RUN/jobs" > jobs.json
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('run.json'))
+          assert run['repository']['full_name'] == os.environ['GH_REPO']
+          assert run['head_repository']['full_name'] == os.environ['GH_REPO']
+          assert run['head_branch'] == 'experiment/pedestrian-acquisition-v1'
+          assert run['event'] == 'push'
+          assert run['path'] == '.github/workflows/android-debug.yml'
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          assert run['head_sha'] == os.environ['CANDIDATE_SOURCE']
+          jobs = {j['name']: j for j in json.load(open('jobs.json'))['jobs']}
+          for name in ('build', 'android-emulator-smoke'):
+              assert jobs[name]['conclusion'] == 'success', name
+          PY
+
+      - name: Download existing exact APK
+        uses: actions/download-artifact@v8
+        with:
+          name: convoy-mesh-debug-apk
+          run-id: ${{ env.CANDIDATE_RUN }}
+          github-token: ${{ github.token }}
+          path: candidate
+
+      - name: Download build provenance
+        uses: actions/download-artifact@v8
+        with:
+          name: convoy-build-provenance
+          run-id: ${{ env.CANDIDATE_RUN }}
+          github-token: ${{ github.token }}
+          path: provenance
+
+      - name: Match approved source, bytes and signed build identity
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, re, shutil, zipfile
+          from pathlib import Path
+          files = list(Path('candidate').rglob('app-debug.apk'))
+          assert len(files) == 1
+          apk = files[0]
+          provenance = Path('provenance')
+          source = os.environ['CANDIDATE_SOURCE']
+          digest = hashlib.file_digest(apk.open('rb'), 'sha256').hexdigest()
+          assert digest == os.environ['CANDIDATE_SHA256']
+          assert digest == (provenance / 'apk-sha256.txt').read_text().split()[0]
+          assert (provenance / 'checkout-sha.txt').read_text().strip() == source
+          assert (provenance / 'head-sha.txt').read_text().strip() == source
+          signature = (provenance / 'apk-signature.txt').read_text()
+          assert 'Verified using v2 scheme (APK Signature Scheme v2): true' in signature
+          badging = (provenance / 'apk-badging.txt').read_text()
+          assert "package: name='com.example.convoy_mesh.pedestrianexp1'" in badging
+          assert "application-label:'Convoy Mesh Exp'" in badging
+          assert "'arm64-v8a'" in badging
+          version = re.search(r"versionName='([^']+)'", badging).group(1)
+          code = int(re.search(r"versionCode='(\d+)'", badging).group(1))
+          assert re.fullmatch(r'[0-9A-Za-z.+-]+', version)
+          assert int(re.search(r"^sdkVersion:'(\d+)'", badging, re.M).group(1)) <= 29
+          with zipfile.ZipFile(apk) as archive:
+              assert archive.testzip() is None
+          output = Path('release'); output.mkdir()
+          asset = output / 'Convoy-Mesh-Experimental.apk'
+          shutil.copyfile(apk, asset)
+          (output / 'SHA256SUMS.txt').write_text(f'{digest}  {asset.name}\n')
+          receipt = {'version': f'{version}+{code}', 'source_sha': source,
+                     'run_id': int(os.environ['CANDIDATE_RUN']),
+                     'apk_sha256': digest, 'apk_bytes': asset.stat().st_size}
+          (output / 'candidate.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          tag = f'experimental-{version}-{code}-{source[:7]}'
+          notes = (f'## Convoy Mesh Exp — {version}+{code}\n\n'
+                   'Candidata sperimentale per le prove di Cama e Francesca. '
+                   'Non è una versione stabile o validata sui telefoni reali.\n\n'
+                   f'Sorgente compilato: `{source}`. '
+                   f'[CI verificata](https://github.com/{os.environ["GH_REPO"]}/actions/runs/{os.environ["CANDIDATE_RUN"]}).\n\n'
+                   f'APK SHA-256: `{digest}`.\n\n'
+                   'Installare Convoy-Mesh-Experimental.apk su entrambi i telefoni; '
+                   'la precedente app resta installata. Tenere attiva una sola versione per telefono. '
+                   'Confermare versione e build nel Test log.\n\n'
+                   'Limiti: passo molto lento, curve strette e GNSS/BLE/OEM reali richiedono prove fisiche. '
+                   'La firma debug attuale non garantisce aggiornamenti tra future build: '
+                   'prima di disinstallare esportare i log. Nessun merge o rilascio di produzione.\n\n'
+                   f'[Protocollo e QA](https://github.com/{os.environ["GH_REPO"]}/blob/{source}/docs/pedestrian-exp1.md).\n')
+          Path('notes.md').write_text(notes)
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write(f'ARCHIVE_TAG={tag}\nCANDIDATE_VERSION={version}+{code}\n')
+          PY
+
+      - name: Archive version, then update the fixed download
+        run: |
+          set -euo pipefail
+          # Archive assets are never clobbered; a rerun must match their digest.
+          if gh release view "$ARCHIVE_TAG" --json tagName > /dev/null 2>&1; then
+            mkdir previous
+            gh release download "$ARCHIVE_TAG" --pattern candidate.json --dir previous
+            cmp release/candidate.json previous/candidate.json
+          else
+            gh release create "$ARCHIVE_TAG" release/* --target "$CANDIDATE_SOURCE" \
+              --title "Convoy Mesh Exp $CANDIDATE_VERSION" --notes-file notes.md \
+              --prerelease --latest=false
+          fi
+          if gh release view experimental-latest --json tagName > /dev/null 2>&1; then
+            gh release upload experimental-latest release/* --clobber
+            gh release edit experimental-latest --title "Convoy Mesh Exp — download corrente" \
+              --notes-file notes.md --prerelease --latest=false
+          else
+            gh release create experimental-latest release/* --target "$CANDIDATE_SOURCE" \
+              --title "Convoy Mesh Exp — download corrente" --notes-file notes.md \
+              --prerelease --latest=false
+          fi
+          # Only this explicitly rolling distribution tag may move.
+          gh api --method PATCH "repos/$GH_REPO/git/refs/tags/experimental-latest" \
+            -f sha="$CANDIDATE_SOURCE" -F force=true > /dev/null
+          mkdir published
+          gh release download experimental-latest --pattern Convoy-Mesh-Experimental.apk --dir published
+          cd published
+          sha256sum --check ../release/SHA256SUMS.txt
+          printf '%s\n' "Download: https://github.com/$GH_REPO/releases/download/experimental-latest/Convoy-Mesh-Experimental.apk" >> "$GITHUB_STEP_SUMMARY"
