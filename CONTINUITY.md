@@ -45,7 +45,7 @@ Experiment installs beside it as `com.example.convoy_mesh.pedestrianexp1` / **Co
 
 ## CURRENT WORK
 
-Deliver the verified experimental APK for Cama/Francesca's physical trial. Run #120 diagnosis is complete: ~0.44 m/s with reliable quiet IMU gives only ~8.9 m over 20 s, below the existing 10 m GPS-motion gate. Run #121 corrected the smoke to ordinary walking and passed stronger assertions without changing the application thresholds. Historical runs #118/#119 were cancelled by later pushes; run #120 failed. Original Work execution/error telemetry remains unavailable, so its chat interruption cause is unverified.
+The exact experimental APK has been recovered for delivery on 2026-10-06; the next work is Cama/Francesca's physical trial. GitHub access is working and PR #4's stale run #120 description has been reconciled with run #121. Reuse-first level 2: reuse the already-verified APK and existing protocol; no application changes or new build. Run #120 diagnosis is complete: ~0.44 m/s with reliable quiet IMU gives only ~8.9 m over 20 s, below the existing 10 m GPS-motion gate. Run #121 corrected the smoke to ordinary walking and passed stronger assertions without changing the application thresholds. Historical runs #118/#119 were cancelled by later pushes; run #120 failed. Original Work execution/error telemetry remains unavailable, so its chat interruption cause is unverified.
 
 ## NEXT GATE
 
@@ -71,4 +71,4 @@ No automatic removal of branches/builds. Keep the exact delivered APK; CI retent
 
 ## LAST CHECKPOINT
 
-2026-10-04: user authorized corrections, verification and delivery. Recovered PR #4, reproduced all 18 failed-run outing fixes independently, corrected only the ordinary-walk smoke scenario and added two actual-service regressions. Run #121 attempt 1 passed all 149 tests and both Android jobs. Exact source `9ca9107`, APK/hash/signature and post-sleep receipts checked; APK retained for handoff. This checkpoint is documentation only. No merge or physical validation; chat/UI interruption cause remains unverified.
+2026-10-06: resumed after Cama reported the prior session lost its GitHub connection. Rechecked live PR #4 (open/draft), run #121 jobs and archived provenance/test/emulator receipts. Recovered the already-saved exact APK and verified 164,372,655 bytes, ZIP integrity and SHA-256 matching both CI and emulator input. Latest application changes remain `9ca9107`; `0046367` changes documentation only. Reconciled the stale PR body with README and the passed run #121. No application edits, redundant CI, merge or physical validation. Next gate remains the three private physical sessions; internal chat telemetry is unavailable.
