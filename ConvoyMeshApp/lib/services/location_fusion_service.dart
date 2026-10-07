@@ -19,8 +19,11 @@ class TrackPoint {
 }
 
 class LocationFusionService extends ChangeNotifier {
-  LocationFusionService._();
+  LocationFusionService._() : _now = DateTime.now;
+  @visibleForTesting
+  LocationFusionService.forTest({required DateTime Function() now}) : _now = now;
   static final instance = LocationFusionService._();
+  final DateTime Function() _now;
   final _ctrl = StreamController<FusedLocation>.broadcast();
   Stream<FusedLocation> get stream => _ctrl.stream;
   FusedLocation? _last;
@@ -89,7 +92,7 @@ class LocationFusionService extends ChangeNotifier {
     await _reconcilePositionStream();
     _ageTimer?.cancel();
     _ageTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      if (_running && _last != null && !_last!.hasFreshFixAt(DateTime.now())) {
+      if (_running && _last != null && !_last!.hasFreshFixAt(_now())) {
         _emit(_estimator.snapshot('waiting_for_fresh_fix'));
       }
     });
@@ -149,7 +152,7 @@ class LocationFusionService extends ChangeNotifier {
   }
 
   void _onPosition(Position position) {
-    final received = DateTime.now().toUtc();
+    final received = _now().toUtc();
     final observation = GpsObservation(
       position.latitude,
       position.longitude,
@@ -213,7 +216,7 @@ class LocationFusionService extends ChangeNotifier {
   }
 
   void _emit(PositionEstimate result) {
-    final now = DateTime.now();
+    final now = _now();
     final fresh = _running && _hasPerm && _serviceEnabled && result.isFreshAt(now);
     final acc = result.accuracyM;
     final bars = fresh ? PedestrianGpsFilter.barsForAccuracy(acc) : 0;

@@ -37,6 +37,9 @@ class PositionEstimate {
 class PedestrianPositionEstimator {
   static const maxAge = Duration(seconds: 15);
   static const windowAge = Duration(seconds: 25);
+  // Original five fixes at the requested 5 s cadence covered 20 s. Preserve
+  // that motion horizon, while allowing faster/uneven delivery within it.
+  static const walkingEvidenceAge = Duration(seconds: 20);
   static const reacquireAfter = Duration(seconds: 45);
 
   final List<GpsObservation> _window = [];
@@ -44,16 +47,19 @@ class PedestrianPositionEstimator {
   DateTime? _supportedAt, _lastInputAt;
   double? _displayAccuracy;
 
+  /// One representative per source-time second, over at most 25 seconds.
+  /// Exposed for bounded-memory diagnostics; not a confidence score.
+  int get retainedObservationCount => _window.length;
 
   PositionEstimate snapshot(String decision) => PositionEstimate(
-        lat: _anchor?.lat,
-        lon: _anchor?.lon,
-        accuracyM: _displayAccuracy,
-        coordinateAt: _anchor?.at,
-        supportedAt: _supportedAt,
-        decision: decision,
-        addToTrack: false,
-      );
+    lat: _anchor?.lat,
+    lon: _anchor?.lon,
+    accuracyM: _displayAccuracy,
+    coordinateAt: _anchor?.at,
+    supportedAt: _supportedAt,
+    decision: decision,
+    addToTrack: false,
+  );
 
   PositionEstimate add(
     GpsObservation sample, {
@@ -81,7 +87,9 @@ class PedestrianPositionEstimator {
     if (sample.accuracyM > 120) return snapshot('poor_accuracy');
 
     final anchor = _anchor;
-    final gap = _supportedAt == null ? null : sample.at.difference(_supportedAt!);
+    final gap = _supportedAt == null
+        ? null
+        : sample.at.difference(_supportedAt!);
     final reacquiring = anchor != null && gap != null && gap > reacquireAfter;
 
     _window.removeWhere((s) => sample.at.difference(s.at) > windowAge);
@@ -102,11 +110,20 @@ class PedestrianPositionEstimator {
       }
     }
 
-    _window.add(sample);
-    if (_window.length > 7) _window.removeAt(0);
+    // Keep the newest fix in each one-second bucket. A count-only cap makes
+    // the required elapsed evidence impossible at faster provider cadences.
+    if (_window.isNotEmpty &&
+        _window.last.at.millisecondsSinceEpoch ~/ 1000 ==
+            sample.at.millisecondsSinceEpoch ~/ 1000) {
+      _window[_window.length - 1] = sample;
+    } else {
+      _window.add(sample);
+    }
 
     if (anchor == null || reacquiring) {
-      final consensus = _consensus();
+      // A static spatial cluster is not a prerequisite for a walking start.
+      // Prefer the current supported endpoint to a lagging cluster centroid.
+      final consensus = _movingAcquisition() ?? _consensus();
       if (consensus == null) {
         return snapshot(anchor == null ? 'acquiring' : 'reacquiring');
       }
@@ -119,9 +136,14 @@ class PedestrianPositionEstimator {
     }
 
     final gpsWalking = _hasWalkingEvidence();
+    final displacement = _distance(anchor, sample);
+    final supportedDisplacement =
+        displacement <= max(12.0, anchor.accuracyM + sample.accuracyM);
+    // Moving the phone is not proof that the person translated. IMU alone may
+    // follow nearby fixes but cannot authorize a large unsupported innovation.
+    final imuWalking = motionReliable && moving && supportedDisplacement;
 
-
-    if ((!motionReliable || !moving) && !gpsWalking) {
+    if (!imuWalking && !gpsWalking) {
       final consensus = _consensus();
       // One allegedly accurate outlier never moves a stationary anchor.
       if (consensus != null &&
@@ -135,8 +157,8 @@ class PedestrianPositionEstimator {
         );
       }
 
-      final d = _distance(anchor, sample);
-      if (d > max(12.0, anchor.accuracyM + sample.accuracyM)) {
+      final d = displacement;
+      if (!supportedDisplacement) {
         return snapshot('stationary_outlier');
       }
 
@@ -147,13 +169,13 @@ class PedestrianPositionEstimator {
       return snapshot(motionReliable ? 'anchored' : 'anchored_gps_only');
     }
 
-    // Moving, or IMU not currently trustworthy: GPS-only, with outlier gating.
+    // IMU-assisted nearby motion, or distributed GPS motion evidence.
     // A light accuracy-dependent blend limits jitter without long walking lag.
     final gain = sample.accuracyM <= 10
         ? 0.85
         : sample.accuracyM <= 25
-            ? 0.65
-            : 0.45;
+        ? 0.65
+        : 0.45;
     final lat = anchor.lat + gain * (sample.lat - anchor.lat);
     // Shortest longitude delta also handles crossing the dateline.
     final deltaLon = ((sample.lon - anchor.lon + 540) % 360) - 180;
@@ -181,8 +203,10 @@ class PedestrianPositionEstimator {
 
   bool _hasWalkingEvidence() {
     if (_window.length < 5) return false;
-    final points = _window.sublist(_window.length - 5);
-    if (points.last.at.difference(points.first.at) < const Duration(seconds: 15)) {
+    final points = _timeSpacedPoints(5, horizon: walkingEvidenceAge);
+    if (points.length < 5) return false;
+    if (points.last.at.difference(points.first.at) <
+        const Duration(seconds: 15)) {
       return false;
     }
     final accs = points.map((p) => p.accuracyM).toList()..sort();
@@ -205,14 +229,107 @@ class PedestrianPositionEstimator {
       final step = _distance(previous, current);
       path += step;
       largestStep = max(largestStep, step);
-      final progress = _distance(previous, points.last) -
-          _distance(current, points.last);
+      final progress =
+          _distance(previous, points.last) - _distance(current, points.last);
       if (progress >= minProgress) progressingSteps++;
     }
     return progressingSteps >= 3 &&
         path > 0 &&
         largestStep <= path * 0.50 &&
         net / path >= 0.85;
+  }
+
+  /// Select actual observations near equally spaced source times, including
+  /// both endpoints. No interpolation or synthetic position enters the filter.
+  List<GpsObservation> _timeSpacedPoints(
+    int count, {
+    Duration? horizon,
+    List<GpsObservation>? observations,
+  }) {
+    final source = observations ?? _window;
+    final recent = horizon == null
+        ? source
+        : source
+              .where((p) => source.last.at.difference(p.at) <= horizon)
+              .toList();
+    // Prefer the nominal 20 s motion span. If a delivery gap leaves fewer
+    // samples, retain evidence from the bounded 25 s window instead of waiting
+    // for five entirely new callbacks. Acquisition supplies its own support.
+    final evidence = recent.length >= count ? recent : source;
+    if (evidence.length <= count) return [...evidence];
+    final start = evidence.first.at.microsecondsSinceEpoch;
+    final span = evidence.last.at.microsecondsSinceEpoch - start;
+    final points = <GpsObservation>[evidence.first];
+    var previousIndex = 0;
+    for (var i = 1; i < count - 1; i++) {
+      final target = start + span * i / (count - 1);
+      var best = previousIndex + 1;
+      final lastAllowed = evidence.length - (count - i);
+      for (var j = best + 1; j <= lastAllowed; j++) {
+        if ((evidence[j].at.microsecondsSinceEpoch - target).abs() <
+            (evidence[best].at.microsecondsSinceEpoch - target).abs()) {
+          best = j;
+        }
+      }
+      points.add(evidence[best]);
+      previousIndex = best;
+    }
+    points.add(evidence.last);
+    return points;
+  }
+
+  GpsObservation? _movingAcquisition() {
+    if (_window.length < 3 ||
+        _window.last.at.difference(_window.first.at) <
+            const Duration(seconds: 8)) {
+      return null;
+    }
+    final latest = _window.last;
+    // Do not cherry-pick three apparently coherent fixes from a contradictory
+    // window. A strict majority of retained time bins must be reachable from
+    // the endpoint at pedestrian speed, including its immediate predecessor.
+    // No accuracy allowance here: noisy starts may use static consensus or
+    // wait for more support. This is a plausibility gate, not proof of truth.
+    final support = _window.where((p) {
+      final dt =
+          latest.at.difference(p.at).inMicroseconds /
+          Duration.microsecondsPerSecond;
+      return _distance(p, latest) <= 4.2 * dt;
+    }).toList();
+    if (support.length < 3 ||
+        support.length * 2 <= _window.length ||
+        !support.contains(_window[_window.length - 2]) ||
+        support.last.at.difference(support.first.at) <
+            const Duration(seconds: 8)) {
+      return null;
+    }
+    final points = _timeSpacedPoints(3, observations: support);
+    final firstStep = _distance(points[0], points[1]);
+    final secondStep = _distance(points[1], points[2]);
+    final path = firstStep + secondStep;
+    final net = _distance(points.first, points.last);
+    // A plausible path is evidence for availability, not absolute accuracy.
+    // Reject a singleton jump/return: both intervals must contribute, and the
+    // endpoint must progress. Keep the existing pedestrian speed bound.
+    if (path < 1.0 || net < path * 0.85) {
+      return null;
+    }
+    final speeds = <double>[];
+    for (var i = 1; i < points.length; i++) {
+      final dt =
+          points[i].at.difference(points[i - 1].at).inMicroseconds /
+          Duration.microsecondsPerSecond;
+      final speed = _distance(points[i - 1], points[i]) / dt;
+      if (dt <= 0 || speed > 4.2) {
+        return null;
+      }
+      speeds.add(speed);
+    }
+    // Compare rates rather than fractions of travelled distance: equally
+    // plausible 1 s + 9 s intervals must not look like one dominant jump.
+    if (min(speeds[0], speeds[1]) < max(speeds[0], speeds[1]) * 0.20)
+      return null;
+    return points.last;
   }
 
   PositionEstimate _accept(
@@ -248,14 +365,14 @@ class PedestrianPositionEstimator {
       ..sort(
         (a, b) => _window
             .fold<double>(0, (s, p) => s + _distance(a, p))
-            .compareTo(
-              _window.fold<double>(0, (s, p) => s + _distance(b, p)),
-            ),
+            .compareTo(_window.fold<double>(0, (s, p) => s + _distance(b, p))),
       );
     final medoid = sorted.first;
     final accs = _window.map((p) => p.accuracyM).toList()..sort();
     final radius = max(6.0, min(35.0, accs[accs.length ~/ 2] * 1.5));
-    final inliers = _window.where((p) => _distance(p, medoid) <= radius).toList();
+    final inliers = _window
+        .where((p) => _distance(p, medoid) <= radius)
+        .toList();
     if (inliers.length < 3 ||
         inliers.length * 2 <= _window.length ||
         !inliers.contains(_window.last)) {
@@ -276,10 +393,8 @@ class PedestrianPositionEstimator {
       medoid.accuracyM,
       _window.last.at,
     );
-    final radii = inliers
-        .map((p) => p.accuracyM + _distance(p, centre))
-        .toList()
-      ..sort();
+    final radii =
+        inliers.map((p) => p.accuracyM + _distance(p, centre)).toList()..sort();
 
     // No sqrt(n) optimism: phone fixes are correlated and may share a bias.
     return GpsObservation(
