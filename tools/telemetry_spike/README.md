@@ -2,6 +2,19 @@
 
 **Mandato corrente del 2 novembre — invio diretto:** autorizzato esclusivamente nel laboratorio un componente Android senza SDK analytics, verso il ricevitore locale con credenziale fittizia. È un'eccezione esplicita al precedente divieto di sender proprio, non un'integrazione Convoy. Il workflow dedicato esegue ora il controllo Android indipendente e, soltanto dopo, costruisce/esegue il [prototipo diretto](direct_trial/README.md). Riusa SQLite e HTTP di Android, osservatore del contenuto e controlli esistenti. Il contratto resta invariato, altri SDK sospesi. Risultati e commit esatto sono nel [rapporto corrente](../../docs/telemetry-minimum-infrastructure.md); una build o i test Python non attestano Android.
 
+**Eseguito:** sorgente `89b3a35d3a55c86d60a1cb5b779cfeba7fd00776`, run `41521892190`/job `125539742017`, tentativo1 SUCCESS. Revoca completata e tre interruzioni dopo il suo salvataggio: in ogni caso vecchi0/20, nuovi10/10 e sentinelle conservate. Prima del primo commit recuperati20 eventi: confine osservato, non revoca accettata. Rifiuto, consegna100, contenuto, ritentativi e saturazione verificati nel LAB;94 controlli host separati. [Ricevute](../../docs/telemetry-evidence/2026-11-02/run-41521892190/direct-public/result.json). Nessun invio cloud o via libera all'app.
+
+Per ricontrollare le ricevute con il verificatore indipendente, dalla radice del repository (non esegue Android):
+
+```sh
+python3 docs/telemetry-evidence/2026-11-02/direct-review-41521892190/recompute_direct_review.py \
+  docs/telemetry-evidence/2026-11-02/run-41521892190 \
+  --support docs/telemetry-evidence/2026-11-02/direct-review-41521892190 \
+  --out /tmp/convoy-direct-independent-review.json
+```
+
+Il risultato coincide con la ricevuta indipendente pubblicata, SHA-256 `7da09ec6c8c28ae5013b207eed6fdfdd0de967f110b796165d381411af5c63d5`. Il bundle runtime rimane integro e separato dai file della revisione.
+
 **Checkpoint precedente — Mixpanel:** precheck sulle fonti Flutter 3.1.0/Android 8.11.1 concluso con **PRECHECK_BLOCKED_MINIMIZATION**: API di cancellazione ed endpoint iniziale disponibili, ma metadati di sessione ed evento di nuovo consenso non eliminabili tramite il percorso pubblico esaminato. Tutte le prove Mixpanel sono **NOT_RUN**. Il vecchio campione PostHog sottostante è conservato a fini di riproducibilità storica e non va rilanciato invariato come correttivo. [Causa, fonti e limiti](../../docs/telemetry-minimum-infrastructure.md).
 
 **Diagnosi successiva del 2 novembre:** nelle versioni effettivamente provate `reset` conserva la coda per contratto; `close` può tentare un invio e non è una purga. Nessuna API supportata di cancellazione mirata trovata. Il codice e le prove riportate sotto restano invariati, con revoca fallita; non rieseguire la stessa combinazione come tentativo di correzione. La sicurezza in caso d’interruzione durante la revoca è **NOT_RUN**. Causa e riferimenti nel [rapporto corrente](../../docs/telemetry-minimum-infrastructure.md); [passo minimo Firebase](../../docs/telemetry-firebase-trial-plan.md), senza build o attivazioni.
