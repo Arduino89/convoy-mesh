@@ -72,7 +72,7 @@ def verify_apk(apk, paths, env):
     package = re.search(r"^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging, re.M)
     if not package or package.groups() != (PACKAGE, "1", "1.0"):
         raise GateError("APK identity mismatch")
-    if "sdkVersion:'24'" not in badging or "targetSdkVersion:'36'" not in badging:
+    if not valid_sdk_bounds(badging):
         bounds = re.findall(r"^(?:sdkVersion|targetSdkVersion|minSdkVersion):'[^']{0,16}'", badging, re.M)
         raise GateError("APK SDK bounds mismatch: " + json.dumps(bounds))
     if re.search(r"^uses-permission", badging, re.M):
@@ -84,6 +84,13 @@ def verify_apk(apk, paths, env):
     return {"package": PACKAGE, "version_code": 1, "version_name": "1.0",
             "min_sdk": 24, "target_sdk": 36, "requested_permissions": [],
             "certificate_sha256": certificates[0].lower()}
+
+
+def valid_sdk_bounds(badging):
+    # aapt2 36 emits minSdkVersion; older aapt emits sdkVersion.
+    minimums = re.findall(r"^(?:sdkVersion|minSdkVersion):'([^']+)'$", badging, re.M)
+    targets = re.findall(r"^targetSdkVersion:'([^']+)'$", badging, re.M)
+    return minimums == ['24'] and targets == ['36']
 
 
 def main():

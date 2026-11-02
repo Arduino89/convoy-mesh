@@ -4,13 +4,21 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from runtime_control.build import GateError, PACKAGE, sha256
+from runtime_control.build import GateError, PACKAGE, sha256, valid_sdk_bounds
 from runtime_control.smoke import (activity_resumed, parse_pid, validate_boot_id,
                                    validate_ready, validate_serial, validate_transition,
                                    verify_build_receipt)
 
 
 class RuntimeControlGuards(unittest.TestCase):
+    def test_current_aapt2_sdk_labels_preserve_exact_bounds(self):
+        observed = "minSdkVersion:'24'\ntargetSdkVersion:'36'\n"
+        self.assertTrue(valid_sdk_bounds(observed))
+        self.assertTrue(valid_sdk_bounds(observed.replace('minSdkVersion', 'sdkVersion')))
+        self.assertFalse(valid_sdk_bounds(observed.replace("'24'", "'23'")))
+        self.assertFalse(valid_sdk_bounds(observed.replace("'36'", "'35'")))
+        self.assertFalse(valid_sdk_bounds("targetSdkVersion:'36'\n"))
+
     def ready(self, **updates):
         result = {"schema_version": 1, "package": PACKAGE, "nonce": "a" * 32,
                   "pid": 123, "launches": 4, "ready": True}
