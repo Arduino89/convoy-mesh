@@ -54,7 +54,18 @@ class _TrialState extends State<Trial> {
           case 'generate45': await _action(() => _generate(45));
           case 'generate100': await _action(() => _generate(100));
           case 'flush': await _action(_flush);
-          case 'status': break;
+          case 'status':
+            // Observe current storage, including after flush. Do not use _action:
+            // a status read must not erase a preceding failed action receipt.
+            if (nativeFilter) {
+              try {
+                _sentinels = Map<String, dynamic>.from(
+                    (await nativeLab.invokeMapMethod<String, dynamic>('sentinels'))!);
+              } catch (_) {
+                return developer.ServiceExtensionResponse.error(
+                    -32000, 'Current storage observation failed');
+              }
+            }
           default:
             return developer.ServiceExtensionResponse.error(-32000, 'Unknown lab command');
         }
