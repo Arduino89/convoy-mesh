@@ -1,0 +1,14 @@
+{
+  "scope": "PYTHON_VALIDATOR_COUNTEREXAMPLE_RECHECK_NOT_ANDROID_EXECUTION",
+  "run_id": "synthetic-wire-review",
+  "violations": [
+    "event[0]:invalid_distinct_id"
+  ],
+  "forbidden_distinct_id_rejected": true,
+  "forbidden_distinct_id_redacted": true,
+  "stored_distinct_id": "<redacted:str>",
+  "independent_event_uuid_preserved": true,
+  "event_uuid": "01234567-89ab-4cde-8fab-0123456789ab",
+  "normalized_business_rows_preserved": true,
+  "receiver_sha256": "bb9311ffc546f68deb1663255987f3daa7b10c169e8ca436396095896be2e279"
+}

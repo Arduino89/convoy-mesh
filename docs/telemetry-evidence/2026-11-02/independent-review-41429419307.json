@@ -1,0 +1,309 @@
+{
+  "scope": "INDEPENDENT_RECALCULATION_OF_SYNTHETIC_WIRE_ACTION_LIFECYCLE_RECEIPTS_NOT_NEW_ANDROID_RUN",
+  "workflow_run": 41429419307,
+  "source_commit": "764bc41080c7b85d25ea895ed16c4b94130c5822",
+  "reviewed_utc": "2026-11-02T10:47:29.346246+00:00",
+  "overall_requirement": "FAIL_REVOCATION_ADOPTION_REMAINS_BLOCKED",
+  "integrity": {
+    "archive_sha256": "3bb5a34c963068ed33e023844be56502181613ce14d884d46f31c21579453996",
+    "archive_bytes": 39125,
+    "archive_entries_verified": 46,
+    "individual_file_hashes_verified": 45
+  },
+  "calculation_method": "Separate stdlib Counter/set and exact payload checks; no imported LAB reconciler or summary flags used for findings",
+  "findings": {
+    "normal": {
+      "expected_unique": 100,
+      "received_rows": 100,
+      "received_unique": 100,
+      "missing_ids": [],
+      "unexpected_ids": [],
+      "duplicate_rows": 0,
+      "conflicting_ids": []
+    },
+    "revoke": {
+      "expected_unique": 10,
+      "received_rows": 30,
+      "received_unique": 30,
+      "missing_ids": [],
+      "unexpected_ids": [
+        "synthetic-native-ci-41429419307-000101",
+        "synthetic-native-ci-41429419307-000102",
+        "synthetic-native-ci-41429419307-000103",
+        "synthetic-native-ci-41429419307-000104",
+        "synthetic-native-ci-41429419307-000105",
+        "synthetic-native-ci-41429419307-000106",
+        "synthetic-native-ci-41429419307-000107",
+        "synthetic-native-ci-41429419307-000108",
+        "synthetic-native-ci-41429419307-000109",
+        "synthetic-native-ci-41429419307-000110",
+        "synthetic-native-ci-41429419307-000111",
+        "synthetic-native-ci-41429419307-000112",
+        "synthetic-native-ci-41429419307-000113",
+        "synthetic-native-ci-41429419307-000114",
+        "synthetic-native-ci-41429419307-000115",
+        "synthetic-native-ci-41429419307-000116",
+        "synthetic-native-ci-41429419307-000117",
+        "synthetic-native-ci-41429419307-000118",
+        "synthetic-native-ci-41429419307-000119",
+        "synthetic-native-ci-41429419307-000120"
+      ],
+      "duplicate_rows": 0,
+      "conflicting_ids": []
+    },
+    "retry": {
+      "expected_unique": 10,
+      "received_rows": 20,
+      "received_unique": 10,
+      "missing_ids": [],
+      "unexpected_ids": [],
+      "duplicate_rows": 10,
+      "conflicting_ids": []
+    },
+    "overflow": {
+      "expected_unique": 45,
+      "received_rows": 32,
+      "received_unique": 32,
+      "missing_ids": [
+        "synthetic-native-overflow-41429419307-000001",
+        "synthetic-native-overflow-41429419307-000002",
+        "synthetic-native-overflow-41429419307-000003",
+        "synthetic-native-overflow-41429419307-000004",
+        "synthetic-native-overflow-41429419307-000005",
+        "synthetic-native-overflow-41429419307-000006",
+        "synthetic-native-overflow-41429419307-000007",
+        "synthetic-native-overflow-41429419307-000008",
+        "synthetic-native-overflow-41429419307-000009",
+        "synthetic-native-overflow-41429419307-000010",
+        "synthetic-native-overflow-41429419307-000011",
+        "synthetic-native-overflow-41429419307-000012",
+        "synthetic-native-overflow-41429419307-000013"
+      ],
+      "unexpected_ids": [],
+      "duplicate_rows": 0,
+      "conflicting_ids": []
+    }
+  },
+  "privacy": {
+    "status": "PASS_FOR_OBSERVED_LOCAL_SDK_WIRE",
+    "requests": 11,
+    "event_rows": 182,
+    "property_keys": [
+      "$geoip_disable",
+      "$process_person_profile",
+      "event_id",
+      "event_name",
+      "run_id",
+      "schema_version",
+      "sequence",
+      "synthetic"
+    ],
+    "envelope_keys": [
+      "api_key",
+      "batch",
+      "sent_at"
+    ],
+    "item_keys": [
+      "distinct_id",
+      "event",
+      "properties",
+      "timestamp",
+      "uuid"
+    ],
+    "header_names": [
+      "accept-encoding",
+      "connection",
+      "content-encoding",
+      "content-length",
+      "content-type",
+      "host",
+      "user-agent"
+    ],
+    "every_distinct_id_exact_run": true,
+    "every_event_uuid_valid": true,
+    "all_geoip_disabled": true,
+    "all_person_profiles_disabled": true,
+    "total_compressed_request_body_bytes": 8119,
+    "per_receiver": {
+      "wire-normal": {
+        "requests": 7,
+        "event_rows": 130
+      },
+      "wire-retry": {
+        "requests": 2,
+        "event_rows": 20
+      },
+      "wire-overflow": {
+        "requests": 2,
+        "event_rows": 32
+      }
+    }
+  },
+  "retry": {
+    "record_then_disconnect_without_response_count": 1,
+    "all_10_ids_same_uuid_across_two_requests": true,
+    "request_gap_seconds": 34.67634630203247,
+    "posthog_cloud_deduplication_tested": false
+  },
+  "refusal": {
+    "normal": {
+      "attempts_refused": 20,
+      "observed_requests_before_grant": 0,
+      "online_sample_utc": "2026-11-02T10:39:17.685428+00:00",
+      "grant_invocation_utc": "2026-11-02T10:39:26.658262+00:00",
+      "first_request_utc": "2026-11-02T10:39:36.747287+00:00",
+      "first_status_utc": "2026-11-02T10:39:17.456298+00:00",
+      "scope": "LOCAL_ENDPOINT_REQUEST_WINDOW_NOT_ALL_DEVICE_NETWORK_TRAFFIC"
+    },
+    "overflow": {
+      "attempts_refused": 20,
+      "observed_requests_before_grant": 0,
+      "online_sample_utc": "2026-11-02T10:41:09.747405+00:00",
+      "grant_invocation_utc": "2026-11-02T10:41:18.410971+00:00",
+      "first_request_utc": "2026-11-02T10:41:28.127989+00:00",
+      "first_status_utc": "2026-11-02T10:41:09.548115+00:00",
+      "scope": "LOCAL_ENDPOINT_REQUEST_WINDOW_NOT_ALL_DEVICE_NETWORK_TRAFFIC"
+    }
+  },
+  "sequence_proof": {
+    "normal": {
+      "offline_before_capture_utc": "2026-11-02T10:39:26.274630+00:00",
+      "restart_before_pid": "4570",
+      "restart_after_pid": "4771",
+      "restart_utc": "2026-11-02T10:39:35.163508+00:00",
+      "offline_after_restart_utc": "2026-11-02T10:39:35.337542+00:00",
+      "reconnect_command_utc": "2026-11-02T10:39:35.512624+00:00"
+    },
+    "revoke": {
+      "offline_before_capture_utc": "2026-11-02T10:39:50.163618+00:00",
+      "restart_before_pid": "4771",
+      "restart_after_pid": "5307",
+      "restart_utc": "2026-11-02T10:39:58.722911+00:00",
+      "offline_after_restart_utc": "2026-11-02T10:39:58.912719+00:00",
+      "reconnect_command_utc": "2026-11-02T10:39:59.478987+00:00",
+      "revoke_utc": "2026-11-02T10:39:55.819181+00:00",
+      "reconsent_offline_utc": "2026-11-02T10:39:59.131898+00:00",
+      "new_capture_offline_utc": "2026-11-02T10:39:59.339098+00:00",
+      "additional_refused_attempts": 10
+    },
+    "overflow": {
+      "offline_before_capture_utc": "2026-11-02T10:41:18.146719+00:00",
+      "restart_before_pid": "6069",
+      "restart_after_pid": "6267",
+      "restart_utc": "2026-11-02T10:41:26.539380+00:00",
+      "offline_after_restart_utc": "2026-11-02T10:41:26.721809+00:00",
+      "reconnect_command_utc": "2026-11-02T10:41:26.916421+00:00"
+    }
+  },
+  "sentinels": {
+    "expected": {
+      "preference": "synthetic-setting-preserve",
+      "marker_exists": true,
+      "file_sha256": "b798c8d488531058093f4fbdcaeddbbaf817d764d8f473438a65b27b15d0779b"
+    },
+    "matching_state_observations": 36,
+    "fresh_status_observations": [
+      {
+        "phase": "normal",
+        "utc": "2026-11-02T10:39:17.456298+00:00",
+        "pid": "4373"
+      },
+      {
+        "phase": "normal",
+        "utc": "2026-11-02T10:39:20.820756+00:00",
+        "pid": "4570"
+      },
+      {
+        "phase": "normal",
+        "utc": "2026-11-02T10:39:35.127755+00:00",
+        "pid": "4771"
+      },
+      {
+        "phase": "normal",
+        "utc": "2026-11-02T10:39:49.517609+00:00",
+        "pid": "4771"
+      },
+      {
+        "phase": "revoke",
+        "utc": "2026-11-02T10:39:49.877833+00:00",
+        "pid": "4771"
+      },
+      {
+        "phase": "revoke",
+        "utc": "2026-11-02T10:39:58.684983+00:00",
+        "pid": "5307"
+      },
+      {
+        "phase": "revoke",
+        "utc": "2026-11-02T10:40:23.497445+00:00",
+        "pid": "5307"
+      },
+      {
+        "phase": "retry",
+        "utc": "2026-11-02T10:40:23.934792+00:00",
+        "pid": "5307"
+      },
+      {
+        "phase": "retry",
+        "utc": "2026-11-02T10:41:05.706585+00:00",
+        "pid": "5307"
+      },
+      {
+        "phase": "overflow",
+        "utc": "2026-11-02T10:41:09.548115+00:00",
+        "pid": "5886"
+      },
+      {
+        "phase": "overflow",
+        "utc": "2026-11-02T10:41:12.717279+00:00",
+        "pid": "6069"
+      },
+      {
+        "phase": "overflow",
+        "utc": "2026-11-02T10:41:26.500000+00:00",
+        "pid": "6267"
+      },
+      {
+        "phase": "overflow",
+        "utc": "2026-11-02T10:41:40.865425+00:00",
+        "pid": "6267"
+      }
+    ],
+    "compiled_status_source_matches_current_reviewed_source": true,
+    "fresh_reads_after_each_phase_flush": true,
+    "pm_clear_only_after_retry_before_separate_overflow": true
+  },
+  "native_control": {
+    "before_pid": 2110,
+    "after_pid": 2268,
+    "counter_before": 1,
+    "counter_after": 2,
+    "same_boot_all_four_phases": true,
+    "boot_id": "98a89bbd-da8b-4a98-8b9a-950993ce1110",
+    "original_gate_sha256": "e2bc3c4c8ecd6b56706c94a373546407b3d3fd96a47ba79f7bc1492595fa2e5b",
+    "canonical_archive_gate_sha256": "0508fb5806e829398ef78ab54745ac19b137fd58cdf59deb19170a518f7608eb",
+    "different_serialization_same_json_verified": true
+  },
+  "compiled_source_file_hash_matches": {
+    "tools/telemetry_spike/ci_build_trial.py": true,
+    "tools/telemetry_spike/posthog_trial/MainActivity.kt": true,
+    "tools/telemetry_spike/posthog_trial/locks/android-debug.lockfile": true,
+    "tools/telemetry_spike/posthog_trial/locks/pubspec.lock": true,
+    "tools/telemetry_spike/posthog_trial/main.dart": true,
+    "tools/telemetry_spike/posthog_trial/prepare_trial.py": true,
+    "tools/telemetry_spike/posthog_trial/pubspec.yaml": true
+  },
+  "limitations": [
+    "Existing receipts were recomputed; no new Android execution was performed by the reviewer.",
+    "Actual native Android SDK on API35 x86_64 debug emulator with local fake-token endpoint, not a new PostHog Cloud ingest/query run.",
+    "Public reset/close sequence demonstrably fails the required revoked-queue suppression; no dedicated queue-purge guarantee established.",
+    "No SDK request observed at the local endpoint during the initial refusal windows; this is not a capture of all device network traffic.",
+    "Sentinels cover one unrelated preference and one synthetic file, sampled after restart/revoke/flush; they do not prove preservation of every possible future app store.",
+    "Restarts are force-stop followed by explicit process launch on the same Android boot; not OS reboot or interruption during a queue write/revocation.",
+    "Exact eight property keys verified in these observed final requests; transport UUID, timestamps, routing headers and SDK user-agent remain intentionally present.",
+    "Duplicate retry proves local transport behavior under a lost ACK, not PostHog Cloud duplicate storage or deduplication behavior.",
+    "Overflow losses are detected against the complete external oracle; no production SDK drop counter is established.",
+    "No physical-phone battery, radio, OEM, GPS or Bluetooth conclusion follows.",
+    "APK source/build/install receipt hashes agree; configured APK binaries are deliberately absent from this evidence bundle and were not independently re-inspected here."
+  ]
+}
