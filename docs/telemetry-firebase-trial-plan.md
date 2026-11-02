@@ -2,6 +2,8 @@
 
 Data: 2 novembre 2026. Stato: **PLAN_ONLY / NOT_BUILT / NOT_RUN**. Questo documento prepara un confronto con gli stessi requisiti del [laboratorio PostHog](telemetry-minimum-infrastructure.md); non autorizza attivazioni, invii, spese, modifiche a Convoy o passaggio a Firebase.
 
+Aggiornamento del mandato: la verifica circoscritta Mixpanel è stata svolta prima di attivare Firebase ed è bloccata dalla minimizzazione, come documentato nel [rapporto corrente](telemetry-minimum-infrastructure.md). Questo piano resta sospeso; il risultato Mixpanel non autorizza automaticamente l'esecuzione Firebase né risolve il suo controllo del contenuto prima del cloud.
+
 ## Decisione e limiti documentati
 
 Firebase Android espone `resetAnalyticsData()`: il contratto dichiara eliminazione dei dati Analytics locali e rinnovo dell'app-instance ID. FlutterFire espone la stessa operazione come `Future<void>`. Nessuna delle due reference consultate documenta un ACK di cancellazione durabile o una garanzia in caso di crash. Il ritorno della chiamata deve essere registrato come **RESET_CALL_RETURNED**, non come **PURGE_VERIFIED**. La cancellazione sul server è distinta. [API Android](https://firebase.google.com/docs/reference/android/com/google/firebase/analytics/FirebaseAnalytics), [API FlutterFire](https://pub.dev/documentation/firebase_analytics/latest/firebase_analytics/FirebaseAnalytics/resetAnalyticsData.html).
