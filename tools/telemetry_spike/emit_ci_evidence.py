@@ -31,16 +31,23 @@ def collect(root):
     # Explicitly enumerate control/build receipts; never include APKs or logs.
     for relative in ('runtime-control-build/build-receipt.json',
                      'runtime-control-smoke/receipt.json',
-                     'lab-build/build-receipt.json'):
+                     'lab-build/build-receipt.json',
+                     'direct-build/build-receipt.json'):
         path = root / relative
         if path.is_file():
             if path.is_symlink() or path.stat().st_size > 65536:
                 raise TrialBlocked('RECEIPT_TYPE_OR_SIZE_REJECTED')
             value = public_json(path.read_text())
             files[relative] = (json.dumps(value, sort_keys=True) + '\n').encode()
-    public = root / 'lab-public'
-    if public.exists():
-        audit_public_directory(public)
+    for folder in ('lab-public', 'direct-public'):
+        public = root / folder
+        if not public.exists():
+            continue
+        if folder == 'direct-public':
+            from ci_direct_trial import audit_public_directory as audit_direct
+            audit_direct(public)
+        else:
+            audit_public_directory(public)
         for path in sorted(public.rglob('*')):
             if path.is_file():
                 if path.suffix == '.jsonl':
@@ -49,7 +56,7 @@ def collect(root):
                                    for value in values).encode()
                 else:
                     data = (json.dumps(public_json(path.read_text()), sort_keys=True, allow_nan=False) + '\n').encode()
-                files['lab-public/' + path.relative_to(public).as_posix()] = data
+                files[folder + '/' + path.relative_to(public).as_posix()] = data
     if sum(len(value) for value in files.values()) > 4 * 1024 * 1024:
         raise TrialBlocked('EVIDENCE_SIZE_EXCEEDS_SYNTHETIC_BUDGET')
     if not files:

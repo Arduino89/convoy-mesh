@@ -1,6 +1,18 @@
 # Convoy Mesh — valutazione telemetria minima
 
-Data aggiornamento: 2 novembre 2026. Proposta circoscritta sui dati Mixpanel pronta per revisione: non ampliare il contratto per l'evento di consenso e i metadati di sessione. Confronto con altri SDK sospeso. Criteri, verificatori e risultati precedenti invariati; nessuna nuova esecuzione o raccolta.
+Data aggiornamento: 2 novembre 2026. Raccomandazione Mixpanel accolta: contratto invariato e altri SDK sospesi. Autorizzato un prototipo Android d'invio diretto esclusivamente nel laboratorio, senza SDK analytics né invio cloud. I risultati storici restano distinti.
+
+## Prototipo Android diretto — prova locale autorizzata
+
+Il nuovo mandato autorizza esplicitamente questo componente d'invio proprio nel solo LAB; non autorizza integrazione Convoy, account, cloud, spese, merge o release. Il formato resta quello già verificato: sei proprietà sintetiche, identità della sola prova, UUID evento stabile nei ritentativi, timestamp e due controlli privacy. La [API pubblica PostHog](https://posthog.com/docs/api/capture) documenta POST `/batch` e identità al livello dell'evento; la compatibilità documentale non attesta ricezione o deduplicazione nel servizio cloud.
+
+**Riutilizzo:** SQLite, `HttpURLConnection`, preferenze e file atomici della piattaforma Android; toolchain nativa fissata API36/build-tools36.0.0/JDK17; app di controllo indipendente; ricevitore locale e verificatore dei campi; oracolo degli ID, controllo del medesimo avvio Android, runner standard del repository pubblico ed esportazione limitata di ricevute sintetiche. Nessuna nuova dipendenza mobile, server o framework.
+
+**Codice nuovo:** piccola app `com.cama.telemetry.direct_lab`, coda persistente con consenso e generazione, controllo del corpo serializzato prima dell'invio, ritentativi e contatori di saturazione; orchestratore Android per revoca e interruzioni. Sorgenti e comandi riproducibili in [direct_trial](../tools/telemetry_spike/direct_trial/README.md). La destinazione è fissata a loopback, credenziale fittizia, redirect disabilitati. L'assenza/ripristino del collegamento `adb reverse` simula indisponibilità del trasporto; non misura reti cellulari o gestione radio.
+
+**Confine della revoca:** il primo commit SQLite salva rifiuto e nuova generazione; soltanto dopo viene cancellata la coda. Il riavvio deve recuperare la pulizia prima di inviare o accettare nuovo consenso. Le interruzioni dopo il primo commit, durante la cancellazione e dopo il commit di cancellazione devono mantenere zero vecchi eventi anche al riavvio online. Un'interruzione prima del primo salvataggio durevole resta una richiesta non confermata: viene osservata separatamente, senza trasformarla in revoca completata. Una richiesta HTTP già iniziata è registrata e può essere ricevuta; non si promette di richiamarne i dati.
+
+**Stato prima dell'esecuzione:** candidato pronto, revisione statica separata conclusa senza blocchi e 94 controlli host passati; nessun risultato Android diretto ancora dichiarato. Il workflow interrompe le prove dipendenti se il controllo indipendente fallisce. Il primo caso richiesto è 20 offline → revoca → riavvio → nuovo consenso → 10 nuovi, con conservazione delle sentinelle. Restano rifiuto, contenuto finale, ritentativo/duplicati, consegna dopo riavvio e saturazione; nessun criterio è allargato per ottenere un PASS.
 
 ## Proposta sui due blocchi Mixpanel — da revisionare
 
