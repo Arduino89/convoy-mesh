@@ -1,0 +1,62 @@
+# INACTIVE REVIEW PROPOSAL. This file is outside .github/workflows.
+# Activating it requires publishing the dedicated LAB branch and workflow.
+# It never builds/installs Convoy and never sends telemetry.
+name: Isolated Android runtime control
+on:
+  workflow_dispatch:
+  push:
+    branches: [experiment/telemetry-runtime-lab]
+    paths:
+      - 'tools/telemetry_spike/runtime_control/**'
+      - '.github/workflows/telemetry-runtime-control.yml'
+permissions:
+  contents: read
+jobs:
+  runtime-control:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Require accelerated host
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Prepare pinned control toolchain
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Build tiny native control only
+        run: >-
+          python3 tools/telemetry_spike/runtime_control/build.py
+          --sdk "$ANDROID_HOME" --jdk "$JAVA_HOME"
+          --out "$RUNNER_TEMP/runtime-control-build"
+      - name: Boot, install, open, stop and reopen control
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          disable-animations: true
+          script: >-
+            python3 tools/telemetry_spike/runtime_control/smoke.py
+            --sdk "$ANDROID_HOME" --jdk "$JAVA_HOME"
+            --apk "$RUNNER_TEMP/runtime-control-build/runtime-control.apk"
+            --build-receipt "$RUNNER_TEMP/runtime-control-build/build-receipt.json"
+            --serial emulator-5554 --out "$RUNNER_TEMP/runtime-control-smoke"
+            --timeout 60
+      - name: Retain only scoped receipts, no APK or system logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: isolated-runtime-control-receipts
+          path: |
+            ${{ runner.temp }}/runtime-control-build/build-receipt.json
+            ${{ runner.temp }}/runtime-control-smoke/receipt.json
+          if-no-files-found: error
+          retention-days: 7
