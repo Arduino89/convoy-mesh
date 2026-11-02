@@ -1,6 +1,24 @@
 # Convoy Mesh — valutazione telemetria minima
 
-Data aggiornamento: 2 novembre 2026. Verifica preliminare Mixpanel conclusa sul sorgente fissato: endpoint iniziale e cancellazione della coda disponibili, ma minimizzazione incompatibile con il contratto corrente. Prove Mixpanel non avviate. Diagnosi PostHog conservata; Firebase resta un piano non attivato. Nessuna nuova esecuzione Android o cloud; adozione bloccata.
+Data aggiornamento: 2 novembre 2026. Proposta circoscritta sui dati Mixpanel pronta per revisione: non ampliare il contratto per l'evento di consenso e i metadati di sessione. Confronto con altri SDK sospeso. Criteri, verificatori e risultati precedenti invariati; nessuna nuova esecuzione o raccolta.
+
+## Proposta sui due blocchi Mixpanel — da revisionare
+
+**Raccomandazione per revisione: Mixpanel resta escluso nella configurazione attuale; non ampliare il contratto.** L'identificazione del singolo evento ha uno scopo già previsto. L'evento di consenso e i tre dati di sessione non aggiungono misure necessarie alle domande attuali. L'obbligo imposto dal SDK non ne giustifica la raccolta.
+
+| Elemento e contenuto | Domanda utile e necessità | Durata, collegabilità e rischio residuo | Conservazione proposta |
+|---|---|---|---|
+| `$opt_in`: ogni chiamata di riabilitazione; proprietà, identità, tempo e metadati SDK | «È stata invocata la riabilitazione?» Utile eventualmente nel LAB, **superfluo nell'ordinaria**: non prova nuovo consenso umano, persistenza o pulizia | Eredita le identità dell'evento, senza rotazione propria. Chiamate ripetute gonfiano i conteggi; può collegare passaggi di consenso | **Non raccogliere: zero** |
+| `$mp_event_id`: valore casuale a 64 bit per descrizione di evento | «Ritentativo o nuova emissione?» **Ruolo tecnico utile, già previsto** dagli ID prova/protocollo; equivalenza da verificare. Nessuna deduplicazione cloud dimostrata | Cambia per nuova descrizione; rimane nel record ritentato. Collega copie dell'evento, non identifica da solo una persona/sessione; possibili collisioni | **Nessuna copia aggiuntiva**. Eventuale equivalente: durata del record, ancora da definire e approvare |
+| `$mp_session_id`: valore casuale a 64 bit della sessione SDK | «Quali eventi appartengono alla stessa attività SDK?» **Non necessario**: non rappresenta un'uscita Convoy; `run_id` raggruppa la sola prova sintetica | Ruota all'inizializzazione/ritorno in primo piano riconosciuto, senza scadenza fissa. Può attraversare consensi diversi | **Non raccogliere: zero** |
+| `$mp_session_seq_id`: contatore separato per eventi e People | «In quale ordine sono costruiti i record?» **Superfluo**: `sequence` e oracolo già conservano gli intenti; un buco SDK non prova perdita | Si azzera con la sessione, non alla revoca. Con ID/tempo ordina attività anche fra consensi diversi | **Non raccogliere: zero** |
+| `$mp_session_start_sec`: inizio sessione, secondi Unix | «Quanto tempo dall'inizio sessione SDK?» **Superfluo**: non misura latenza di consegna o inizio uscita | Costante fino alla rotazione; espone orario di attività correlabile con altri dati, dipendente dall'orologio del telefono | **Non raccogliere: zero** |
+
+**Collegabilità, dal sorgente Android 8.11.1:** `reset`, opt-out, opt-in e `identify` non ruotano la sessione. A processo/primo piano continui, i metadati possono collegare eventi già inviati prima della revoca a quelli dopo nuovo consenso, anche con identità principale diversa. Questa inferenza è distinta dalla cancellazione dei revocati accodati, ancora da provare. Una nuova istanza/processo ruota la sessione senza riscrivere i record su disco; altre identità/tempi possono comunque collegare sessioni diverse.
+
+Il ritorno dopo background riconosciuto rinnova la sessione; un rientro che annulla il controllo ritardato di 500 ms può mantenerla. Fonti fissate: [campi](https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/SessionMetadata.java#L17), [rotazione](https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java#L2503), [ciclo di vita](https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelActivityLifecycleCallbacks.java#L40), [revoca/riabilitazione](https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java#L1517). Nessuna nuova prova Android.
+
+**Conservazione e decisione.** Zero significa nessuna nuova raccolta; ruotare un ID non elimina copie accodate/inviate. Nessuna conservazione cloud è configurata/verificata. Le ricevute sintetiche GitHub restano storiche, senza promessa di scadenza delle copie pubbliche. Non si propongono eccezioni: una revisione diversa richiede approvazione di Cama prima di cambiare criteri/verificatori. Restano consenso facoltativo, esclusione di nomi, coordinate/percorsi, ID pubblicitari e log integrali, revocati zero e tracce/impostazioni conservate. Mixpanel resta **NOT_RUN**, senza nuovi PASS. Altri SDK ed esperimenti sospesi; nessun account, spesa, invio, sender proprio o modifica all'app.
 
 ## Verifica circoscritta Mixpanel, prima di Firebase
 
@@ -30,7 +48,7 @@ Il criterio è semantico: i sei campi applicativi, l'identità della sola prova 
 
 Tutte le prove Mixpanel — 20 eventi offline → revoca → riavvio → nuovo consenso → 10 nuovi, interruzioni durante revoca, sentinelle, rifiuto, consegna normale, duplicati, saturazione e risorse — restano **NOT_RUN**. Il workflow esistente esegue ancora il campione PostHog; non è stato rilanciato né presentato come prova Mixpanel. Le regressioni e le ricevute precedenti sono conservate senza nuove esecuzioni Python.
 
-**Prossimo passo circoscritto:** revisione di questa incompatibilità nelle versioni fissate. Per riaprire la prova servirebbe un percorso pubblico supportato che soddisfi il contenuto minimo, compresi sessione ed eventi di consenso, seguito dalle prove locali autorizzate; non basta un account. Nessun accesso Mixpanel o Firebase è necessario per questa conclusione. Firebase rimane sospeso al proprio controllo del payload già documentato, senza attivazione automatica. PR #5 resta in bozza e Convoy invariata.
+**Checkpoint del precontrollo:** incompatibilità documentata nelle versioni fissate. Il successivo mandato sospende il confronto con altri SDK e richiede prima la proposta sui dati riportata sopra. Nessun accesso Mixpanel o Firebase è necessario per questa revisione. Firebase rimane sospeso, PR #5 resta in bozza e Convoy invariata.
 
 ## Causa della revoca e decisione dopo la revisione
 
