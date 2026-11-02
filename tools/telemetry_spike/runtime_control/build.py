@@ -73,7 +73,8 @@ def verify_apk(apk, paths, env):
     if not package or package.groups() != (PACKAGE, "1", "1.0"):
         raise GateError("APK identity mismatch")
     if "sdkVersion:'24'" not in badging or "targetSdkVersion:'36'" not in badging:
-        raise GateError("APK SDK bounds mismatch")
+        bounds = re.findall(r"^(?:sdkVersion|targetSdkVersion|minSdkVersion):'[^']{0,16}'", badging, re.M)
+        raise GateError("APK SDK bounds mismatch: " + json.dumps(bounds))
     if re.search(r"^uses-permission", badging, re.M):
         raise GateError("control APK must request zero permissions")
     signature = run([paths["apksigner"], "verify", "--print-certs", apk], env=env)
@@ -111,7 +112,7 @@ def main():
         run([paths["d8"], "--lib", paths["android_jar"], "--min-api", "24",
              "--output", dex, out / "classes.jar"], env=env)
         run([paths["aapt2"], "link", "-o", out / "base.apk", "-I", paths["android_jar"],
-             "--manifest", manifest], env=env)
+             "--manifest", manifest, "--min-sdk-version", "24", "--target-sdk-version", "36"], env=env)
         with zipfile.ZipFile(out / "base.apk") as base, zipfile.ZipFile(out / "unsigned.apk", "w") as apk:
             for info in base.infolist():
                 apk.writestr(info, base.read(info.filename))
