@@ -28,7 +28,9 @@ jobs:
           test -c /dev/kvm
           sudo chmod a+rw /dev/kvm
       - name: Prepare pinned control toolchain
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+        run: |
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
       - name: Build tiny native control only
         run: >-
           python3 tools/telemetry_spike/runtime_control/build.py
