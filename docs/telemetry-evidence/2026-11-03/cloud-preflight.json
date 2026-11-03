@@ -69,14 +69,17 @@
     "executed": false,
     "access_probe_ref": "deletion-access-probe.json",
     "alternative_without_person_profile": "NO_SUPPORTED_SELECTIVE_PERSONLESS_DELETION_PATH_VERIFIED",
-    "path_review_ref": "deletion-path-review.json"
+    "path_review_ref": "deletion-path-review.json",
+    "support_ticket_number": 80503,
+    "support_reply": "NOT_OBSERVED",
+    "exact_set_user_approval_required_before_actual_deletion": true
   },
   "budget": {
     "maximum_transmitted_rows_including_retries": 500,
     "cloud_rows_sent_this_turn": 0
   },
   "blockers": [
-    "The documented self-service data_deletion_requests GET denies this authenticated project access because the endpoint is alpha and not publicly available. A supported selective cleanup path for events without person profiles is not yet verified.",
+    "The documented deletion endpoint denied access as alpha/not public. Scoped technical support ticket80503 has been created and its full message verified; no reply or supported selective personless cleanup path is yet verified. A supported manual or assisted procedure is acceptable; actual deletion requires separate user approval of the exact set.",
     "The existing repository has no Actions secrets. CONVOY_LAB_POSTHOG_TOKEN has not been provisioned; no ingestion token was transmitted to GitHub."
   ],
   "sources": [
@@ -114,5 +117,16 @@
   "resolved_previous_blockers": [
     "GitHub and PostHog browser authentication succeeded.",
     "Exact-source Android local regression and independent receipt/source review passed on 2d76100."
-  ]
+  ],
+  "support_followup": {
+    "recorded_at_utc": "2026-11-03T10:11:01Z",
+    "ticket_number": 80503,
+    "status": "CREATED_MESSAGE_VERIFIED_AWAITING_REPLY",
+    "evidence_ref": "posthog-support-request.json",
+    "supported_manual_or_assisted_path_acceptable": true,
+    "exact_set_user_approval_required_before_any_actual_deletion": true,
+    "secrets_setup_documented_not_applied": true,
+    "new_android_execution": false,
+    "new_cloud_rows_sent": 0
+  }
 }

@@ -1,5 +1,5 @@
 2ba2d52e61013a22d1f272689a4329780f3dd03063b21d06a1d0e329830aface  docs/telemetry-evidence/2026-11-03/cloud-http-retry-source-review.json
-68c60c42b3556d5e86561979749f9c49a9bfccb4a5592ed991a63aab2f267416  docs/telemetry-evidence/2026-11-03/cloud-preflight.json
+881252ab2679449f473bcd970a59d0a96f4bf6afe65123805c1df5f02bfa99e4  docs/telemetry-evidence/2026-11-03/cloud-preflight.json
 81ebad05692c4b00fd1f5226255c0dbb6fd9abe61cc74a8a69dbe0351977cf18  docs/telemetry-evidence/2026-11-03/deletion-access-probe.json
 ecff6aa9b3d2c15de218f916a4d9ab12cb8c0283799a4526ae27e7afe569c469  docs/telemetry-evidence/2026-11-03/deletion-path-review.json
 c1d6ffd7456f3c8a52c94c1dd9078e4e14b32fd0a719b4070e4186d340991a33  docs/telemetry-evidence/2026-11-03/direct-review-41600690330/INDEPENDENT_REVIEW.md
@@ -14,6 +14,7 @@ bfff398acc0ceca6bf3c7cc44dbf2ca7bb1edd1c3a7c8ac61f7e6d836632b30f  docs/telemetry
 3075b570f9950aa360c3b720419df85b6924a6fc7fd0508e1c3f5d28b73482ce  docs/telemetry-evidence/2026-11-03/direct-review-41600690330/run-41600690330-export-manifest.json
 ef47a8564767ea7e83a12712e16a9aadaf58cdb8ed0df46af40303ad09b43547  docs/telemetry-evidence/2026-11-03/host-verification.json
 7d9dce067a75ed56275b213a06c1fb0a630fd4bab94f1ccdae4c5cbfe8dd56a2  docs/telemetry-evidence/2026-11-03/independent-cloud-source-review.json
+642b9520f6ecb3d1311cedf422e8156cdb14bd330b29226bf17f8a3eeb3beafa  docs/telemetry-evidence/2026-11-03/posthog-support-request.json
 bef3e028b33a2a94dda49cb99831ea908d621d62ad93e2dc0413ce61fb1075b8  docs/telemetry-evidence/2026-11-03/run-41600690330/SHA256SUMS.txt
 dd4fe4c9b9b527094e7bb907651d2d5e1c1bcc6d1ebc02b978b053b18668a0fd  docs/telemetry-evidence/2026-11-03/run-41600690330/direct-build/build-receipt.json
 22b75d0f8cf51f1f2fe26fc24b2d01fcb054311777da6b59c118bd9e2c0f3e0d  docs/telemetry-evidence/2026-11-03/run-41600690330/direct-public/apk-receipt.json
