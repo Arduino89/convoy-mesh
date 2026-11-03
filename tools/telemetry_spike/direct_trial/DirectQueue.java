@@ -4,11 +4,16 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Process;
 import android.util.AtomicFile;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
@@ -36,10 +41,18 @@ import org.json.JSONObject;
 final class DirectQueue {
     private static final String ENDPOINT = "http://127.0.0.1:8765/batch/";
     private static final String TOKEN = "phc_synthetic_local_only";
+    private static final String CLOUD_ENDPOINT = "https://eu.i.posthog.com/batch/";
+    private static final int CLOUD_ROW_CEILING = 500;
     private static final int BYTE_LIMIT = 1048576;
     private static final int WIRE_LIMIT = 65536;
     private final Context context;
     private final SQLiteDatabase db;
+    private final boolean cloudMode;
+    private final String transportEndpoint;
+    private final String transportToken;
+    private final String cloudRunId;
+    private final String cloudBinding;
+    private final int cloudRowLimit;
     // Every network body write and durable revocation boundary shares this gate.
     private final Object dispatchGate = new Object();
     private final Object store = new Object();
@@ -52,6 +65,14 @@ final class DirectQueue {
 
     DirectQueue(Context context) throws Exception {
         this.context = context;
+        JSONObject privateConfig = privateCloudConfig();
+        cloudMode = privateConfig != null;
+        transportEndpoint = cloudMode ? privateConfig.getString("endpoint") : ENDPOINT;
+        transportToken = cloudMode ? privateConfig.getString("api_key") : TOKEN;
+        cloudRunId = cloudMode ? privateConfig.getString("run_id") : "";
+        cloudRowLimit = cloudMode ? privateConfig.getInt("row_limit") : 0;
+        cloudBinding = cloudMode ? hexDigest((transportEndpoint + "\n" + transportToken + "\n"
+            + cloudRunId + "\n" + cloudRowLimit).getBytes(StandardCharsets.UTF_8)) : "";
         initializeSentinels();
         db = context.openOrCreateDatabase("synthetic_telemetry.db", Context.MODE_PRIVATE, null);
         try (Cursor mode = db.rawQuery("PRAGMA journal_mode=DELETE", null)) {
@@ -77,16 +98,66 @@ final class DirectQueue {
             try {
                 for (String key : new String[]{"consent", "generation", "dropped_count", "refused_count",
                         "revoked_count", "preflight_count", "preflight_rejected", "requests_started",
-                        "requests_acked", "transport_failures", "dispatch_attempts"}) {
+                        "requests_acked", "transport_failures", "dispatch_attempts", "cloud_rows_reserved",
+                        "cloud_rows_written", "cloud_budget_blocked", "cloud_transport_blocked", "cloud_audit_failures", "retry_armed",
+                        "retry_start", "retry_count", "retry_ack_discarded"}) {
                     db.execSQL("INSERT OR IGNORE INTO state VALUES (?, '0')", new Object[]{key});
                 }
                 db.execSQL("INSERT OR IGNORE INTO state VALUES ('run_id', '')");
                 db.execSQL("INSERT OR IGNORE INTO state VALUES ('capacity', '1000')");
+                db.execSQL("INSERT OR IGNORE INTO state VALUES ('transport_mode', 'local')");
+                db.execSQL("INSERT OR IGNORE INTO state VALUES ('cloud_binding', '')");
+                db.execSQL("INSERT OR IGNORE INTO state VALUES ('cloud_block_reason', '')");
+                bindTransport();
                 purgeObsolete();
                 db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
         }
         kick(); // A restart online may send only committed, currently-consented rows.
+    }
+
+    private JSONObject privateCloudConfig() throws Exception {
+        File file = new File(context.getFilesDir(), "cloud-config.private.json");
+        if (!file.exists()) return null;
+        if (!file.isFile() || file.length() < 1 || file.length() > 4096)
+            throw new IllegalStateException("PRIVATE_CONFIG_INVALID");
+        byte[] bytes = new byte[(int) file.length()];
+        try (FileInputStream input = new FileInputStream(file)) {
+            int offset = 0, count;
+            while (offset < bytes.length && (count = input.read(bytes, offset, bytes.length - offset)) > 0)
+                offset += count;
+            if (offset != bytes.length || input.read() != -1) throw new IllegalStateException("PRIVATE_CONFIG_INVALID");
+        }
+        JSONObject config = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
+        exact(config, "mode", "endpoint", "api_key", "run_id", "row_limit");
+        if (!"posthog_cloud".equals(config.get("mode")) || !CLOUD_ENDPOINT.equals(config.get("endpoint"))
+                || !(config.get("api_key") instanceof String)
+                || !config.getString("api_key").matches("phc_[A-Za-z0-9_-]{16,250}")
+                || !(config.get("run_id") instanceof String)
+                || !config.getString("run_id").matches("synthetic-[a-z0-9-]{1,48}")
+                || !(config.get("row_limit") instanceof Integer)
+                || config.getInt("row_limit") < 1 || config.getInt("row_limit") > CLOUD_ROW_CEILING)
+            throw new IllegalStateException("PRIVATE_CONFIG_INVALID");
+        return config;
+    }
+
+    private void bindTransport() {
+        String mode = get("transport_mode");
+        if (cloudMode) {
+            if (mode.equals("local")) {
+                if (!get("run_id").isEmpty() || number("consent") != 0 || number("dispatch_attempts") != 0
+                        || scalar("SELECT count(*) FROM queue") != 0)
+                    throw new IllegalStateException("CLOUD_REQUIRES_FRESH_INSTALL");
+                set("transport_mode", "posthog_cloud");
+                set("cloud_binding", cloudBinding);
+            } else if (!mode.equals("posthog_cloud") || !get("cloud_binding").equals(cloudBinding)) {
+                throw new IllegalStateException("CLOUD_BINDING_CHANGED");
+            }
+            if (number("cloud_rows_reserved") < 0 || number("cloud_rows_reserved") > cloudRowLimit)
+                throw new IllegalStateException("CLOUD_BUDGET_INVALID");
+        } else if (!mode.equals("local")) {
+            throw new IllegalStateException("CLOUD_CONFIG_MISSING");
+        }
     }
 
     private String get(String key) {
@@ -113,6 +184,7 @@ final class DirectQueue {
     void configure(String run, int capacity) {
         if (run == null || !run.matches("synthetic-[a-z0-9-]{1,48}")
                 || (capacity != 32 && capacity != 1000)) throw new IllegalArgumentException("BAD_CONFIG");
+        if (cloudMode && !cloudRunId.equals(run)) throw new IllegalArgumentException("CLOUD_RUN_MISMATCH");
         synchronized (store) {
             if (!get("run_id").isEmpty()) {
                 if (!get("run_id").equals(run) || number("capacity") != capacity)
@@ -122,6 +194,21 @@ final class DirectQueue {
             db.beginTransaction();
             try {
                 set("run_id", run); set("capacity", capacity);
+                db.setTransactionSuccessful();
+            } finally { db.endTransaction(); }
+        }
+    }
+
+    void armRetry(int first, int count) {
+        if (!cloudMode || first < 1 || count != 10 || first + count - 1 > 100000)
+            throw new IllegalArgumentException("BAD_RETRY_PROBE");
+        synchronized (store) {
+            if (number("retry_armed") != 0 || number("retry_ack_discarded") != 0
+                    || scalar("SELECT count(*) FROM queue") != 0 || inFlight != 0)
+                throw new IllegalStateException("RETRY_PROBE_NOT_FRESH");
+            db.beginTransaction();
+            try {
+                set("retry_start", first); set("retry_count", count); set("retry_armed", 1);
                 db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
         }
@@ -229,13 +316,18 @@ final class DirectQueue {
     private void sendOnce() {
         HttpURLConnection connection = null;
         List<Long> ids = new ArrayList<>();
+        JSONArray batch = new JSONArray();
         boolean hasRows = false, acknowledged = false, started = false;
+        boolean ackDiscarded = false, responseAccepted = false, quotaLimited = false;
+        long attemptId = 0;
+        int responseCode = 0;
         try {
             byte[] bytes;
             synchronized (dispatchGate) {
                 synchronized (store) {
                     if (number("consent") == 0) return;
-                    JSONArray batch = new JSONArray();
+                    if (cloudMode && (!cloudNetworkReady() || number("cloud_budget_blocked") != 0
+                            || number("cloud_transport_blocked") != 0)) return;
                     try (Cursor c = db.rawQuery("SELECT id,body FROM queue WHERE generation=? ORDER BY id LIMIT 20",
                             new String[]{String.valueOf(number("generation"))})) {
                         while (c.moveToNext()) { ids.add(c.getLong(0)); batch.put(new JSONObject(c.getString(1))); }
@@ -243,22 +335,49 @@ final class DirectQueue {
                     if (ids.isEmpty()) return;
                     hasRows = true;
                     JSONObject payload = new JSONObject();
-                    payload.put("api_key", TOKEN); payload.put("batch", batch);
+                    payload.put("api_key", transportToken); payload.put("batch", batch);
                     bytes = payload.toString().getBytes(StandardCharsets.UTF_8);
                     try {
-                        validateBytes(bytes, get("run_id"));
+                        validateBytes(bytes, get("run_id"), transportToken);
                         add("preflight_count", 1);
                     } catch (Exception failure) {
                         add("preflight_rejected", 1);
                         return; // Fail closed: nothing from this malformed batch is written.
                     }
+                    // Reservation is conservative: no refund for connect errors, lost ACKs or crashes.
+                    db.beginTransaction();
+                    try {
+                        if (cloudMode && !canReserveCloud(number("cloud_rows_reserved"), ids.size(), cloudRowLimit)) {
+                            set("cloud_budget_blocked", 1);
+                            set("cloud_block_reason", "ROW_BUDGET");
+                            db.setTransactionSuccessful();
+                            return;
+                        }
+                        if (cloudMode) add("cloud_rows_reserved", ids.size());
+                        add("dispatch_attempts", 1);
+                        attemptId = number("dispatch_attempts");
+                        db.setTransactionSuccessful();
+                    } finally { db.endTransaction(); }
+                    if (cloudMode) {
+                        JSONObject safePayload = new JSONObject(payload.toString());
+                        safePayload.put("api_key", "<redacted:project-token>");
+                        JSONObject audit = transportRecord(attemptId, "reserved", batch);
+                        audit.put("body_bytes", bytes.length); audit.put("payload", safePayload);
+                        cloudAudit("cloud-preflight.jsonl", audit);
+                        cloudAudit("cloud-transport.jsonl", transportRecord(attemptId, "reserved", batch));
+                    }
                 }
-                URL target = new URL(ENDPOINT);
-                if (!target.getHost().equals("127.0.0.1") || target.getPort() != 8765
-                        || !target.getProtocol().equals("http") || !target.getPath().equals("/batch/"))
-                    throw new IllegalStateException("NOT_LOOPBACK");
-                // A loopback request must never use an Android-configured remote HTTP proxy.
-                connection = (HttpURLConnection) target.openConnection(Proxy.NO_PROXY);
+                URL target = new URL(transportEndpoint);
+                if (cloudMode) {
+                    if (!CLOUD_ENDPOINT.equals(target.toExternalForm())) throw new IllegalStateException("CLOUD_DESTINATION");
+                    // Keep Android's default certificate/hostname validation and configured proxy policy.
+                    connection = (HttpURLConnection) target.openConnection();
+                } else {
+                    if (!target.getHost().equals("127.0.0.1") || target.getPort() != 8765
+                            || !target.getProtocol().equals("http") || !target.getPath().equals("/batch/"))
+                        throw new IllegalStateException("NOT_LOOPBACK");
+                    connection = (HttpURLConnection) target.openConnection(Proxy.NO_PROXY);
+                }
                 connection.setInstanceFollowRedirects(false);
                 connection.setRequestMethod("POST"); connection.setDoOutput(true);
                 connection.setConnectTimeout(3000); connection.setReadTimeout(30000);
@@ -268,15 +387,52 @@ final class DirectQueue {
                 connection.setRequestProperty("Connection", "close");
                 connection.setRequestProperty("User-Agent", "Java/1.8");
                 connection.setFixedLengthStreamingMode(bytes.length);
-                synchronized (store) { add("dispatch_attempts", 1); }
                 try (OutputStream output = connection.getOutputStream()) {
                     output.write(bytes); output.flush();
                 }
-                synchronized (store) { add("requests_started", 1); inFlight++; started = true; }
+                synchronized (store) {
+                    add("requests_started", 1); inFlight++; started = true;
+                    if (cloudMode) {
+                        add("cloud_rows_written", ids.size());
+                        cloudAudit("cloud-transport.jsonl", transportRecord(attemptId, "body_written", batch));
+                    }
+                }
             }
             // The dispatch gate is released: revocation need not wait for this ACK.
-            int status = connection.getResponseCode();
-            acknowledged = status == 200;
+            responseCode = connection.getResponseCode();
+            responseAccepted = responseCode == 200;
+            if (cloudMode && responseAccepted) {
+                JSONObject response;
+                try { response = readCloudResponse(connection); }
+                catch (Exception failure) {
+                    synchronized (store) { blockCloud("UNRECOGNIZED_RESPONSE"); }
+                    throw new IllegalStateException("UNRECOGNIZED_RESPONSE");
+                }
+                quotaLimited = quotaLimited(response);
+                responseAccepted = acceptedCloudResponse(response);
+                if (!responseAccepted) {
+                    synchronized (store) { blockCloud(quotaLimited ? "QUOTA_LIMITED" : "UNRECOGNIZED_RESPONSE"); }
+                }
+            } else if (cloudMode && responseCode >= 300 && responseCode < 500) {
+                synchronized (store) { blockCloud("HTTP_REJECTED"); }
+            }
+            acknowledged = responseAccepted;
+            synchronized (store) {
+                if (cloudMode && responseAccepted && shouldDiscardAck(batch)) {
+                    db.beginTransaction();
+                    try {
+                        set("retry_ack_discarded", 1); set("retry_armed", 0);
+                        db.setTransactionSuccessful();
+                    } finally { db.endTransaction(); }
+                    acknowledged = false; ackDiscarded = true;
+                }
+                if (cloudMode) {
+                    JSONObject response = transportRecord(attemptId, "response", batch);
+                    response.put("response_code", responseCode); response.put("response_accepted", responseAccepted);
+                    response.put("quota_limited", quotaLimited); response.put("ack_discarded", ackDiscarded);
+                    cloudAudit("cloud-transport.jsonl", response);
+                }
+            }
             if (acknowledged) {
                 synchronized (store) {
                     db.beginTransaction();
@@ -292,11 +448,25 @@ final class DirectQueue {
             synchronized (store) { add("transport_failures", 1); }
         } finally {
             if (connection != null) connection.disconnect();
+            if (cloudMode && attemptId != 0) {
+                synchronized (store) {
+                    try {
+                        JSONObject finished = transportRecord(attemptId, "finished", batch);
+                        finished.put("body_written", started); finished.put("acknowledged", acknowledged);
+                        finished.put("response_code", responseCode); finished.put("ack_discarded", ackDiscarded);
+                        cloudAudit("cloud-transport.jsonl", finished);
+                    } catch (Exception failure) {
+                        blockCloud("AUDIT_WRITE_FAILED");
+                    }
+                }
+            }
             synchronized (scheduling) {
                 boolean again;
                 synchronized (store) {
                     if (started) inFlight--;
-                    again = number("consent") == 1 && scalar("SELECT count(*) FROM queue") > 0;
+                    again = number("consent") == 1 && scalar("SELECT count(*) FROM queue") > 0
+                        && (!cloudMode || number("cloud_budget_blocked") == 0);
+                    again = again && (!cloudMode || number("cloud_transport_blocked") == 0);
                 }
                 scheduled = false;
                 if (again) {
@@ -309,14 +479,128 @@ final class DirectQueue {
         }
     }
 
+    private void blockCloud(String reason) {
+        set("cloud_transport_blocked", 1); set("cloud_block_reason", reason);
+    }
+
+    private static boolean canReserveCloud(long reserved, int rows, int limit) {
+        return limit >= 1 && limit <= CLOUD_ROW_CEILING && reserved >= 0 && reserved <= limit
+            && rows >= 1 && rows <= 20 && reserved + rows <= limit && reserved + rows <= CLOUD_ROW_CEILING;
+    }
+
+    private static boolean quotaLimited(JSONObject response) {
+        Object quota = response.opt("quota_limited");
+        return quota != null && quota != JSONObject.NULL
+            && !(quota instanceof Boolean && Boolean.FALSE.equals(quota))
+            && !(quota instanceof JSONArray && ((JSONArray) quota).length() == 0);
+    }
+
+    private static boolean acceptedCloudResponse(JSONObject response) throws Exception {
+        return response.opt("status") instanceof Integer && response.getInt("status") == 1 && !quotaLimited(response);
+    }
+
+    private boolean shouldDiscardAck(JSONArray batch) throws Exception {
+        if (number("retry_armed") != 1 || number("retry_ack_discarded") != 0
+                || batch.length() != number("retry_count")) return false;
+        long start = number("retry_start");
+        for (int i = 0; i < batch.length(); i++) {
+            if (batch.getJSONObject(i).getJSONObject("properties").getInt("sequence") != start + i) return false;
+        }
+        return true;
+    }
+
+    private static JSONObject readCloudResponse(HttpURLConnection connection) throws Exception {
+        try (InputStream input = connection.getInputStream(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] bytes = new byte[1024]; int count;
+            while ((count = input.read(bytes)) != -1) {
+                if (output.size() + count > 8192) throw new IllegalStateException("RESPONSE_TOO_LARGE");
+                output.write(bytes, 0, count);
+            }
+            return new JSONObject(new String(output.toByteArray(), StandardCharsets.UTF_8));
+        }
+    }
+
+    private JSONObject transportRecord(long attempt, String phase, JSONArray batch) throws Exception {
+        JSONObject value = new JSONObject();
+        value.put("schema_version", 1); value.put("attempt_id", attempt); value.put("phase", phase);
+        value.put("utc", utc()); value.put("rows", batch.length());
+        value.put("budget_reserved_rows", number("cloud_rows_reserved"));
+        value.put("row_limit", cloudRowLimit);
+        JSONArray eventIds = new JSONArray(), uuids = new JSONArray();
+        for (int i = 0; i < batch.length(); i++) {
+            eventIds.put(batch.getJSONObject(i).getJSONObject("properties").getString("event_id"));
+            uuids.put(batch.getJSONObject(i).getString("uuid"));
+        }
+        value.put("event_ids", eventIds); value.put("uuids", uuids);
+        return value;
+    }
+
+    private void cloudAudit(String name, JSONObject value) throws Exception {
+        if (!cloudMode || !(name.equals("cloud-preflight.jsonl") || name.equals("cloud-transport.jsonl")))
+            throw new IllegalStateException("AUDIT_DESTINATION");
+        try {
+            byte[] bytes = (value.toString() + "\n").getBytes(StandardCharsets.UTF_8);
+            if (bytes.length > WIRE_LIMIT + 8192) throw new IllegalStateException("AUDIT_SIZE");
+            try (FileOutputStream output = new FileOutputStream(new File(context.getFilesDir(), name), true)) {
+                output.write(bytes); output.getFD().sync();
+            }
+        } catch (Exception failure) {
+            add("cloud_audit_failures", 1); blockCloud("AUDIT_WRITE_FAILED");
+            throw new IllegalStateException("AUDIT_WRITE_FAILED");
+        }
+    }
+
+    private JSONObject connectivity() throws Exception {
+        JSONObject value = new JSONObject();
+        boolean available = false, active = false, internet = false, validated = false;
+        JSONArray transports = new JSONArray();
+        try {
+            ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (manager != null) {
+                Network network = manager.getActiveNetwork();
+                available = true; active = network != null;
+                NetworkCapabilities caps = network == null ? null : manager.getNetworkCapabilities(network);
+                if (caps != null) {
+                    internet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                    validated = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                    if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) transports.put("wifi");
+                    if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) transports.put("cellular");
+                    if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) transports.put("ethernet");
+                    if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) transports.put("vpn");
+                    if (transports.length() == 0) transports.put("other");
+                }
+            }
+        } catch (SecurityException failure) { available = false; active = false; }
+        value.put("probe_available", available); value.put("active_network", active);
+        value.put("internet_capable", internet); value.put("validated", validated); value.put("transports", transports);
+        return value;
+    }
+
+    private boolean cloudNetworkReady() throws Exception {
+        JSONObject state = connectivity();
+        return state.getBoolean("probe_available") && state.getBoolean("active_network")
+            && state.getBoolean("internet_capable") && state.getBoolean("validated");
+    }
+
+    private static String hexDigest(byte[] bytes) throws Exception {
+        StringBuilder hex = new StringBuilder();
+        for (byte value : MessageDigest.getInstance("SHA-256").digest(bytes))
+            hex.append(String.format(Locale.ROOT, "%02x", value & 255));
+        return hex.toString();
+    }
+
     /** Check the final serialized body, independently of the construction above. */
     static void validateBytes(byte[] bytes, String run) throws Exception {
+        validateBytes(bytes, run, TOKEN);
+    }
+
+    private static void validateBytes(byte[] bytes, String run, String allowedToken) throws Exception {
         if (run == null || !run.matches("synthetic-[a-z0-9-]{1,48}"))
             throw new IllegalArgumentException("RUN");
         if (bytes.length == 0 || bytes.length > WIRE_LIMIT) throw new IllegalArgumentException("SIZE");
         JSONObject body = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
         exact(body, "api_key", "batch");
-        if (!TOKEN.equals(body.getString("api_key"))) throw new IllegalArgumentException("TOKEN");
+        if (!allowedToken.equals(body.getString("api_key"))) throw new IllegalArgumentException("TOKEN");
         JSONArray batch = body.getJSONArray("batch");
         if (batch.length() < 1 || batch.length() > 20) throw new IllegalArgumentException("BATCH");
         Set<String> eventIds = new HashSet<>();
@@ -393,6 +677,18 @@ final class DirectQueue {
             if (!rejected) throw new IllegalStateException("PREFLIGHT_COUNTEREXAMPLE_ACCEPTED");
         }
         result.put("all_passed", true);
+        result.put("cloud_budget_490_plus_20_rejected", !canReserveCloud(490, 20, 500));
+        result.put("cloud_budget_490_plus_10_allowed", canReserveCloud(490, 10, 500));
+        result.put("cloud_budget_500_plus_1_rejected", !canReserveCloud(500, 1, 500));
+        result.put("cloud_budget_limit_over_500_rejected", !canReserveCloud(0, 1, 501));
+        result.put("cloud_response_fractional_status_rejected", !acceptedCloudResponse(new JSONObject("{\"status\":1.5}")));
+        result.put("cloud_response_quota_limited_rejected",
+            !acceptedCloudResponse(new JSONObject("{\"status\":1,\"quota_limited\":[\"product_analytics\"]}")));
+        result.put("cloud_response_status_1_accepted", acceptedCloudResponse(new JSONObject("{\"status\":1}")));
+        Iterator<String> checks = result.keys();
+        while (checks.hasNext()) {
+            if (!Boolean.TRUE.equals(result.get(checks.next()))) throw new IllegalStateException("COUNTEREXAMPLE_ACCEPTED");
+        }
         synchronized (store) { preflightResults = result; }
     }
     private static String utc() {
@@ -446,6 +742,16 @@ final class DirectQueue {
             state.put("trace_sha256", traceHash());
             state.put("setting_value", context.getSharedPreferences("unrelated_settings", Context.MODE_PRIVATE)
                 .getString("setting", "MISSING"));
+            state.put("connectivity", connectivity());
+            state.put("transport_mode", cloudMode ? "posthog_cloud_https" : "local_loopback");
+            if (cloudMode) {
+                for (String key : new String[]{"cloud_rows_reserved", "cloud_rows_written", "cloud_budget_blocked",
+                        "cloud_transport_blocked", "cloud_audit_failures", "retry_armed", "retry_ack_discarded"})
+                    state.put(key, number(key));
+                state.put("cloud_row_limit", cloudRowLimit);
+                state.put("cloud_rows_remaining", cloudRowLimit - number("cloud_rows_reserved"));
+                state.put("cloud_block_reason", get("cloud_block_reason"));
+            }
             if (preflightResults != null) state.put("preflight_checks", preflightResults);
         }
         writeAtomic("state.json", state.toString().getBytes(StandardCharsets.UTF_8));

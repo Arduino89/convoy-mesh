@@ -16,7 +16,7 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         label = new TextView(this);
-        label.setText("Synthetic direct telemetry LAB\nLoopback only");
+        label.setText("Synthetic direct telemetry LAB");
         setContentView(label);
         handle(getIntent());
     }
@@ -49,6 +49,7 @@ public final class MainActivity extends Activity {
                         case "flush": queue.kick(); break;
                         case "revoke": queue.revoke(nonce, stop); break;
                         case "preflight_checks": queue.preflightChecks(); break;
+                        case "arm_retry": queue.armRetry(start, count); break;
                         case "state": break;
                         default: throw new IllegalArgumentException("UNKNOWN_ACTION");
                     }

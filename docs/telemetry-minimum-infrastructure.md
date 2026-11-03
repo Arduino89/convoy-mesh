@@ -1,6 +1,33 @@
 # Convoy Mesh — valutazione telemetria minima
 
-Data aggiornamento: 2 novembre 2026. Raccomandazione Mixpanel accolta: contratto invariato e altri SDK sospesi. Autorizzato un prototipo Android d'invio diretto esclusivamente nel laboratorio, senza SDK analytics né invio cloud. I risultati storici restano distinti.
+Data aggiornamento: 3 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
+
+## Prova cloud — preparazione e condizioni prima dell'invio
+
+**Nessun nuovo evento cloud inviato.** Preparato il percorso HTTPS con configurazione privata, controllo persistente del budget e lettura riproducibile delle righe. Le prove cloud restano **NOT_RUN** finché non sono soddisfatti tutti i controlli preliminari. [Ricevuta delle verifiche attuali](telemetry-evidence/2026-11-03/cloud-preflight.json).
+
+| Verifica del 3 novembre | Riscontro effettivo |
+|---|---|
+| Destinazione e accesso | Progetto esistente `330212`, host di ingestione `https://eu.i.posthog.com`, accesso amministrativo al progetto; lettura impostazioni, fatturazione e schema eventi riuscita tramite collegamento |
+| Quota | Piano `free`, nessun abbonamento attivo; 162 eventi usati su 1.000.000 nel periodo corrente, 999.838 disponibili al controllo. Nessun upgrade o variazione dei limiti |
+| Privacy configurata | `anonymize_ips=true`, `session_recording_opt_in=false`. Le opzioni console/performance del progetto risultano attive, ma il sender nativo non contiene i relativi SDK o raccolte. Il controllo locale prima della scrittura resta obbligatorio; i metadati cloud richiedono successiva lettura |
+| Conservazione | Il piano restituisce `product_analytics_data_retention=1 year`. La documentazione definisce una finestra delle query: **non è prova di cancellazione fisica alla scadenza**, né di eliminazione da backup/repliche |
+| Cancellazione | API ufficiale di richieste/anteprima documentata; il collegamento non espone tale operazione. Disponibilità e permesso sul progetto effettivo ancora da verificare, senza cancellare le evidenze precedenti |
+| Credenziale al runner | Token di ingestione disponibile attraverso il progetto, mai nei sorgenti o nelle ricevute. Gestione dei segreti GitHub assente nel collegamento; il browser risulta non autenticato. Il segreto del runner non è stato predisposto né verificato |
+
+La [conservazione degli eventi](https://posthog.com/docs/data/events-retention) e la [API di cancellazione](https://posthog.com/docs/api/data-deletion-requests) sono fonti documentali, distinte dai valori letti sul progetto. Non è stata attestata l'impostazione organizzativa relativa all'uso dei dati per addestramento: la risposta disponibile non la espone. Nessuna di queste verifiche autorizza dati reali.
+
+**Verifica del codice preparato:** [133/133 controlli host](telemetry-evidence/2026-11-03/host-verification.json) superati: 94 precedenti, 15 su gate/orchestratore/configurazione, 22 sulla lettura cloud e due sull'esportazione. La [revisione indipendente](telemetry-evidence/2026-11-03/independent-cloud-source-review.json) non rileva blocchi residui per la regressione locale; non approva l'esecuzione cloud con preflight incompleto. I sette nuovi controlli nativi sono prove di funzioni aritmetiche/risposte: non attestano persistenza SQLite del budget, TLS o riavvio del profilo cloud. Il contatore scritto dopo la trasmissione può sottocontare in caso d'interruzione; il limite conservativo deriva dalle prenotazioni salvate prima dell'invio.
+
+**Modifica circoscritta:** lo stesso laboratorio conserva la modalità locale predefinita. Solo un file privato valido abilita l'unico endpoint HTTPS consentito; la sua assenza dopo l'associazione cloud blocca l'avvio. Il token arriva al package tramite stdin e non compare in intent, argomenti o ricevute. Ogni batch prenota durevolmente le proprie righe prima del collegamento: tentativi falliti e ritentativi consumano il budget, senza rimborsi; revoca, riavvio e nuovo consenso non lo azzerano. Limite assoluto nativo 500, con eventuale residuo minore. Nessun redirect o disabilitazione TLS. Gli errori di quota, risposta inattesa e scrittura delle evidenze arrestano ulteriori invii.
+
+La prova prevista usa un'unica installazione: normali 1–100, revocati 101–120, nuovi 121–130, retry 131–140. Il controllo della connettività Android distingue assenza di rete e ritorno di una rete validata; richiede il solo permesso aggiuntivo di lettura `ACCESS_NETWORK_STATE`. Il nuovo consenso deve mantenere traccia e impostazioni sintetiche. Il retry cloud ignora deliberatamente una risposta accettata e riusa UUID, tempo e contenuto: è distinto dalla perdita della risposta nel ricevitore locale. Una singola riga osservata per UUID è compatibile con deduplicazione; non prova che entrambe le copie siano state ingerite.
+
+L'orchestratore conclude soltanto `TRANSPORT_COMPLETE_READBACK_PENDING`: HTTP 200 non è ricezione dimostrata. La riconciliazione usa righe senza `DISTINCT` o raggruppamenti che eliminino duplicati, confronta ID attesi/ricevuti/mancanti/inattesi e UUID, e segnala proprietà aggiunte o modificate. I valori inattesi del cloud restano esclusi dalle ricevute pubbliche, conservando chiavi, tipi ed esito dell'audit. Query, intervallo e completezza della risposta devono restare riproducibili.
+
+Il workflow mantiene la modalità locale su ogni push e sugli avvii manuali predefiniti. Il cloud richiede un gate esplicito, valido meno di 24 ore, riferito a sorgente esatto, numero della singola esecuzione, tentativo 1 e verifiche complete; un gate incompleto viene respinto. Vietati ritentativi automatici del job: prima di un'eventuale seconda esecuzione occorre sottrarre conservativamente dal tetto complessivo ogni prenotazione precedente. Nessun file di configurazione privata viene esportato. Il runner è quello standard del repository pubblico, senza cache o artefatti Actions.
+
+Restano i confini già dimostrati: una revoca non salvata non è confermata; un invio già partito non è richiamabile. Telefoni, batteria, sospensione OEM, cancellazione forense e privacy dell'intera infrastruttura non risultano certificati. Le prove e la revisione indipendente del nuovo sorgente saranno riportate separatamente; i controlli host non sostituiscono Android.
 
 ## Prototipo Android diretto — prova locale eseguita
 

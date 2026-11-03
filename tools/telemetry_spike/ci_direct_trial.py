@@ -45,7 +45,11 @@ STATE_COUNTS = ("generation", "queue_count", "queue_bytes", "dropped_count", "re
 STATE_REQUIRED = {"action_nonce", "action_ok", "action", "pid", "run_id", "consent",
                   "trace_sha256", "setting_value", *STATE_COUNTS}
 SELF_CHECKS = {"valid_fixture_accepted", "foreign_distinct_id_rejected", "extra_property_rejected",
-               "wrong_privacy_flag_rejected", "non_fake_token_rejected", "invalid_timestamp_rejected", "all_passed"}
+               "wrong_privacy_flag_rejected", "non_fake_token_rejected", "invalid_timestamp_rejected", "all_passed",
+               "cloud_budget_490_plus_20_rejected", "cloud_budget_490_plus_10_allowed",
+               "cloud_budget_500_plus_1_rejected", "cloud_budget_limit_over_500_rejected",
+               "cloud_response_fractional_status_rejected", "cloud_response_quota_limited_rejected",
+               "cloud_response_status_1_accepted"}
 WIRE_SCOPE = "DIRECT_SENDER_LOOPBACK_WIRE_AUDIT_NOT_CLOUD_NOT_PRODUCTION"
 BUILD_SOURCES = {"tools/telemetry_spike/direct_trial/" + name for name in
                  ("AndroidManifest.xml", "MainActivity.java", "DirectQueue.java", "build.py")} | {
@@ -410,7 +414,7 @@ class Device:
 def verify_apk(args, env):
     receipt = json.loads(args.build_receipt.read_text())
     if (receipt.get("status") != "BUILT_VERIFIED_NOT_RUN" or
-            receipt.get("scope") != "NATIVE_DIRECT_SYNTHETIC_LOOPBACK_ONLY" or
+            receipt.get("scope") != "NATIVE_DIRECT_SYNTHETIC_DEFAULT_LOOPBACK_CLOUD_PRIVATE_CONFIG_REQUIRED" or
             receipt.get("runtime_tested") is not False or receipt.get("analytics_sdk") is not None or
             receipt.get("new_dependencies") != [] or
             receipt.get("source_commit") != args.source_commit or
@@ -433,7 +437,7 @@ def verify_apk(args, env):
     if not valid_sdk_bounds(badging):
         raise TrialBlocked("APK_SDK_BOUNDS_MISMATCH")
     permissions = re.findall(r"^uses-permission[^:]*: name='([^']+)'", badging, re.M)
-    if permissions != ["android.permission.INTERNET"]:
+    if permissions != ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE"]:
         raise TrialBlocked("APK_PERMISSION_SCOPE_REJECTED")
     signature = run([tools / "apksigner", "verify", "--print-certs", args.apk], env).stdout
     certs = re.findall(r"Signer #[0-9]+ certificate SHA-256 digest: ([a-fA-F0-9]{64})", signature)

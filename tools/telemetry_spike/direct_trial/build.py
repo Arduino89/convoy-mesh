@@ -24,8 +24,8 @@ def verify_apk(apk, paths, env):
     if not valid_sdk_bounds(badging):
         raise GateError("direct APK SDK bounds mismatch")
     permissions = re.findall(r"^uses-permission: name='([^']+)'", badging, re.M)
-    if permissions != ["android.permission.INTERNET"]:
-        raise GateError("direct APK must request only INTERNET")
+    if sorted(permissions) != ["android.permission.ACCESS_NETWORK_STATE", "android.permission.INTERNET"]:
+        raise GateError("direct APK requires only INTERNET and ACCESS_NETWORK_STATE")
     signature = run([paths["apksigner"], "verify", "--print-certs", apk], env=env)
     certificates = re.findall(r"Signer #[0-9]+ certificate SHA-256 digest: ([a-fA-F0-9]{64})", signature)
     if len(certificates) != 1:
@@ -45,7 +45,7 @@ def main():
     if not re.fullmatch(r"[a-f0-9]{40}", args.source_commit):
         parser.error("an exact source commit is required")
     receipt = {"utc": datetime.now(timezone.utc).isoformat(), "status": "NOT_BUILT",
-               "scope": "NATIVE_DIRECT_SYNTHETIC_LOOPBACK_ONLY", "runtime_tested": False,
+               "scope": "NATIVE_DIRECT_SYNTHETIC_DEFAULT_LOOPBACK_CLOUD_PRIVATE_CONFIG_REQUIRED", "runtime_tested": False,
                "source_commit": args.source_commit, "analytics_sdk": None, "new_dependencies": []}
     out = args.out.resolve()
     created_output = False

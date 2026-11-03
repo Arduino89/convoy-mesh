@@ -60,6 +60,30 @@ class EvidenceEmitterTests(unittest.TestCase):
             with self.assertRaises(TrialBlocked):
                 collect(root)
 
+    def test_cloud_export_keeps_retries_and_excludes_private_configuration(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            public = root / 'cloud-public'
+            public.mkdir()
+            row = '{"event_id":"synthetic-cloud-export-000001","sequence":1}\n'
+            (public / 'transport.jsonl').write_text(row + row)
+            private = root / 'cloud-private'
+            private.mkdir()
+            (private / 'config.json').write_text('{"api_key":"private-fixture"}')
+            data, names = collect(root)
+            self.assertFalse(any('private' in name for name in names))
+            with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                self.assertEqual(len(archive.read('cloud-public/transport.jsonl').splitlines()), 2)
+
+    def test_cloud_export_rejects_private_file_in_public_folder(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            public = root / 'cloud-public'
+            public.mkdir()
+            (public / 'config.json').write_text('{"api_key":"private-fixture"}')
+            with self.assertRaises(TrialBlocked):
+                collect(root)
+
 
 if __name__ == '__main__':
     unittest.main()

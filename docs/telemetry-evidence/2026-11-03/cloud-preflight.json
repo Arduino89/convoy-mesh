@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "status": "BLOCKED_BEFORE_CLOUD_SEND",
+  "checked_at_utc": "2026-11-03T07:47:06.944Z",
+  "project_id": 330212,
+  "api_host": "https://eu.i.posthog.com",
+  "access": {
+    "project_role": "admin",
+    "project_settings_read": true,
+    "billing_read": true,
+    "events_schema_read": true,
+    "ingestion_token_available_privately": true
+  },
+  "privacy": {
+    "anonymize_ips": true,
+    "session_recording_opt_in": false,
+    "capture_console_log_opt_in": true,
+    "capture_performance_opt_in": true,
+    "notes": [
+      "Native direct sender contains no recording, console, performance or analytics SDK; project flags alone are not outbound payload proof.",
+      "Data sent must satisfy unchanged LAB allowlist. Unknown cloud metadata values must stay out of public evidence.",
+      "Organization AI-training setting is not exposed by current read response; not attested."
+    ]
+  },
+  "billing": {
+    "billing_plan": "free",
+    "subscription_level": "free",
+    "has_active_subscription": false,
+    "billing_period": {
+      "current_period_start": "2026-11-01T19:16:06.532Z",
+      "current_period_end": "2026-12-01T19:16:06.532Z",
+      "interval": "month"
+    },
+    "events": {
+      "usage": 162,
+      "limit": 1000000,
+      "todays_usage": 0
+    },
+    "free_rows_remaining": 999838,
+    "trial": null
+  },
+  "retention": {
+    "feature": {
+      "key": "product_analytics_data_retention",
+      "name": "Data retention",
+      "description": "Keep a historical record of your data.",
+      "unit": "year",
+      "limit": 1,
+      "note": null,
+      "entitlement_only": false,
+      "is_plan_default": true,
+      "category": null
+    },
+    "verified": "PLAN_ENTITLEMENT_ONE_YEAR_QUERY_WINDOW",
+    "physical_erasure_after_one_year": "NOT_VERIFIED_NOT_CLAIMED",
+    "docs": "https://posthog.com/docs/data/events-retention"
+  },
+  "deletion": {
+    "documented_api": "https://posthog.com/docs/api/data-deletion-requests",
+    "list_endpoint": "GET /api/projects/330212/data_deletion_requests/",
+    "preview_endpoint": "POST /api/projects/330212/data_deletion_requests/preview/",
+    "delete_endpoint": "POST /api/projects/330212/data_deletion_requests/",
+    "connector_capability": "NOT_EXPOSED",
+    "project_availability_and_permission": "NOT_VERIFIED",
+    "executed": false
+  },
+  "budget": {
+    "maximum_transmitted_rows_including_retries": 500,
+    "cloud_rows_sent_this_turn": 0
+  },
+  "blockers": [
+    "Verify project-specific event deletion availability and preview through an authorized UI/API before ingestion.",
+    "Provision project ingestion token to GitHub Actions via private secret; connector has no secret management, browser is signed out.",
+    "Complete exact-source Android local regressions and independent implementation review before cloud trial."
+  ],
+  "sources": [
+    "PostHog project-get id330212",
+    "PostHog billing-overview-get",
+    "PostHog organization-get for project organization",
+    "PostHog execute-sql events schema",
+    "PostHog docs-search retention/deletion",
+    "GitHub PR5 and repository GET"
+  ],
+  "github_runner": {
+    "repository": "Arduino89/convoy-mesh",
+    "repository_public_verified": true,
+    "label": "ubuntu-24.04",
+    "standard_public_runner_free": true,
+    "artifact_uploads": false,
+    "actions_cache": false,
+    "source": "https://docs.github.com/en/actions/concepts/billing-and-usage",
+    "runner_reference": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+    "checked_date_utc": "2026-11-03"
+  }
+}

@@ -39,11 +39,14 @@ def collect(root):
                 raise TrialBlocked('RECEIPT_TYPE_OR_SIZE_REJECTED')
             value = public_json(path.read_text())
             files[relative] = (json.dumps(value, sort_keys=True) + '\n').encode()
-    for folder in ('lab-public', 'direct-public'):
+    for folder in ('lab-public', 'direct-public', 'cloud-public'):
         public = root / folder
         if not public.exists():
             continue
-        if folder == 'direct-public':
+        if folder == 'cloud-public':
+            from ci_cloud_trial import audit_public_directory as audit_cloud
+            audit_cloud(public)
+        elif folder == 'direct-public':
             from ci_direct_trial import audit_public_directory as audit_direct
             audit_direct(public)
         else:
