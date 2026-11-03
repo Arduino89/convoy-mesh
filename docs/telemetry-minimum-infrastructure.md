@@ -2,9 +2,9 @@
 
 Data aggiornamento: 3 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
 
-## Prova cloud — preparazione e condizioni prima dell'invio
+## Prova cloud — regressione Android superata, invio fermo al preflight
 
-**Nessun nuovo evento cloud inviato.** Preparato il percorso HTTPS con configurazione privata, controllo persistente del budget e lettura riproducibile delle righe. Le prove cloud restano **NOT_RUN** finché non sono soddisfatti tutti i controlli preliminari. [Ricevuta delle verifiche attuali](telemetry-evidence/2026-11-03/cloud-preflight.json).
+**La nuova regressione Android è riuscita sul commit `2d76100`; nessun evento di questa continuazione è stato inviato al cloud.** Il percorso HTTPS è preparato, ma la verifica di cancellazione ha trovato un blocco reale: il GET ufficiale `data_deletion_requests` risponde che l’endpoint è alpha e non ancora disponibile pubblicamente. Il segreto di ingestione del runner è inoltre assente. Cloud **NOT_RUN**, senza promuovere un controllo saltato a PASS. [Preflight aggiornato](telemetry-evidence/2026-11-03/cloud-preflight.json) · [risposta osservata](telemetry-evidence/2026-11-03/deletion-access-probe.json).
 
 | Verifica del 3 novembre | Riscontro effettivo |
 |---|---|
@@ -12,8 +12,8 @@ Data aggiornamento: 3 novembre 2026. Il nuovo mandato autorizza Android → prog
 | Quota | Piano `free`, nessun abbonamento attivo; 162 eventi usati su 1.000.000 nel periodo corrente, 999.838 disponibili al controllo. Nessun upgrade o variazione dei limiti |
 | Privacy configurata | `anonymize_ips=true`, `session_recording_opt_in=false`. Le opzioni console/performance del progetto risultano attive, ma il sender nativo non contiene i relativi SDK o raccolte. Il controllo locale prima della scrittura resta obbligatorio; i metadati cloud richiedono successiva lettura |
 | Conservazione | Il piano restituisce `product_analytics_data_retention=1 year`. La documentazione definisce una finestra delle query: **non è prova di cancellazione fisica alla scadenza**, né di eliminazione da backup/repliche |
-| Cancellazione | API ufficiale di richieste/anteprima documentata; il collegamento non espone tale operazione. Disponibilità e permesso sul progetto effettivo ancora da verificare, senza cancellare le evidenze precedenti |
-| Credenziale al runner | Token di ingestione disponibile attraverso il progetto, mai nei sorgenti o nelle ricevute. Gestione dei segreti GitHub assente nel collegamento; il browser risulta non autenticato. Il segreto del runner non è stato predisposto né verificato |
+| Cancellazione | Accesso autenticato al progetto riuscito; GET ufficiale respinto con `permission_denied`: endpoint alpha non disponibile pubblicamente. Nessuna anteprima o cancellazione eseguita. Il pulsante per cancellare tutto il progetto è presente, ma non è stato usato: coinvolgerebbe le evidenze storiche. Percorso selettivo per eventi senza profilo personale non ancora verificato |
+| Credenziale al runner | Accesso GitHub riuscito: il pannello mostra nessun segreto repository o ambiente. `CONVOY_LAB_POSTHOG_TOKEN` non creato; nessun token trasferito a GitHub. Il token del progetto resta escluso da sorgenti e ricevute |
 
 La [conservazione degli eventi](https://posthog.com/docs/data/events-retention) e la [API di cancellazione](https://posthog.com/docs/api/data-deletion-requests) sono fonti documentali, distinte dai valori letti sul progetto. Non è stata attestata l'impostazione organizzativa relativa all'uso dei dati per addestramento: la risposta disponibile non la espone. Nessuna di queste verifiche autorizza dati reali.
 
@@ -27,7 +27,32 @@ L'orchestratore conclude soltanto `TRANSPORT_COMPLETE_READBACK_PENDING`: HTTP 20
 
 Il workflow mantiene la modalità locale su ogni push e sugli avvii manuali predefiniti. Il cloud richiede un gate esplicito, valido meno di 24 ore, riferito a sorgente esatto, numero della singola esecuzione, tentativo 1 e verifiche complete; un gate incompleto viene respinto. Vietati ritentativi automatici del job: prima di un'eventuale seconda esecuzione occorre sottrarre conservativamente dal tetto complessivo ogni prenotazione precedente. Nessun file di configurazione privata viene esportato. Il runner è quello standard del repository pubblico, senza cache o artefatti Actions.
 
-Restano i confini già dimostrati: una revoca non salvata non è confermata; un invio già partito non è richiamabile. Telefoni, batteria, sospensione OEM, cancellazione forense e privacy dell'intera infrastruttura non risultano certificati. Le prove e la revisione indipendente del nuovo sorgente saranno riportate separatamente; i controlli host non sostituiscono Android.
+Restano i confini già dimostrati: una revoca non salvata non è confermata; un invio già partito non è richiamabile. Telefoni, batteria, sospensione OEM, cancellazione forense e privacy dell'intera infrastruttura non risultano certificati. La regressione Android e la revisione indipendente del nuovo sorgente sono riportate di seguito; i controlli host restano distinti da Android e il profilo cloud non è stato eseguito.
+
+## Nuova regressione Android del sorgente predisposto per HTTPS
+
+**PASS locale sul sorgente `2d76100fda1df0637e953f4ad90f26073028880c`:** [run 41600690330](https://github.com/Arduino89/convoy-mesh/actions/runs/41600690330), [job 125798442094](https://github.com/Arduino89/convoy-mesh/actions/runs/41600690330/job/125798442094), tentativo 1. Il push ha avviato esclusivamente la modalità locale; preparazione privata cloud e invio cloud sono rimasti saltati. **133/133 controlli host** superati anche nel runner. La pubblicazione finale delle ricevute è separata dal commit eseguibile qui identificato.
+
+| Prova sul nuovo eseguibile | Riscontro |
+|---|---|
+| Controllo Android indipendente prima del LAB | Installazione/apertura/arresto/riapertura riuscite; PID 2633→2766, contatore 1→2, stesso avvio del sistema |
+| Consegna dopo indisponibilità e riavvio | 100/100, zero mancanti e duplicati |
+| Revoca completata, riavvio, nuovo consenso | Vecchi **0/20**, nuovi **10/10**; traccia e impostazione sintetiche conservate |
+| Tre interruzioni successive al commit del rifiuto | In ciascun caso vecchi **0/20**, nuovi **10/10**; riavvio online in rifiuto e sentinelle conservate |
+| Rifiuto | Zero ricevuti sui 20 tentativi iniziali e sui 10 successivi alla revoca |
+| Risposta persa nel ricevitore locale | 10 ID, 20 righe: duplicati visibili, UUID/timestamp/contenuto invariati |
+| Saturazione 32/45 | Mancano esattamente i primi 13; contatore di scarto 13 |
+| Prima del commit / richiesta già partita | Confini confermati: 20 vecchi arrivano con consenso precedente recuperato; i 10 già ricevuti prima della revoca non sono richiamabili |
+
+[Build](telemetry-evidence/2026-11-03/run-41600690330/direct-build/build-receipt.json): APK debug **45.459 byte**, SHA-256 `91eacc843b92be29806fe69cc2d8b76e3615c8b9dc177563d33ef8f33c3d83fe`, package `com.cama.telemetry.direct_lab`, versione 1.0/1, minSDK24/target36; soli permessi INTERNET e ACCESS_NETWORK_STATE. JDK17.0.21, piattaforma36/build-tools36.0.0. Boot comune controllo/LAB `08000cad-e3f1-466a-98ec-9803988a50b7`.
+
+La [revisione indipendente](telemetry-evidence/2026-11-03/direct-review-41600690330/INDEPENDENT_REVIEW.md), con [script riproducibile](telemetry-evidence/2026-11-03/direct-review-41600690330/recompute_direct_review.py), ricalcola senza importare il classificatore **16 richieste, 232 righe, 222 ID/UUID unici, 98.000 byte di body, 399 stati e 403 nonce**; verifica 107 hash dell’export, ricevute originali di controllo/build e 18 file del commit remoto. Ricalcolo ripetuto con risultato byte-identico SHA-256 `15e0e086acd80680e8fa6e79f4dd8faa24c28ec8f37334c28460bbd14c270fa6`. Nessun’anomalia materiale rilevata nel perimetro esaminato.
+
+**Limiti del nuovo PASS:** tutti gli stati attestano `local_loopback`. I sette helper aggiunti per budget/risposta sono stati eseguiti nativamente; configurazione privata, prenotazione durevole del budget cloud, HTTPS, ingestione e lettura cloud **non sono stati esercitati**. L’indisponibilità locale usa `adb reverse`, non le radio; valgono i soli punti di arresto osservati e finestre finite. Persistenza del contatore overflow dopo riavvio, memoria, batteria, byte cap/disco pieno, telefoni/GPS/Bluetooth e cancellazione fisica restano non verificati. Il controllo dei 108 file del bundle non ha rilevato credenziali non redatte, identità personali o IP non loopback.
+
+La [verifica delle alternative di cancellazione](telemetry-evidence/2026-11-03/deletion-path-review.json) distingue l’API documentata dall’accesso effettivo. `persons/bulk_delete` accetta `distinct_ids`, ma il [sorgente ufficiale fissato](https://github.com/PostHog/posthog/blob/27db03406400b3d4ea1b8ff281fdc51448b2a849/posthog/models/person/bulk_delete.py#L828) accoda la cancellazione degli eventi soltanto per persone risolte: una lista vuota non accoda nulla. Questo non dimostra una soluzione per il contratto `$process_person_profile=false`. È una verifica statica del sorgente pubblico, non una cancellazione live né prova della revisione esatta del server EU. Non esclude una procedura assistita dal fornitore, ancora da confermare. Nessun contatto esterno o modifica dei permessi è stato eseguito.
+
+**Prossimo passo circoscritto:** verificare un percorso supportato di cancellazione dei soli eventi sintetici senza profilo personale e predisporre il segreto del solo progetto LAB nel runner. Poi aggiornare il preflight, vincolarlo al commit esatto e a un singolo nuovo run, conservare il tetto globale 500 e completare la lettura grezza tramite collegamento. Non cambiare il contratto per creare profili, eliminare l’intero progetto o dichiarare la finestra annuale equivalente a cancellazione. Nessuna nuova esecuzione cloud è stata avviata.
 
 ## Prototipo Android diretto — prova locale eseguita
 

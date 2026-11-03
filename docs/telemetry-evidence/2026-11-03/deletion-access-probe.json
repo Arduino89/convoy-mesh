@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-11-03T09:14:30Z",
+  "project_id": 330212,
+  "operation": "READ_ONLY_AUTHENTICATED_BROWSER_NAVIGATION",
+  "method": "GET",
+  "url": "https://eu.posthog.com/api/projects/330212/data_deletion_requests/",
+  "basis": "Official API reference documents this GET. The signed-in browser could read the settings of the same existing project before navigation.",
+  "rendered_response_body": {
+    "type": "authentication_error",
+    "code": "permission_denied",
+    "detail": "This endpoint is in alpha and is not yet publicly available.",
+    "attr": null
+  },
+  "http_status": "NOT_EXPOSED_BY_BROWSER_OBSERVATION",
+  "conclusion": "DOCUMENTED_SELF_SERVICE_DELETION_ENDPOINT_UNAVAILABLE_TO_THIS_ACCESS",
+  "preview_executed": false,
+  "deletion_executed": false,
+  "scope": "This observation does not prove every deletion mechanism is unavailable. No API scope, feature, project, person profile or billing setting was changed.",
+  "other_observations": {
+    "project_privacy_discard_client_ip_data": true,
+    "project_privacy_note": "The UI says transformations can use the client IP before it is discarded. The LAB additionally sends $geoip_disable=true; cloud enrichment remains NOT_RUN.",
+    "project_delete_button_available": true,
+    "project_delete_executed": false,
+    "project_delete_not_selected_as_lab_cleanup": "Would remove the entire existing project and historical evidence, beyond deletion of this trial.",
+    "github_authenticated_repository_secrets_page": true,
+    "github_repository_secrets_present": false,
+    "github_environment_secrets_present": false,
+    "github_secret_created": false,
+    "required_secret_name": "CONVOY_LAB_POSTHOG_TOKEN"
+  },
+  "source_urls": [
+    "https://posthog.com/docs/api/data-deletion-requests",
+    "https://eu.posthog.com/project/330212/settings/project-privacy",
+    "https://eu.posthog.com/project/330212/settings/project-danger-zone",
+    "https://github.com/Arduino89/convoy-mesh/settings/secrets/actions"
+  ],
+  "cloud_rows_sent_this_continuation": 0,
+  "cloud_status": "NOT_RUN"
+}

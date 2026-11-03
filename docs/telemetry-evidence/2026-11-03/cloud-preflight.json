@@ -9,7 +9,11 @@
     "project_settings_read": true,
     "billing_read": true,
     "events_schema_read": true,
-    "ingestion_token_available_privately": true
+    "ingestion_token_available_privately": true,
+    "browser_project_settings_authenticated": true,
+    "github_repository_secrets_page_authenticated": true,
+    "github_repository_secret_present": false,
+    "github_secret_created": false
   },
   "privacy": {
     "anonymize_ips": true,
@@ -61,17 +65,19 @@
     "preview_endpoint": "POST /api/projects/330212/data_deletion_requests/preview/",
     "delete_endpoint": "POST /api/projects/330212/data_deletion_requests/",
     "connector_capability": "NOT_EXPOSED",
-    "project_availability_and_permission": "NOT_VERIFIED",
-    "executed": false
+    "project_availability_and_permission": "DOCUMENTED_ENDPOINT_DENIED_ALPHA_NOT_PUBLICLY_AVAILABLE",
+    "executed": false,
+    "access_probe_ref": "deletion-access-probe.json",
+    "alternative_without_person_profile": "NO_SUPPORTED_SELECTIVE_PERSONLESS_DELETION_PATH_VERIFIED",
+    "path_review_ref": "deletion-path-review.json"
   },
   "budget": {
     "maximum_transmitted_rows_including_retries": 500,
     "cloud_rows_sent_this_turn": 0
   },
   "blockers": [
-    "Verify project-specific event deletion availability and preview through an authorized UI/API before ingestion.",
-    "Provision project ingestion token to GitHub Actions via private secret; connector has no secret management, browser is signed out.",
-    "Complete exact-source Android local regressions and independent implementation review before cloud trial."
+    "The documented self-service data_deletion_requests GET denies this authenticated project access because the endpoint is alpha and not publicly available. A supported selective cleanup path for events without person profiles is not yet verified.",
+    "The existing repository has no Actions secrets. CONVOY_LAB_POSTHOG_TOKEN has not been provisioned; no ingestion token was transmitted to GitHub."
   ],
   "sources": [
     "PostHog project-get id330212",
@@ -79,7 +85,9 @@
     "PostHog organization-get for project organization",
     "PostHog execute-sql events schema",
     "PostHog docs-search retention/deletion",
-    "GitHub PR5 and repository GET"
+    "GitHub PR5 and repository GET",
+    "Authenticated browser observations in deletion-access-probe.json",
+    "GitHub run41600690330/job125798442094 plus independently recomputed synthetic receipts"
   ],
   "github_runner": {
     "repository": "Arduino89/convoy-mesh",
@@ -91,5 +99,20 @@
     "source": "https://docs.github.com/en/actions/concepts/billing-and-usage",
     "runner_reference": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
     "checked_date_utc": "2026-11-03"
-  }
+  },
+  "followup_recorded_at_utc": "2026-11-03T09:14:30Z",
+  "local_android_regression": {
+    "status": "PASS",
+    "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+    "run_id": 41600690330,
+    "job_id": 125798442094,
+    "run_attempt": 1,
+    "host_tests_passed": 133,
+    "independent_review_ref": "direct-review-41600690330/independent-runtime-review.json",
+    "scope": "LOCAL_LOOPBACK_ONLY_CLOUD_NOT_RUN"
+  },
+  "resolved_previous_blockers": [
+    "GitHub and PostHog browser authentication succeeded.",
+    "Exact-source Android local regression and independent receipt/source review passed on 2d76100."
+  ]
 }

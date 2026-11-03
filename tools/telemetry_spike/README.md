@@ -1,19 +1,21 @@
 # Telemetry spike — istruzioni riproducibili
 
-**Mandato corrente del 3 novembre — collegamento cloud del solo laboratorio:** autorizzato il percorso Android → progetto PostHog EU esistente → analisi, massimo 500 righe trasmesse compresi ritentativi. Preparati configurazione privata, prenotazione persistente del budget, controllo della rete e lettura senza occultare duplicati. **Cloud NOT_RUN:** mancano verifica della cancellazione sul progetto e predisposizione protetta della credenziale del runner; [preflight](../../docs/telemetry-evidence/2026-11-03/cloud-preflight.json). Il workflow resta locale su push e avvio predefinito; nessuna attivazione implicita. Convoy invariata, altri SDK sospesi, PR #5 in bozza. Risultati e commit esatto nel [rapporto corrente](../../docs/telemetry-minimum-infrastructure.md); Python e build non attestano Android.
+**Mandato corrente del 3 novembre — collegamento cloud del solo laboratorio:** autorizzato il percorso Android → progetto PostHog EU esistente → analisi, massimo 500 righe trasmesse compresi ritentativi. Preparati configurazione privata, prenotazione persistente del budget, controllo della rete e lettura senza occultare duplicati. **Cloud NOT_RUN:** l'accesso autenticato a `data_deletion_requests` restituisce l'indisponibilità pubblica della API in alpha; manca inoltre il secret protetto del runner GitHub. Questi prerequisiti restano bloccanti nel [preflight](../../docs/telemetry-evidence/2026-11-03/cloud-preflight.json). Il workflow resta locale su push e avvio predefinito; nessuna attivazione implicita. Convoy invariata, altri SDK sospesi, PR #5 in bozza. Risultati e commit esatto nel [rapporto corrente](../../docs/telemetry-minimum-infrastructure.md); Python e build non attestano Android.
 
-**Eseguito:** sorgente `89b3a35d3a55c86d60a1cb5b779cfeba7fd00776`, run `41521892190`/job `125539742017`, tentativo1 SUCCESS. Revoca completata e tre interruzioni dopo il suo salvataggio: in ogni caso vecchi0/20, nuovi10/10 e sentinelle conservate. Prima del primo commit recuperati20 eventi: confine osservato, non revoca accettata. Rifiuto, consegna100, contenuto, ritentativi e saturazione verificati nel LAB;94 controlli host separati. [Ricevute](../../docs/telemetry-evidence/2026-11-02/run-41521892190/direct-public/result.json). Nessun invio cloud o via libera all'app.
+**Ultima regressione Android locale eseguita:** sorgente `2d76100fda1df0637e953f4ad90f26073028880c`, [run `41600690330`/job `125798442094`](https://github.com/Arduino89/convoy-mesh/actions/runs/41600690330/job/125798442094), tentativo 1 **SUCCESS**. Consegna 100/100; revoca completata e tre interruzioni dopo il salvataggio: complessivamente 0/80 vecchi ricevuti e 40/40 nuovi, sentinelle conservate. Rifiuto 0/30; ritentativo 20 righe/10 ID con UUID invariati; saturazione 32/45, primi 13 mancanti rilevati. Prima del primo commit recuperati 20 eventi: confine osservato, non revoca accettata. I 10 eventi in-flight erano già ricevuti prima della revoca. [Ricevute](../../docs/telemetry-evidence/2026-11-03/run-41600690330/direct-public/result.json).
+
+**Identità e limiti:** APK 45.459 byte, SHA-256 `91eacc843b92be29806fe69cc2d8b76e3615c8b9dc177563d33ef8f33c3d83fe`; 133 controlli host separati passati e 107 hash del bundle verificati dalla [revisione indipendente](../../docs/telemetry-evidence/2026-11-03/direct-review-41600690330/INDEPENDENT_REVIEW.md). Tutti gli stati Android sono `local_loopback`. I sette nuovi controlli nativi di budget/risposta verificano soltanto funzioni isolate: HTTPS, credenziali, prenotazione SQLite del budget cloud e lettura PostHog restano **NOT_RUN**. Nessun invio cloud o via libera all'app.
 
 Per ricontrollare le ricevute con il verificatore indipendente, dalla radice del repository (non esegue Android):
 
 ```sh
-python3 docs/telemetry-evidence/2026-11-02/direct-review-41521892190/recompute_direct_review.py \
-  docs/telemetry-evidence/2026-11-02/run-41521892190 \
-  --support docs/telemetry-evidence/2026-11-02/direct-review-41521892190 \
-  --out /tmp/convoy-direct-independent-review.json
+python3 docs/telemetry-evidence/2026-11-03/direct-review-41600690330/recompute_direct_review.py \
+  docs/telemetry-evidence/2026-11-03/run-41600690330 \
+  --support docs/telemetry-evidence/2026-11-03/direct-review-41600690330 \
+  --out /tmp/convoy-direct-independent-review-41600690330.json
 ```
 
-Il risultato coincide con la ricevuta indipendente pubblicata, SHA-256 `7da09ec6c8c28ae5013b207eed6fdfdd0de967f110b796165d381411af5c63d5`. Il bundle runtime rimane integro e separato dai file della revisione.
+Il ricalcolo usa il bundle runtime originale e i file di supporto separati; non avvia Android. Il [precedente ciclo locale del 2 novembre](../../docs/telemetry-evidence/2026-11-02/run-41521892190/direct-public/result.json), sorgente `89b3a35`, rimane conservato come storico.
 
 **Checkpoint precedente — Mixpanel:** precheck sulle fonti Flutter 3.1.0/Android 8.11.1 concluso con **PRECHECK_BLOCKED_MINIMIZATION**: API di cancellazione ed endpoint iniziale disponibili, ma metadati di sessione ed evento di nuovo consenso non eliminabili tramite il percorso pubblico esaminato. Tutte le prove Mixpanel sono **NOT_RUN**. Il vecchio campione PostHog sottostante è conservato a fini di riproducibilità storica e non va rilanciato invariato come correttivo. [Causa, fonti e limiti](../../docs/telemetry-minimum-infrastructure.md).
 

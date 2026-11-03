@@ -8,6 +8,27 @@ runtime-control builder, Android runner, exact wire auditor and reconciliation
 contract are reused. The new code is limited to a bounded local queue, explicit
 consent transitions, one sender thread and debug commands for reproducible tests.
 
+## Verified checkpoint — 3 November 2026
+
+The local Android regression of source `2d76100fda1df0637e953f4ad90f26073028880c`
+completed successfully in [run 41600690330, job 125798442094](https://github.com/Arduino89/convoy-mesh/actions/runs/41600690330/job/125798442094).
+The APK is 45,459 bytes, SHA-256
+`91eacc843b92be29806fe69cc2d8b76e3615c8b9dc177563d33ef8f33c3d83fe`.
+The [independent review](../../../docs/telemetry-evidence/2026-11-03/direct-review-41600690330/INDEPENDENT_REVIEW.md)
+verified 107 bundle hashes and reconstructed delivery/revocation/retry/sentinel
+results. The 133 passing host tests remain separate from Android evidence.
+See the [reproducible review command](../README.md) to recompute the receipts
+without rerunning Android.
+
+All native states report `local_loopback`. The seven additional budget/response
+helper checks ran on Android; they do not test private cloud configuration, HTTPS
+or durable cloud reservations. **Cloud remains NOT_RUN:** authenticated access to
+`data_deletion_requests` reports that its alpha API is not publicly available,
+and the protected GitHub runner secret is absent. The
+[cloud preflight](../../../docs/telemetry-evidence/2026-11-03/cloud-preflight.json)
+must be satisfied before any ingestion. Historical receipts and Convoy remain
+unchanged.
+
 Build with the installed JDK17/platform36/build-tools36.0.0, after the separate
 runtime control has passed:
 
