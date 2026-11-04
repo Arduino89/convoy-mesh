@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "observed_utc": "2026-11-04T10:38:37.880101+00:00",
+  "harness_version": "0.2.1-rc.5",
+  "node_version": "v24.22.1",
+  "benchmark_state": "NOT_RUN",
+  "paid_inference_requests": 0,
+  "api_spend_usd": 0,
+  "deepseek_api_authentication": "NOT_TESTED",
+  "github_mcp_live": "NOT_CONFIGURED",
+  "source_hashes": {
+    "probe.py": "7684dd140ec4e2053c52147f095ea8e2e43d626c151926eb20eeef53a1625f5f",
+    "runtime_probe.mjs": "dac106ae3fbbf00dc29b427264f963ee04a4fbcfb05c4b245628422c7a27319f",
+    "mcp_fixture.py": "b92c6a9e40ebf31358ccf2ccfb3c7a047d6da060f0b8441863d6feb4986e5abe",
+    "read-only.patch.yml": "7546498911d926ff707b5283645afb8faa3d11eaccf55f5432b6addf8719e459"
+  },
+  "checks": [
+    {
+      "name": "version",
+      "argv": [
+        "<RUNTIME>/node_modules/.bin/dsh",
+        "--version"
+      ],
+      "cwd": "<TEMP>",
+      "exit_code": 0,
+      "stdout": "0.2.1-rc.5\n",
+      "stderr": "",
+      "pass": true
+    },
+    {
+      "name": "headless_help",
+      "argv": [
+        "<RUNTIME>/node_modules/.bin/dsh",
+        "headless",
+        "--help"
+      ],
+      "cwd": "<TEMP>",
+      "exit_code": 0,
+      "stdout": "Usage: dsh --profile headless [options] [task...]\n\nAnswer one task and exit; the answer goes to stdout and diagnostics to stderr.\n\nArguments:\n  task               the task text; multiple words are joined by spaces, and `-`\n                     reads stdin\n\nOptions:\n  --json             write newline-delimited run events to stdout instead of the\n                     final message\n  --session-id <id>  adopt the persisted Session with this id; an unknown id is\n                     an error\n  -h, --help         show this help\n\nExamples:\n  dsh --profile headless \"run the tests\"          answer one task and exit\n  echo \"run the tests\" | dsh --profile headless   read the task from stdin\n  dsh --profile headless --json \"run the tests\"   emit machine-readable run events\n  dsh --profile headless --session-id session-\u2026 \"continue\"   resume an existing Session\n\n",
+      "stderr": "",
+      "pass": true
+    },
+    {
+      "name": "compose_read_only",
+      "argv": [
+        "<RUNTIME>/node_modules/.bin/dsh",
+        "headless",
+        "--patch",
+        "/workspace/scratch/ef999178ff7d/convoy-mesh/agent_benchmark_distribution_2026-11-04/preparation/read-only.patch.yml",
+        "--dump-config"
+      ],
+      "cwd": "<TEMP>",
+      "exit_code": 0,
+      "stdout": "Composed tree omitted; rerun --dump-config to inspect.",
+      "stderr": "",
+      "pass": true,
+      "stdout_sha256": "c4e6fe7aace2e239348547d4ac9b9655ee249034d9ac202c0aea345d506ba538"
+    },
+    {
+      "name": "missing_key_fails_closed",
+      "argv": [
+        "<RUNTIME>/node_modules/.bin/dsh",
+        "headless",
+        "--patch",
+        "/workspace/scratch/ef999178ff7d/convoy-mesh/agent_benchmark_distribution_2026-11-04/preparation/read-only.patch.yml",
+        "--json",
+        "Preparation smoke only. Reply READY. Do not use tools."
+      ],
+      "cwd": "<TEMP>",
+      "exit_code": 1,
+      "stdout": "{\"type\":\"session\",\"sessionId\":\"session-9db5d4df-05f1-4074-ad93-0c269bb60761\",\"cwd\":\"<TEMP>\"}\n{\"type\":\"status\",\"phase\":\"turn_start\",\"turn\":1}\n{\"type\":\"status\",\"phase\":\"step_start\",\"turn\":1,\"step\":1}\n{\"type\":\"status\",\"phase\":\"step_end\",\"turn\":1,\"step\":1}\n{\"type\":\"status\",\"phase\":\"turn_end\",\"turn\":1,\"reason\":{\"kind\":\"error\",\"error\":{\"message\":\"llm-deepseek: no API key for provider route \\\"deepseek-official\\\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment\",\"code\":\"MISSING_CREDENTIAL\"}}}\n{\"type\":\"final\",\"text\":\"\"}\n",
+      "stderr": "dsh: MISSING_CREDENTIAL: llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment\n",
+      "pass": true
+    },
+    {
+      "name": "local_harness_services",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/ef999178ff7d/convoy-mesh/agent_benchmark_distribution_2026-11-04/preparation/runtime_probe.mjs",
+        "<RUNTIME>",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+      ],
+      "cwd": "<TEMP>",
+      "exit_code": 0,
+      "stdout": "{\n  \"landlock\": \"unusable\",\n  \"sandbox\": {\n    \"state\": \"UNAVAILABLE\",\n    \"code\": \"SANDBOX_UNAVAILABLE\",\n    \"message\": \"sandbox mode \\\"read-only\\\" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined. Install bubblewrap or run a Landlock-enforcing kernel (Linux), ensure sandbox-exec is usable (macOS), or ensure the ACL restricted-token runner can start (Windows) \u2014 otherwise switch the consumer to danger-full-access.\"\n  },\n  \"mcp\": {\n    \"state\": \"PASS\",\n    \"tools\": [\n      \"mcp__preparation__read_sentinel\"\n    ],\n    \"result\": {\n      \"isError\": false,\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"CONVOY_PREPARATION_MCP_OK\"\n        }\n      ],\n      \"value\": {\n        \"content\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"CONVOY_PREPARATION_MCP_OK\"\n          }\n        ]\n      }\n    }\n  }\n}\n",
+      "stderr": "",
+      "pass": true
+    }
+  ],
+  "services": {
+    "landlock": "unusable",
+    "sandbox": {
+      "state": "UNAVAILABLE",
+      "code": "SANDBOX_UNAVAILABLE",
+      "message": "sandbox mode \"read-only\" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined. Install bubblewrap or run a Landlock-enforcing kernel (Linux), ensure sandbox-exec is usable (macOS), or ensure the ACL restricted-token runner can start (Windows) \u2014 otherwise switch the consumer to danger-full-access."
+    },
+    "mcp": {
+      "state": "PASS",
+      "tools": [
+        "mcp__preparation__read_sentinel"
+      ],
+      "result": {
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "text": "CONVOY_PREPARATION_MCP_OK"
+          }
+        ],
+        "value": {
+          "content": [
+            {
+              "type": "text",
+              "text": "CONVOY_PREPARATION_MCP_OK"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
