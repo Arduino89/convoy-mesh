@@ -2,6 +2,44 @@
 
 Data aggiornamento: 5 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
 
+## Risultato corrente — preparazione offline corretta e verificata
+
+**La prova Android del correttivo è riuscita:** [run42072267635/job127403084581](https://github.com/Arduino89/convoy-mesh/actions/runs/42072267635/job/127403084581), numero13/tentativo1, sorgente eseguibile del diagnostico `e094db2d815b10aca3ce49cdd9007304818220b3`, conclusioneSUCCESS. Sorgente nativo LAB fissato a `2d76100fda1df0637e953f4ad90f26073028880c`, invariato. [Ricevute e riepilogo](telemetry-evidence/2026-11-05/run-42072267635/summary.json).178/178controlli host separati e45mirati nel jobPASS; le prove Python restano distinte da Android.
+
+| Riscontro su Android | Risultato |
+|---|---|
+| Controllo indipendente | Installazione, apertura, arresto/riapertura PASS sullo stesso boot |
+| Barriera offline | Tre flag radio richiesti e nessuna rete predefinita prima/dopo;4campioni complessivi |
+| Installazione LAB | Success più verifica package, distinta da cleanup_required |
+| Protocollo ADB |1.0.41 / platform-tools37.0.1/build15733141;19funzioni su righe, una esattamente shell_v2 |
+| Trasferimento privato | shell-T, uscita0, file600e rilettura esattamente uguale alla sola configurazione fittizia |
+| Pulizia | Processo fermo, file rimosso e assenza verificata, radio iniziali ripristinate |
+| Budget e cloud | Contatori precedenti sconosciuti/null,500prudenziali/0autorizzati; nessuna chiamata cloud o avvio LAB |
+
+Nove fasi di preparazione con uscita0; nessun errore occultato o criterio ridotto. Il falso riscontro “exit0quindi file scritto” è eliminato: completamento del comando e verifica del file hanno flag separati. La ricevuta budget viene scritta prima di ADB, resta recuperabile anche su errore e non autorizza rimborsi. Il recupero positivo del database proprio del LAB è testato su host/SQLite e harness simulato; questa prova no-launch non inizializza un ledger cloud né recupera il vecchio runner.
+
+APK LAB della prova: package `com.cama.telemetry.direct_lab`, versione1.0/code1,45459byte; SHA256`76731f705128803e7b7936de1e7848a2acf9ee1cb92f13ad0503618adf827777`, certificatoSHA256`9046b4110ab2a3a0fdac0b078d8a532474e278ccf577f61ff804d2c7a4cc8557`, minSDK24/target36, permessi INTERNET e ACCESS_NETWORK_STATE. Identità verificata dagli strumenti nel runner e collegata ai5hashsorgente/build; APK non distribuita come Convoy, firma debug temporanea senza promessa di identità binaria fra runner.
+
+| Tentativo conservato | Esito distinto |
+|---|---|
+|9 /69a4b30 | Nuovo wrapper sh/pipefail fallisce prima del controllo; corretto con ingresso Bash e regressione |
+|10 /b282c3f8 | Controllo/installazione/mkdir PASS; stat1FILE_NOT_FOUND riproduce file assente dopo exec-in0 |
+|11 /015d943f | Timeout barriera offline; nessuna installazione/prova del trasferimento, causa rete non localizzata |
+|12 /da4e05f4 | Barriera/installazione PASS; nuovo parser CSV rifiuta CLI a righe prima della scrittura; corretto con regressione |
+|13 /e094db2d | Preparazione e pulizia corrette PASS, protocollo/rilettura e barriera durante la preparazione confermati |
+
+La [revisione indipendente](telemetry-evidence/2026-11-05/run-42072267635/independent-review.json) conferma il risultato; il [ricalcolo con sola libreria standard](telemetry-evidence/2026-11-05/run-42072267635/README.md) è stato rieseguito e produce la stessa ricevuta byte per byte. È una revisione delle evidenze, non una seconda esecuzione Android. I fallimenti restano nelle rispettive cartelle; nessun rilancio identico e nessuna asserzione allentata. Il workflow originale viene ripristinato con skip-ci nel commit finale di evidenze. Restano non verificati invio/consenso/revoca cloud, deduplicazione, privacy dell’intera infrastruttura e consumi sui telefoni. Le regressioni native/locali precedenti rimangono valide sui sorgenti invariati, senza nuova esecuzione attribuita. **Convoy invariata, PR5DRAFT; nessuna integrazione, cancellazione, spesa, merge, release o utente reale.**
+
+## Proposta per il successivo gate cloud — NON AUTORIZZATA
+
+La preparazione offline è verificata; la proposta resta subordinata alla revisione delle ricevute e a una decisione separata di Cama. **Nessun invio avviato e nessun nuovo plafond concesso da questo incarico.**
+
+Se Cama vorrà procedere, propongo un nuovo limite separato di **200righe aggiuntive**, inclusi tentativi incerti e ritentativi. Gli scenari nominali richiedono130trasmissioni per120eventi unici; l’eccedenza massima70serve soltanto per tentativi di trasporto, senza nuovi eventi o campi. Una sola esecuzione, nessun rerun/reset automatico, stesso progettoEU330212 e soli dati sintetici. Il vecchio run8 rimane500conteggiato prudenzialmente e non viene rifinanziato: il tetto cumulativo prudenziale proposto diventerebbe700, non un conteggio di invii dimostrati.
+
+Prima dell’avvio occorre presentare e revisionare il gate concreto con progetto/run/sorgente/tentativo e budget esatti. Il contratto attuale con tetto500non va riutilizzato fingendo prenotazioni precedenti diverse da500: vanno rappresentati distintamente cumulativo, nuovo plafond e limite nativo per quella esecuzione. Anche la provenienza delle regressioni va esplicitata: riusare i sorgenti nativi/harness locali invariati tramite hash, senza attribuire un vecchio run a un nuovo commit; ripetere solo ciò che una modifica reale invalida. Privacy, quota gratuita e percorso assistito di cancellazione vanno ricontrollati prima dell’ingresso; nessuna cancellazione è autorizzata dalla proposta.
+
+Scenari: offline→riavvio→rete→100normali; revoca→riavvio→nuovo consenso, vecchi20assenti e nuovi10presenti; ritentativo di10eventi con UUID invariati; controllo dei corpi finali e lettura raw/count senza DISTINCT. Trasporto, dati ricevuti, duplicati e metadati cloud restano conclusioni separate. Se un controllo manca o il budget è ignoto, bloccare e conservare le prove. Nessuna integrazione/utente reale/merge/release/nuovo servizio o spesa.
+
 ## Formato CLI corretto nel verificatore — prova12
 
 [Run42070151906/job127395556977](https://github.com/Arduino89/convoy-mesh/actions/runs/42070151906/job/127395556977), da4e05f4, numero12/tentativo1: barrieraofflinePASS con4campioni, installazione e mkdirPASS. Il nuovo controllo features risponde0 ma il parser lo rifiuta, quindi **PRIVATE_WRITE non eseguito**; cleanup completoPASS, budgetnull/500prudenziali0autorizzati. [Ricevuta e revisione](telemetry-evidence/2026-11-05/run-42070151906/summary.json). Lo stato effettivo del protocollo nel vecchio output non conservato non è dichiarato assente.

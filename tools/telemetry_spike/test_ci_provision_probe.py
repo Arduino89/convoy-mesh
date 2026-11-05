@@ -1,6 +1,7 @@
 """Host-only guard regressions: simulated device commands, no Android or cloud."""
 from contextlib import redirect_stdout
 import io
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -70,9 +71,14 @@ class ProvisionShellEntry(unittest.TestCase):
         self.assertEqual([call[0] for call in self.calls()], [
             "pinned-app/tools/telemetry_spike/runtime_control/smoke.py"])
 
-    def test_diagnostic_workflow_selects_single_bash_entry_and_only_next_attempt(self):
+    def test_completed_diagnostic_is_archived_and_not_rearmed(self):
         workflow = (self.repo / ".github/workflows/telemetry-runtime-control.yml").read_text()
-        diagnostic = workflow.split("  diagnostic-provision:\n", 1)[1]
+        self.assertNotIn("  diagnostic-provision:", workflow)
+        executed = self.repo / "docs/telemetry-evidence/2026-11-05/run-42072267635/workflow-executed.yml"
+        raw = executed.read_bytes()
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),
+                         "f6ad935df4eeb4d1583624435a11f336092ad579e4c057cb78729a44120634c9")
+        diagnostic = raw.decode().split("  diagnostic-provision:\n", 1)[1]
         self.assertIn("github.run_number == 13 && github.run_attempt == 1", diagnostic)
         self.assertIn("github.event.head_commit.message == 'Diagnose isolated LAB provisioning offline (no cloud)'", diagnostic)
         self.assertIn("script: bash tools/telemetry_spike/run_ci_provision_probe.sh", diagnostic)

@@ -62,5 +62,11 @@
     "red_log_sha256": "17a8b252f85d13029fdd09df4359d100e367d5de19ca61df404447879011b4c9",
     "green_log_sha256": "93909c44545057aa9d9c8f4cd6a7aef54c3ccb2b10fccc071f185e623a643dca",
     "csv_prefix_duplicate_rejected": true
+  },
+  "post_restore_full_suite": {
+    "tests": 178,
+    "failures": 0,
+    "errors": 0,
+    "scope": "HOST_ONLY_AFTER_ORIGINAL_WORKFLOW_RESTORE_AND_ARCHIVE_GUARD_TEST"
   }
 }
