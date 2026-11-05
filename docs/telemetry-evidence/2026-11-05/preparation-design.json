@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "APPROVE_SINGLE_OFFLINE_PROVISION_RUN_11_ATTEMPT_1",
+  "status": "APPROVE_SINGLE_CAUSAL_FEATURE_CLI_FIX_RUN_13_ATTEMPT_1",
   "base_head": "219261375c1179cb2ee21e10efb36c6fc7c74b3d",
   "branch": "experiment/telemetry-runtime-lab",
   "pr": 5,
@@ -101,11 +101,12 @@
   },
   "independent_review": "preparation-offline-source-review.json",
   "wrapper_failure_ref": "run-42064249734/summary.json",
-  "next_attempt_reason": "Supported shell-T/shell_v2 replaces causally invalid prequoted exec-in; file confirmation requires mode and exact readback.",
-  "next_run_number": 12,
+  "next_attempt_reason": "Correct the documented line-oriented CLI parser; required shell_v2 and offline predicate unchanged, no CSV fallback.",
+  "next_run_number": 13,
   "current_reproduced_failure_ref": "run-42065607773/summary.json",
   "causal_correction_ref": "provision-transport-cause.json",
-  "current_independent_review": "preparation-offline-observation-review.json",
+  "current_independent_review": "preparation-feature-cli-fix-review.json",
   "last_network_failure_ref": "run-42068243243/summary.json",
-  "bounded_stop": "One final instrumented attempt12. If offline barrier fails, no further Android/cloud attempts."
+  "bounded_stop": "No identical retry. Stop on an actual unavailable/offline environment or required protocol; no cloud budget.",
+  "last_feature_parser_failure_ref": "run-42070151906/summary.json"
 }

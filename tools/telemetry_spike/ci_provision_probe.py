@@ -202,6 +202,7 @@ def main():
                                            for name in ("ci_provision_probe.py", "ci_cloud_trial.py")},
               "diagnostic_commands": [], "preparation": [],
               "offline_sample_count": 0, "last_offline_observation": None,
+              "shell_features_observation": None,
               "limits": ["ONE_PREPARATION_ATTEMPT_ONLY", "NO_APPLICATION_RUNTIME_OR_CLOUD_PROOF",
                          "REBUILT_PINNED_SOURCE_NOT_HISTORICAL_APK_BYTES"]}
     device, radios = None, None
@@ -255,6 +256,7 @@ def main():
     finally:
         if device is not None:
             result["shell_v2_confirmed"] = bool(getattr(device, "shell_v2_confirmed", False))
+            result["shell_features_observation"] = getattr(device, "shell_features_observation", None)
             result["private_write_command_completed"] = bool(getattr(device, "private_write_command_completed", False))
             result["config_write_confirmed"] = bool(getattr(device, "config_write_confirmed", False))
             cleanup["required"] = bool(getattr(device, "cleanup_required", False))

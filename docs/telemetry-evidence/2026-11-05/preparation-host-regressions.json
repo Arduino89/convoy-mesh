@@ -16,18 +16,19 @@
   "run8_budget_refund_authorized": false,
   "run8_remaining_for_future_launches": 0,
   "sha256": {
-    "tests": "6bd50bdbccf07297a1d6a3fe5f4e0d1189e761c8fe53811dfe93eefc99afd407",
-    "implementation": "0caaa7c8b44eed5fa6791fc6c39309b1c033e5b01d2394f1f8c5f19f6095ed03",
+    "tests": "4c1ab1ab644c21dd24dc233452d128b3e2cd98e18b761a8a9b170885e627db83",
+    "implementation": "93c0ae66f60d4aa1e8f62a6c883492f208e9344440e4f37ce485ded2ee8f5d78",
     "red_log": "6887d690127991e1bf483eacd25491d6c5a75281729dbb24d1fde2977c97c148",
     "green_log": "7f8882d877a60b2472c7542323e98479087e3cfa6d283920351141a237b5e186"
   },
   "emitter_counterexample_sha256": "3b7084b6a7923f62c261f815f39c8a1c24e571ec8989d34d1d6f1d5bdeb8cead",
   "full_suite": {
-    "tests": 176,
+    "tests": 178,
     "failures": 0,
     "errors": 0,
     "scope": "HOST_ONLY_NO_ANDROID_NO_CLOUD",
-    "executed_by": "root"
+    "executed_by": "root",
+    "final_assertions_included": true
   },
   "checked_at_utc": "2026-11-05T16:24:52.424499+00:00",
   "wrapper_regressions": {
@@ -53,5 +54,13 @@
     "tests": 2,
     "result": "PASS",
     "unchanged_predicate_and_45_seconds": true
+  },
+  "cli_feature_regression": {
+    "expected_format": "ONE_FEATURE_PER_LINE",
+    "before": "CLOUD_PRIVATE_SHELL_FEATURES_OUTPUT_REJECTED",
+    "after": "EXACT_ONE_SHELL_V2_LINE_REQUIRED",
+    "red_log_sha256": "17a8b252f85d13029fdd09df4359d100e367d5de19ca61df404447879011b4c9",
+    "green_log_sha256": "93909c44545057aa9d9c8f4cd6a7aef54c3ccb2b10fccc071f185e623a643dca",
+    "csv_prefix_duplicate_rejected": true
   }
 }

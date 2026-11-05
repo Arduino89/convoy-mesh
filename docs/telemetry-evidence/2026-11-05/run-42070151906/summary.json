@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "status": "FEATURE_CLI_PARSER_BLOCKED_BEFORE_PRIVATE_WRITE",
+  "run_id": 42070151906,
+  "run_number": 12,
+  "run_attempt": 1,
+  "job_id": 127395556977,
+  "commit": "da4e05f413035e83fc1046f638992893a13a6095",
+  "control": "PASS_NATIVE_RUNTIME_CONTROL",
+  "offline_before_install": true,
+  "last_offline_observation": {
+    "sample_index": 4,
+    "radio_settings": {
+      "airplane_mode_on": true,
+      "wifi_on": false,
+      "mobile_data": false
+    },
+    "radio_flags_match_requested": true,
+    "default_network_state": "NONE",
+    "default_network_label_count": 1,
+    "raw_connectivity_dump_published": false
+  },
+  "install_confirmed": true,
+  "mkdir_returncode": 0,
+  "features_command_returncode": 0,
+  "feature_output_rejected": true,
+  "private_write": "NOT_RUN",
+  "shell_v2_actual_availability": "NOT_ATTESTED_RAW_OUTPUT_NOT_RETAINED",
+  "identified_parser_defect": "CSV parsing applied to the line-oriented adb features CLI output; source AOSP2177-2186.",
+  "cleanup": {
+    "required": true,
+    "install_confirmed": true,
+    "lab_stopped": true,
+    "fake_config_removed": true,
+    "initial_radios_restored": true
+  },
+  "budget_unknown": true,
+  "conservative_prior500_remaining0": true,
+  "minimal_correction": "Require exactly one shell_v2 line from the official CLI output; preserve protocol requirement, no CSV/prefix/duplicate acceptance."
+}

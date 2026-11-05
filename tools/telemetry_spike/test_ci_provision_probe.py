@@ -73,7 +73,7 @@ class ProvisionShellEntry(unittest.TestCase):
     def test_diagnostic_workflow_selects_single_bash_entry_and_only_next_attempt(self):
         workflow = (self.repo / ".github/workflows/telemetry-runtime-control.yml").read_text()
         diagnostic = workflow.split("  diagnostic-provision:\n", 1)[1]
-        self.assertIn("github.run_number == 12 && github.run_attempt == 1", diagnostic)
+        self.assertIn("github.run_number == 13 && github.run_attempt == 1", diagnostic)
         self.assertIn("github.event.head_commit.message == 'Diagnose isolated LAB provisioning offline (no cloud)'", diagnostic)
         self.assertIn("script: bash tools/telemetry_spike/run_ci_provision_probe.sh", diagnostic)
         self.assertNotIn("script: |", diagnostic)
@@ -98,6 +98,7 @@ class ProvisionProbeGuards(unittest.TestCase):
         self.device.install_confirmed = False
         self.device.provision_confirmed = False
         self.device.shell_v2_confirmed = False
+        self.device.shell_features_observation = None
         self.device.private_write_command_completed = False
         self.device.config_write_confirmed = False
         self.device.preparation_records = []
@@ -265,6 +266,9 @@ class ProvisionProbeGuards(unittest.TestCase):
             self.assertEqual(probe.FAKE_CONFIG["row_limit"], 0)
             self.device.provision_confirmed = True
             self.device.shell_v2_confirmed = True
+            self.device.shell_features_observation = {
+                "output_format": "ONE_FEATURE_PER_LINE", "line_count": 3,
+                "exact_shell_v2_count": 1, "raw_output_published": False}
             self.device.private_write_command_completed = True
             self.device.config_write_confirmed = True
         self.device.install.side_effect = install
@@ -281,6 +285,9 @@ class ProvisionProbeGuards(unittest.TestCase):
         self.assertEqual(receipt["historical_failure_cause"], "EXEC_IN_QUOTING_CONTRACT_MISMATCH_REPRODUCED_ON_HOST")
         self.assertTrue(receipt["cleanup"]["fake_config_removed"])
         self.assertTrue(receipt["shell_v2_confirmed"])
+        self.assertEqual(receipt["shell_features_observation"], {
+            "output_format": "ONE_FEATURE_PER_LINE", "line_count": 3,
+            "exact_shell_v2_count": 1, "raw_output_published": False})
         self.assertTrue(receipt["private_write_command_completed"])
         self.assertTrue(receipt["config_write_confirmed"])
         self.assertFalse(receipt["legacy_install_provision_argv_unchanged"])

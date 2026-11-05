@@ -305,6 +305,7 @@ class CloudDevice(Device):
         self.config_write_confirmed = False
         self.provision_confirmed = False
         self.shell_v2_confirmed = False
+        self.shell_features_observation = None
 
     def _preparation_record(self, phase, output=None, category=None):
         if phase not in PREPARATION_PHASES:
@@ -358,11 +359,17 @@ class CloudDevice(Device):
         self.config_write_confirmed = False
         self.provision_confirmed = False
         self.shell_v2_confirmed = False
+        self.shell_features_observation = None
         if self.pid(absent_ok=True) is not None:
             raise TrialBlocked("PRIVATE_PROVISION_REQUIRES_STOPPED_LAB")
         self.prepare_call("PRIVATE_MKDIR", "shell", "run-as", PACKAGE, "mkdir", "-p", "files")
         features = self.prepare_call("PRIVATE_SHELL_FEATURES", "features")
-        if "shell_v2" not in features.stdout.strip().split(","):
+        # The adb CLI prints one common feature per line, not its wire CSV format.
+        lines = [line.strip() for line in features.stdout.splitlines() if line.strip()]
+        self.shell_features_observation = {
+            "output_format": "ONE_FEATURE_PER_LINE", "line_count": len(lines),
+            "exact_shell_v2_count": lines.count("shell_v2"), "raw_output_published": False}
+        if self.shell_features_observation["exact_shell_v2_count"] != 1:
             self._preparation_record("PRIVATE_SHELL_FEATURES", features, "OUTPUT_REJECTED")
             raise TrialBlocked("CLOUD_PRIVATE_SHELL_FEATURES_OUTPUT_REJECTED")
         self.shell_v2_confirmed = True
@@ -693,6 +700,8 @@ def main():
                 result["status"] = "BLOCKED"
                 result["public_export_error"] = "CLOUD_STATE_EXPORT_INCOMPLETE_OR_UNSAFE"
             result["cleanup"], result["finished_utc"] = cleanup, now()
+            result["shell_v2_confirmed"] = bool(device and getattr(device, "shell_v2_confirmed", False))
+            result["shell_features_observation"] = getattr(device, "shell_features_observation", None)
             public_write(args.out / "result.json", result)
             try:
                 audit_public_directory(args.out)

@@ -143,7 +143,7 @@ class CloudPreparationEvidence(unittest.TestCase):
 
     def provision_responses(self, stat_code=0, mode='600\n', copied=None):
         return [subprocess.CompletedProcess([], 0, '', ''),
-                subprocess.CompletedProcess([], 0, 'shell_v2,cmd\n', ''),
+                subprocess.CompletedProcess([], 0, 'shell_v2\ncmd\n', ''),
                 subprocess.CompletedProcess([], 0, b'', b''),
                 subprocess.CompletedProcess([], stat_code, mode, '' if not stat_code else self.canary),
                 subprocess.CompletedProcess([], 0, self.private.decode() if copied is None else copied, '')]
@@ -202,8 +202,35 @@ class CloudPreparationEvidence(unittest.TestCase):
         self.assertNotIn(self.canary, ' '.join(argv))
         self.assertEqual(write_call.kwargs['input'], self.private)
 
+    def test_official_features_cli_line_output_allows_required_shell_v2(self):
+        # AOSP `adb features` emits each supported feature with printf("%s\n").
+        # This is the CLI output shape, not its internal comma-separated transport.
+        responses = self.provision_responses()
+        responses[1] = subprocess.CompletedProcess([], 0, 'cmd\nshell_v2\nstat_v2\n', '')
+        with patch('ci_cloud_trial.subprocess.run', side_effect=responses) as command:
+            self.device.provision(self.private)
+        self.assertIs(self.device.shell_v2_confirmed, True)
+        self.assertIs(self.device.config_write_confirmed, True)
+        self.assertIs(self.device.provision_confirmed, True)
+        self.assertEqual(command.call_count, 5)
+        self.assertEqual(command.call_args_list[2].kwargs['input'], self.private)
+        self.assertEqual(self.device.shell_features_observation,
+                         {'output_format': 'ONE_FEATURE_PER_LINE', 'line_count': 3,
+                          'exact_shell_v2_count': 1, 'raw_output_published': False})
+
+    def test_feature_observation_contains_counts_without_raw_feature_values(self):
+        responses = self.provision_responses()
+        responses[1] = subprocess.CompletedProcess([], 0, 'shell_v2\n' + self.canary + '\n', '')
+        with patch('ci_cloud_trial.subprocess.run', side_effect=responses):
+            self.device.provision(self.private)
+        observation = self.device.shell_features_observation
+        self.assertEqual(observation, {'output_format': 'ONE_FEATURE_PER_LINE', 'line_count': 2,
+                                      'exact_shell_v2_count': 1, 'raw_output_published': False})
+        self.assertNotIn(self.canary, json.dumps(observation) + self.device.preparation_path.read_text())
+
     def test_missing_shell_v2_stops_before_private_bytes_are_submitted(self):
-        for advertised in ('', 'cmd,stat_v2\n', 'not_shell_v2\n', 'shell_v20\n'):
+        for advertised in ('', 'cmd\nstat_v2\n', 'not_shell_v2\n', 'shell_v20\n',
+                           'shell_v2,cmd\n', 'cmd,shell_v2\n', 'shell_v2\nshell_v2\n'):
             with self.subTest(features=advertised):
                 self.device.preparation_path.unlink(missing_ok=True)
                 responses = [subprocess.CompletedProcess([], 0, '', ''),
@@ -217,6 +244,8 @@ class CloudPreparationEvidence(unittest.TestCase):
                 self.assertIs(self.device.private_write_command_completed, False)
                 self.assertIs(self.device.config_write_confirmed, False)
                 self.assertIs(self.device.provision_confirmed, False)
+                self.assertNotEqual(self.device.shell_features_observation['exact_shell_v2_count'], 1)
+                self.assertIs(self.device.shell_features_observation['raw_output_published'], False)
                 self.assertEqual(self.receipts()[-1]['phase'], 'PRIVATE_SHELL_FEATURES')
                 self.assertEqual(self.receipts()[-1]['error_category'], 'OUTPUT_REJECTED')
 
@@ -413,6 +442,10 @@ class CloudPreparationMainIntegration(unittest.TestCase):
         device.recover_budget.assert_called_once()
         result = json.loads((self.out/'result.json').read_text())
         self.assertEqual(result['blocked_reason'], 'CLOUD_PRIVATE_STAT_NONZERO_EXIT')
+        self.assertIs(result['shell_v2_confirmed'], True)
+        self.assertEqual(result['shell_features_observation'],
+                         {'output_format': 'ONE_FEATURE_PER_LINE', 'line_count': 1,
+                          'exact_shell_v2_count': 1, 'raw_output_published': False})
         self.assertIs(result['cleanup']['cleanup_required'], True)
         self.assertIs(result['cleanup']['installation_confirmed'], True)
         self.assertIs(result['cleanup']['private_write_command_completed'], True)

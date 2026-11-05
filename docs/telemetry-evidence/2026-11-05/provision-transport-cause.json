@@ -60,5 +60,39 @@
     "exact_run10_adb_source_correspondence": "NOT_ATTESTED",
     "supported_correction": "ADB_SHELL_T_WITH_SHELL_V2_REQUIRED_AND_SAME_FIXED_QUOTED_SCRIPT",
     "android_correction_validation": "NOT_RUN"
+  },
+  "feature_format_defect": {
+    "source": "https://android.googlesource.com/platform/packages/modules/adb/+/1bacec0a271e494d149d5e46f745b04a3c5c7a19/client/commandline.cpp",
+    "source_location": "features CLI branch, lines 2177-2186",
+    "official_cli_format": "ONE_FEATURE_NAME_PER_LINE",
+    "incorrect_lab_parser": "SPLIT_STDOUT_ON_COMMAS",
+    "identified_defect": "NEWLINE_FEATURE_LIST_NOT_PARSED_AS_SEPARATE_NAMES",
+    "correction": "REQUIRE_EXACTLY_ONE_SHELL_V2_LINE_AFTER_SPLITTING_NEWLINES",
+    "run12": {
+      "run_id": 42070151906,
+      "attempt": 1,
+      "source_commit": "da4e05f413035e83fc1046f638992893a13a6095",
+      "offline_before_install": true,
+      "install_confirmed": true,
+      "private_mkdir_returncode": 0,
+      "features_command_returncode": 0,
+      "features_output_present": true,
+      "blocked_reason": "CLOUD_PRIVATE_SHELL_FEATURES_OUTPUT_REJECTED",
+      "private_write_attempted": false,
+      "cleanup_verified": true,
+      "adb_client": {
+        "protocol_version": "1.0.41",
+        "platform_tools_version": "37.0.1",
+        "build_number": "15733141"
+      },
+      "raw_features_output_retained": false,
+      "shell_v2_presence": "UNVERIFIED_FROM_RETAINED_RECEIPT"
+    },
+    "limits": [
+      "CODE_FORMAT_MISMATCH_CONFIRMED_BY_PRIMARY_SOURCE",
+      "RUN12_RAW_OUTPUT_NOT_RETAINED_CANNOT_RECONSTRUCT_FEATURE_NAMES",
+      "SHELL_V2_PRESENCE_AND_CORRECTED_PROVISION_AWAIT_ANDROID_VALIDATION",
+      "NO_NETWORK_BARRIER_RELAXATION_NO_TRANSPORT_OR_APP_CHANGE_NO_NEW_CLOUD_ALLOWANCE"
+    ]
   }
 }

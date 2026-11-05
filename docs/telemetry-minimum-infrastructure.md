@@ -2,6 +2,12 @@
 
 Data aggiornamento: 5 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
 
+## Formato CLI corretto nel verificatore — prova12
+
+[Run42070151906/job127395556977](https://github.com/Arduino89/convoy-mesh/actions/runs/42070151906/job/127395556977), da4e05f4, numero12/tentativo1: barrieraofflinePASS con4campioni, installazione e mkdirPASS. Il nuovo controllo features risponde0 ma il parser lo rifiuta, quindi **PRIVATE_WRITE non eseguito**; cleanup completoPASS, budgetnull/500prudenziali0autorizzati. [Ricevuta e revisione](telemetry-evidence/2026-11-05/run-42070151906/summary.json). Lo stato effettivo del protocollo nel vecchio output non conservato non è dichiarato assente.
+
+Il difetto introdotto nel verificatore è accertato: [adb features stampa una funzione per riga](https://android.googlesource.com/platform/packages/modules/adb/+/1bacec0a271e494d149d5e46f745b04a3c5c7a19/client/commandline.cpp#2177), mentre il controllo usava il formato CSV del modello host. La correzione richiede una sola riga esattamente shell_v2, senza accettare CSV, prefissi o duplicati; conserva soltanto conteggi tipizzati, mai l’elenco grezzo. La regressione con il formato CLI ufficiale fallisce prima e passa dopo; viene corretta anche la fixture precedente, mantenendo obbligatorio il protocollo.178/178controlli hostPASS. Un avvio13su sorgente corretto revisionato resta necessario per attestare scrittura600/rilettura e pulizia. Barriera e requisito del protocollo non vengono ridotti, nessun cloud o budget nuovo.
+
 ## Blocco della barriera offline — prova11 e ultimo controllo circoscritto
 
 [Run42068243243/job127388407533](https://github.com/Arduino89/convoy-mesh/actions/runs/42068243243/job/127388407533), sorgente015d943f, numero11/tentativo1: controlloAndroidPASS; ADB37.0.1/build15733141. La barriera offline non è attestata entro45s e ferma il flusso prima dell’installazione: **correzione del trasferimento NOT_RUN**. La ricevuta sopravvive, ripristino radioPASS, contatori budgetnull/500conteggiati0autorizzati. Le72letture rete conservano codici d’uscita ma non i valori radio/classificazione default: la causa della mancata barriera non è localizzabile. [Ricevuta e revisione](telemetry-evidence/2026-11-05/run-42068243243/summary.json).
