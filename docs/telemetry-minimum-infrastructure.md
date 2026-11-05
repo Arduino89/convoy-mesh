@@ -2,6 +2,16 @@
 
 Data aggiornamento: 3 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
 
+## Ripartenza del 5 novembre — segreto presente, ambiente indisponibile
+
+**Segreto verificato nell’elenco GitHub, senza leggerne il valore:** `CONVOY_LAB_POSTHOG_TOKEN`, aggiornamento mostrato05Nov08:49GMT+1. PostHog330212: hostEU, IP anonimizzati e replay disattivato; piano gratuito senza abbonamento attivo,162/1000000eventi usati,999838disponibili. La validità del valore inserito sarà verificata dal job, non dalla presenza del nome. Nessun nuovo test, workflow o evento cloud eseguito.
+
+La risposta del ticket80503, letta il4novembre (Chris,3novembre11:17italiane), conferma una procedura assistita gratuita, selettiva per run_id/UUID e senza profili. Il fornitore prepara filtro/conteggio e attende conferma prima dell’invio della cancellazione; comunica completamento nel ticket, verificabile dal conteggio zero sulle tabelle eventi. Le copie temporanee e i backup hanno tempi ulteriori dichiarati, non misurati da noi. L’approvazione di Cama sull’insieme esatto resta obbligatoria prima di cancellare. La rilettura del ticket oggi non è stata completata perché il browser si è scollegato.
+
+**Blocco di esecuzione:** il workflow è presente soltanto sul ramo LAB e manca in `main`, ramo predefinito. Il pannello non offre “Run workflow”; [GitHub richiede il file sul ramo predefinito per workflow_dispatch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow). Il successivo scollegamento del browser e l’indisponibilità dell’ambiente Work hanno fermato la preparazione prima di qualsiasi invio.
+
+È stata revisionata soltanto l’idea di riusare il trigger push già attivo con vincoli a ramo, messaggio, numero8e tentativo1, sorgente estratto2d76100 e gate fresco500righe. **Nessun YAML è stato modificato o attivato:** il wrapper concreto richiede ancora preparazione e review dopo il ripristino. Non occorre integrare codice in main. Le prove Android valide restano quelle già registrate; i controlli cloud restano NOT_RUN. [Preflight e prossimo passo](telemetry-evidence/2026-11-03/cloud-preflight.json).
+
 ## Richiesta all’assistenza e configurazione privata — 3 novembre
 
 **Richiesta inviata una sola volta all’assistenza PostHog: ticket #80503, stato “new”.** La vista autenticata “Your tickets” ha mostrato il ticket e l’intero messaggio dopo l’invio. Nessuna risposta osservata al controllo; non sono stati ripetuti test host o Android. [Ricevuta e testo inviato](telemetry-evidence/2026-11-03/posthog-support-request.json).

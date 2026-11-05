@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "BLOCKED_BEFORE_CLOUD_SEND",
+  "status": "BLOCKED_EXECUTION_ENVIRONMENT_UNAVAILABLE",
   "checked_at_utc": "2026-11-03T07:47:06.944Z",
   "project_id": 330212,
   "api_host": "https://eu.i.posthog.com",
@@ -12,8 +12,8 @@
     "ingestion_token_available_privately": true,
     "browser_project_settings_authenticated": true,
     "github_repository_secrets_page_authenticated": true,
-    "github_repository_secret_present": false,
-    "github_secret_created": false
+    "github_repository_secret_present": true,
+    "github_secret_created": true
   },
   "privacy": {
     "anonymize_ips": true,
@@ -71,7 +71,7 @@
     "alternative_without_person_profile": "NO_SUPPORTED_SELECTIVE_PERSONLESS_DELETION_PATH_VERIFIED",
     "path_review_ref": "deletion-path-review.json",
     "support_ticket_number": 80503,
-    "support_reply": "NOT_OBSERVED",
+    "support_reply": "PROCEDURE_CONFIRMED_IN_TICKET_NOT_EXECUTED",
     "exact_set_user_approval_required_before_actual_deletion": true
   },
   "budget": {
@@ -79,8 +79,9 @@
     "cloud_rows_sent_this_turn": 0
   },
   "blockers": [
-    "The documented deletion endpoint denied access as alpha/not public. Scoped technical support ticket80503 has been created and its full message verified; no reply or supported selective personless cleanup path is yet verified. A supported manual or assisted procedure is acceptable; actual deletion requires separate user approval of the exact set.",
-    "The existing repository has no Actions secrets. CONVOY_LAB_POSTHOG_TOKEN has not been provisioned; no ingestion token was transmitted to GitHub."
+    "GitHub default branch is main and the LAB workflow is absent there; the UI offers no Run workflow. Official workflow_dispatch requires the file on the default branch.",
+    "Browser disconnected and the managed environment became unavailable before a fresh gate or cloud run was submitted. No identical retries or alternate cloud sends.",
+    "An explicit one-shot push wrapper on the existing LAB branch was reviewed conceptually as a possible minimum reuse path; no YAML change was implemented, tested, published or activated."
   ],
   "sources": [
     "PostHog project-get id330212",
@@ -116,7 +117,9 @@
   },
   "resolved_previous_blockers": [
     "GitHub and PostHog browser authentication succeeded.",
-    "Exact-source Android local regression and independent receipt/source review passed on 2d76100."
+    "Exact-source Android local regression and independent receipt/source review passed on 2d76100.",
+    "Vendor-supported selective personless deletion procedure confirmed; exact-set approval still required.",
+    "Repository secret presence verified on5Nov2026 without reading its value."
   ],
   "support_followup": {
     "recorded_at_utc": "2026-11-03T10:11:01Z",
@@ -128,5 +131,71 @@
     "secrets_setup_documented_not_applied": true,
     "new_android_execution": false,
     "new_cloud_rows_sent": 0
+  },
+  "followup_2026_11_05": {
+    "checked_at_utc": "2026-11-05T08:00:43.171Z",
+    "status": "BLOCKED_EXECUTION_ENVIRONMENT_UNAVAILABLE",
+    "project_id": 330212,
+    "api_host": "https://eu.i.posthog.com",
+    "privacy": {
+      "anonymize_ips": true,
+      "session_recording_opt_in": false
+    },
+    "billing": {
+      "plan": "free",
+      "has_active_subscription": false,
+      "events_usage": 162,
+      "events_limit": 1000000,
+      "events_remaining": 999838
+    },
+    "runner_secret": {
+      "name": "CONVOY_LAB_POSTHOG_TOKEN",
+      "repository": "Arduino89/convoy-mesh",
+      "presence_verified_in_authenticated_ui": true,
+      "last_updated_display": "Nov 5, 2026, 08:49 GMT+1",
+      "value_read": false,
+      "value_validity": "NOT_TESTED_BY_RUNNING_JOB"
+    },
+    "deletion_procedure": {
+      "status": "CONFIRMED_BY_VENDOR_SUPPORT_NOT_EXECUTED",
+      "ticket": 80503,
+      "response_observed_date": "2026-11-04",
+      "reply_local_time": "2026-11-03T11:17+01:00",
+      "manual_support_assisted": true,
+      "personless_selective": true,
+      "free_plan_no_charge_stated": true,
+      "preview_filter_and_count_before_confirmation": true,
+      "user_approval_of_exact_set_required": true,
+      "timing_stated": "Confirmed by Friday: weekend batch; provider confirms completion in ticket and same event count becomes zero. Recent transient copy about8days, backups about2weeks later; not independently measured.",
+      "fresh_browser_recheck": "NOT_COMPLETED_BROWSER_DISCONNECTED"
+    },
+    "runtime": {
+      "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+      "last_valid_local_run": 41600690330,
+      "next_expected_workflow_number_at_check": 8,
+      "new_runs_started": 0,
+      "new_cloud_rows_sent": 0,
+      "global_row_ceiling_including_retries": 500,
+      "previous_rows_reserved_in_this_cloud_continuation": 0,
+      "cloud_status": "NOT_RUN"
+    },
+    "blockers": [
+      "GitHub default branch is main and the LAB workflow is absent there; the UI offers no Run workflow. Official workflow_dispatch requires the file on the default branch.",
+      "Browser disconnected and the managed environment became unavailable before a fresh gate or cloud run was submitted. No identical retries or alternate cloud sends.",
+      "An explicit one-shot push wrapper on the existing LAB branch was reviewed conceptually as a possible minimum reuse path; no YAML change was implemented, tested, published or activated."
+    ],
+    "next_step": "Restore the execution environment, refresh observations/run-number/gate, then prepare and independently review a single-use push configuration on the existing LAB branch. Preserve main and the already-tested executable source. Do not delete any data without user approval of the exact set.",
+    "reuse_first": {
+      "level": 5,
+      "decision": "Configure/compose the existing branch-local workflow and pinned source; no new sender, service, account or main integration.",
+      "implementation_status": "PROPOSED_ONLY"
+    },
+    "sources": [
+      "PostHog project-get and billing-overview-get current read",
+      "Authenticated GitHub Actions secrets UI, name and timestamp only",
+      "GitHub PR5/run list and main workflow404",
+      "https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow",
+      "Previously read authenticated ticket80503 reply"
+    ]
   }
 }
