@@ -2,13 +2,72 @@
 from contextlib import redirect_stdout
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
 import ci_provision_probe as probe
+
+
+class ProvisionShellEntry(unittest.TestCase):
+    """Exercise the action's actual sh entry with a harmless local Python stub."""
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.log = self.root / "calls.jsonl"
+        stub = self.root / "python3"
+        stub.write_text("#!" + sys.executable + "\n" +
+                        "import json, os, sys\n" +
+                        "with open(os.environ['PROBE_STUB_LOG'], 'a') as stream:\n" +
+                        "    stream.write(json.dumps(sys.argv[1:]) + '\\n')\n" +
+                        "if sys.argv[1].endswith(os.environ.get('PROBE_STUB_FAIL', 'never-match')):\n" +
+                        "    raise SystemExit(37)\n")
+        stub.chmod(0o700)
+        self.repo = Path(__file__).resolve().parents[2]
+        self.env = dict(os.environ, PATH=str(self.root) + os.pathsep + os.environ.get("PATH", ""),
+                        ANDROID_HOME="/synthetic SDK", JAVA_HOME="/synthetic JDK",
+                        RUNNER_TEMP="/synthetic runner", GITHUB_SHA="a" * 40,
+                        PROBE_STUB_LOG=str(self.log))
+
+    def execute(self):
+        return subprocess.run(["/usr/bin/sh", "-c", "bash tools/telemetry_spike/run_ci_provision_probe.sh"],
+                              cwd=self.repo, env=self.env, capture_output=True, text=True, timeout=10)
+
+    def calls(self):
+        return [json.loads(line) for line in self.log.read_text().splitlines()]
+
+    def test_previous_action_first_line_reproduces_pipefail_error(self):
+        old = subprocess.run(["/usr/bin/sh", "-c", "set -euo pipefail"],
+                             capture_output=True, text=True, timeout=10)
+        self.assertEqual(old.returncode, 2)
+        self.assertIn("pipefail", old.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_single_bash_entry_runs_control_then_build_then_probe_with_quoted_arguments(self):
+        result = self.execute()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = self.calls()
+        self.assertEqual([call[0] for call in calls], [
+            "pinned-app/tools/telemetry_spike/runtime_control/smoke.py",
+            "pinned-app/tools/telemetry_spike/direct_trial/build.py",
+            "tools/telemetry_spike/ci_provision_probe.py"])
+        for call in calls:
+            self.assertEqual(call[call.index("--sdk") + 1], "/synthetic SDK")
+            self.assertEqual(call[call.index("--jdk") + 1], "/synthetic JDK")
+        self.assertEqual(calls[1][calls[1].index("--source-commit") + 1], probe.PINNED_APP_SOURCE)
+        self.assertEqual(calls[2][calls[2].index("--source-commit") + 1], "a" * 40)
+
+    def test_failed_control_stops_before_build_or_provision(self):
+        self.env["PROBE_STUB_FAIL"] = "runtime_control/smoke.py"
+        result = self.execute()
+        self.assertEqual(result.returncode, 37)
+        self.assertEqual([call[0] for call in self.calls()], [
+            "pinned-app/tools/telemetry_spike/runtime_control/smoke.py"])
 
 
 class ProvisionProbeGuards(unittest.TestCase):

@@ -81,7 +81,7 @@ jobs:
         if: always()
         run: python3 tools/telemetry_spike/emit_ci_evidence.py "$RUNNER_TEMP"
   diagnostic-provision:
-    if: github.repository == 'Arduino89/convoy-mesh' && github.event.repository.private == false && github.event_name == 'push' && github.ref == 'refs/heads/experiment/telemetry-runtime-lab' && github.event.head_commit.message == 'Diagnose isolated LAB provisioning offline (no cloud)' && github.run_number == 9 && github.run_attempt == 1
+    if: github.repository == 'Arduino89/convoy-mesh' && github.event.repository.private == false && github.event_name == 'push' && github.ref == 'refs/heads/experiment/telemetry-runtime-lab' && github.event.head_commit.message == 'Diagnose isolated LAB provisioning offline (no cloud)' && github.run_number == 10 && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -130,11 +130,7 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: |
-            set -euo pipefail
-            python3 pinned-app/tools/telemetry_spike/runtime_control/smoke.py --sdk "$ANDROID_HOME" --jdk "$JAVA_HOME" --apk "$RUNNER_TEMP/runtime-control-build/runtime-control.apk" --build-receipt "$RUNNER_TEMP/runtime-control-build/build-receipt.json" --serial emulator-5554 --out "$RUNNER_TEMP/runtime-control-smoke" --timeout 60
-            python3 pinned-app/tools/telemetry_spike/direct_trial/build.py --sdk "$ANDROID_HOME" --jdk "$JAVA_HOME" --out "$RUNNER_TEMP/direct-build" --source-commit 2d76100fda1df0637e953f4ad90f26073028880c
-            python3 tools/telemetry_spike/ci_provision_probe.py --sdk "$ANDROID_HOME" --jdk "$JAVA_HOME" --apk "$RUNNER_TEMP/direct-build/direct-lab.apk" --build-receipt "$RUNNER_TEMP/direct-build/build-receipt.json" --runtime-gate "$RUNNER_TEMP/runtime-control-smoke/receipt.json" --serial emulator-5554 --source-commit "$GITHUB_SHA" --apk-source-commit 2d76100fda1df0637e953f4ad90f26073028880c --out "$RUNNER_TEMP/provision-diagnostic"
+          script: bash tools/telemetry_spike/run_ci_provision_probe.sh
       - name: Emit only the sanitized provisioning result
         if: always()
         run: |

@@ -1,0 +1,25 @@
+{
+  "utc": "2026-11-05T16:25:32.922011+00:00",
+  "status": "BUILT_VERIFIED_NOT_RUN",
+  "scope": "NATIVE_RUNTIME_CONTROL_ONLY",
+  "telemetry_tested": false,
+  "apk_sha256": "a7d77e9a201d7a0183594047dedcdf1f7d16657b3297ff4d4853e5f8c2063754",
+  "apk_bytes": 12691,
+  "identity": {
+    "package": "com.cama.telemetry.runtime_control",
+    "version_code": 1,
+    "version_name": "1.0",
+    "min_sdk": 24,
+    "target_sdk": 36,
+    "requested_permissions": [],
+    "certificate_sha256": "a01c23c3cca3f0b95dbb21c5c318ec2cb20c477b43abc74cb58d4f1a92e6e651"
+  },
+  "javac": "javac 17.0.21",
+  "platform": "36",
+  "build_tools": "36.0.0",
+  "sources": {
+    "AndroidManifest.xml": "131eea018ed9fb2317b342dcbe588d19f3e8f8b447b3b2025969cf80877ebe4f",
+    "MainActivity.java": "9226633646f4c75f1755ea5ae8dbc57214efc4271f5a59ef642ac7f8300ff847",
+    "build.py": "0965a5ae2f41015ecca8b8c70236f6f074be57388dcc95d6de3f0e32af08c743"
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "status": "RUN9_WORKFLOW_SHELL_FAILURE_CONFIRMED_OFFLINE_FIX_APPROVED",
+  "scope": "INDEPENDENT_BOUNDED_JOB_LOG_AND_EXACT_SOURCE_REVIEW_WITH_LOCAL_SHELL_REGRESSIONS",
+  "reviewed_at_utc": "2026-11-05T16:32:04.506638+00:00",
+  "observed_run": {
+    "run_id": 42064249734,
+    "run_number": 9,
+    "attempt": 1,
+    "job_id": 127373873198,
+    "source_commit": "69a4b30c7c9ea9ba5981c3e517534889405c9a20",
+    "failed_workflow_git_blob_sha": "724016983a1cd6f4a7dcdbf001f6e2a6e70d0724",
+    "status": "FAILURE",
+    "host_tests_observed": [
+      26,
+      6
+    ],
+    "native_control_apk_built": true,
+    "emulator_boot_observed": true,
+    "native_control_smoke": "NOT_RUN",
+    "lab_apk_build": "NOT_RUN",
+    "install_provision_probe": "NOT_RUN",
+    "diagnostic_runtime_receipt_exported": false,
+    "safe_selected_log_lines": [
+      "2026-11-05T16:27:02.9082708Z Emulator booted.",
+      "2026-11-05T16:27:09.6522169Z [command]/usr/bin/sh -c set -euo pipefail",
+      "2026-11-05T16:27:09.6538926Z /usr/bin/sh: 1: set: Illegal option -o pipefail",
+      "2026-11-05T16:27:09.6579843Z ##[error]The process '/usr/bin/sh' failed with exit code 2",
+      "2026-11-05T16:27:10.7250501Z PROVISION_DIAGNOSTIC_NOT_RUN_NO_RECEIPT"
+    ],
+    "control_build": {
+      "status": "BUILT_VERIFIED_NOT_RUN",
+      "scope": "NATIVE_RUNTIME_CONTROL_ONLY",
+      "telemetry_tested": false,
+      "apk_sha256": "a7d77e9a201d7a0183594047dedcdf1f7d16657b3297ff4d4853e5f8c2063754",
+      "apk_bytes": 12691,
+      "identity": {
+        "package": "com.cama.telemetry.runtime_control",
+        "version_code": 1,
+        "version_name": "1.0",
+        "min_sdk": 24,
+        "target_sdk": 36,
+        "requested_permissions": [],
+        "certificate_sha256": "a01c23c3cca3f0b95dbb21c5c318ec2cb20c477b43abc74cb58d4f1a92e6e651"
+      }
+    }
+  },
+  "established_cause": {
+    "type": "WORKFLOW_SHELL_BOUNDARY_ERROR",
+    "command": "/usr/bin/sh -c set -euo pipefail",
+    "exit_code": 2,
+    "explanation": "The emulator action executed the first configured script line with sh. This shell rejected the Bash pipefail option, before any of the three Python commands.",
+    "source_coordinate": ".github/workflows/telemetry-runtime-control.yml:134",
+    "same_boundary_reproduced_locally": true,
+    "relationship_to_run8": "NEW_ORCHESTRATION_DEFECT_NOT_THE_UNIDENTIFIED_RUN8_INSTALL_PROVISION_CAUSE"
+  },
+  "reviewed_fix": {
+    "status": "APPROVED_FOR_ONE_OFFLINE_DIAGNOSTIC_ATTEMPT",
+    "expected_run_number": 10,
+    "expected_attempt": 1,
+    "branch": "experiment/telemetry-runtime-lab",
+    "exact_marker": "Diagnose isolated LAB provisioning offline (no cloud)",
+    "workflow_delta": "Only run9-to-run10 guard and multiline action script-to-one explicit Bash entry.",
+    "entry": "bash tools/telemetry_spike/run_ci_provision_probe.sh",
+    "command_arguments_equal_to_failed_workflow": true,
+    "command_order": [
+      "independent native control smoke",
+      "pinned LAB build",
+      "one offline dummy provisioning probe"
+    ],
+    "native_app_source": "2d76100fda1df0637e953f4ad90f26073028880c",
+    "native_app_and_probe_core_unchanged": true,
+    "source_sha256": {
+      "tools/telemetry_spike/ci_cloud_trial.py": "82ea83e5eb205261b6f94781435ef2d0cd8bac3a9dca1f6074ab0fdba4570821",
+      "tools/telemetry_spike/ci_provision_probe.py": "e88c45ee4313ee7e28f4b66fd1ace9cb3fa3d8d313cfb94acaefad0438da1a6c",
+      "tools/telemetry_spike/test_cloud_preparation.py": "ddde5277fca8d970d989c46ab57a4a4d4371e3f2b6254c698e26541e5eb41833",
+      "tools/telemetry_spike/run_ci_provision_probe.sh": "4aee380c191912458651e545371ea304a31f3c9ed680f7284978fb6c41206468",
+      "tools/telemetry_spike/test_ci_provision_probe.py": "4201628c516fb9ebceea0f2e4784d7b5570b715b3b623af005c2492e274e48ad",
+      ".github/workflows/telemetry-runtime-control.yml": "03395f6c9d5411e4c97cc5eefdf19dd8215c4b793c5e1b5c1c43f80f67a8bd2c"
+    },
+    "host_regressions_independently_executed": 9,
+    "new_causal_regressions": [
+      "Actual sh -c legacy first line exits2 before any Python stub invocation.",
+      "Actual sh-to-Bash entry executes control/build/probe in order with spaced argument values preserved.",
+      "Control stub exit37 terminates the script before LAB build or provisioning."
+    ],
+    "bash_syntax_check": "PASS",
+    "full_host_suite_reported_by_parent": {
+      "tests": 168,
+      "failures": 0
+    },
+    "android_execution_of_fix": "NOT_RUN",
+    "additional_cloud_authorization": false
+  },
+  "run8_budget": {
+    "actual_transmitted_rows": "UNKNOWN",
+    "conservative_consumed": 500,
+    "remaining_authorized": 0,
+    "automatic_refund_allowed": false
+  },
+  "limits": [
+    "Only explicitly selected safe error/phase lines are published, not the original job log or environment.",
+    "The control APK build and emulator boot do not constitute a native runtime control PASS.",
+    "The run9 result supplies no new evidence about the run8 install/provision command or token validity.",
+    "The proposed Bash fix is verified by faithful local shell/stub tests, not by a new Android run yet.",
+    "Previous offline guard review remains applicable because app/probe/core source and workflow controls are unchanged except the explicitly reviewed run10 guard and Bash entry.",
+    "No PostHog query, cloud transmission, deletion, automatic rerun or budget refund performed by reviewer."
+  ]
+}

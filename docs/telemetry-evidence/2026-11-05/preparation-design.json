@@ -89,7 +89,7 @@
       "JON-2026-08-25-011",
       "JON-2026-09-08-001"
     ],
-    "routing_memory_status": "NOT_RECHECKED_NO_ROUTING_CLAIM"
+    "routing_memory_status": "READ_CURRENT_ADVISORY_ZERO_RULE_EVIDENCE"
   },
   "proof_boundary": "Android install/provision/cleanup with no cloud access, no LAB start with private configuration; host tests alone are not runtime proof.",
   "retry_limit": "One instrumented diagnosis on exact code; stop dependent steps on failure. A later attempt requires a concrete reviewed causal change, not an identical rerun.",
@@ -99,5 +99,8 @@
     "unknown_consumes_full500": true,
     "automatic_refund": false
   },
-  "independent_review": "preparation-offline-source-review.json"
+  "independent_review": "preparation-offline-source-review.json",
+  "wrapper_failure_ref": "run-42064249734/summary.json",
+  "next_attempt_reason": "Explicit Bash wrapper corrects reproduced sh/pipefail defect; new source, not identical rerun.",
+  "next_run_number": 10
 }

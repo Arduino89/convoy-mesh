@@ -23,11 +23,17 @@
   },
   "emitter_counterexample_sha256": "3b7084b6a7923f62c261f815f39c8a1c24e571ec8989d34d1d6f1d5bdeb8cead",
   "full_suite": {
-    "tests": 165,
+    "tests": 168,
     "failures": 0,
     "errors": 0,
     "scope": "HOST_ONLY_NO_ANDROID_NO_CLOUD",
     "executed_by": "root"
   },
-  "checked_at_utc": "2026-11-05T16:24:52.424499+00:00"
+  "checked_at_utc": "2026-11-05T16:24:52.424499+00:00",
+  "wrapper_regressions": {
+    "tests": 3,
+    "failures": 0,
+    "legacy_sh_exit": 2,
+    "new_bash_entry": "PASS_ORDER_AND_ABORT"
+  }
 }
