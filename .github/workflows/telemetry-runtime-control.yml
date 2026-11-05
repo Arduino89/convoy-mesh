@@ -81,7 +81,7 @@ jobs:
         if: always()
         run: python3 tools/telemetry_spike/emit_ci_evidence.py "$RUNNER_TEMP"
   diagnostic-provision:
-    if: github.repository == 'Arduino89/convoy-mesh' && github.event.repository.private == false && github.event_name == 'push' && github.ref == 'refs/heads/experiment/telemetry-runtime-lab' && github.event.head_commit.message == 'Diagnose isolated LAB provisioning offline (no cloud)' && github.run_number == 10 && github.run_attempt == 1
+    if: github.repository == 'Arduino89/convoy-mesh' && github.event.repository.private == false && github.event_name == 'push' && github.ref == 'refs/heads/experiment/telemetry-runtime-lab' && github.event.head_commit.message == 'Diagnose isolated LAB provisioning offline (no cloud)' && github.run_number == 11 && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -108,6 +108,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tools/telemetry_spike -p 'test_cloud_preparation.py' -q
           python3 -m unittest discover -s tools/telemetry_spike -p 'test_ci_provision_probe.py' -q
+          python3 -m unittest discover -s tools/telemetry_spike -p 'test_adb_provision_contract.py' -q
       - name: Require accelerated host
         run: |
           test -c /dev/kvm

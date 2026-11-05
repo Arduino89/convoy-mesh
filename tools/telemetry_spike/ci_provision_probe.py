@@ -38,6 +38,16 @@ def no_active_default_network(dump):
     return len(labels) == 1 and labels[0].strip() == "none"
 
 
+def adb_version_identity(output):
+    """Keep only numeric client identity, never installation paths or raw text."""
+    protocol = re.findall(r"^Android Debug Bridge version ([0-9]+\.[0-9]+\.[0-9]+)$", output, re.M)
+    build = re.findall(r"^Version ([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$", output, re.M)
+    if len(protocol) != 1 or len(build) != 1:
+        raise TrialBlocked("PROBE_ADB_VERSION_UNATTESTED")
+    return {"protocol_version": protocol[0], "platform_tools_version": build[0][0],
+            "build_number": build[0][1], "raw_output_published": False}
+
+
 def checked_call(device, records, stage, *args, timeout=15, allow_failure=False):
     if not re.fullmatch(r"[A-Z_]{1,64}", stage):
         raise TrialBlocked("PROBE_STAGE_INVALID")
@@ -158,7 +168,9 @@ def main():
     args.out.mkdir(parents=True, exist_ok=False)
     result = {"schema_version": 1, "scope": "OFFLINE_FAKE_PROVISION_DIAGNOSTIC_NO_LAB_LAUNCH_NO_CLOUD",
               "diagnostic_source_commit": args.source_commit, "apk_source_commit": args.apk_source_commit,
-              "started_utc": now(), "status": "BLOCKED", "legacy_install_provision_argv_unchanged": True,
+              "started_utc": now(), "status": "BLOCKED", "legacy_install_provision_argv_unchanged": False,
+              "provision_transport": "ADB_SHELL_T_SHELL_V2_REMOTE_EXIT_REQUIRED",
+              "transport_change_reason": "PREQUOTED_SCRIPT_REESCAPED_BY_EXEC_IN_AND_REMOTE_EXIT_UNOBSERVED",
               "lab_activity_launched": False, "grant_or_capture_invoked": False,
               "fake_input_only": True, "cloud_send_attempted": False,
               "cloud_budget": {"previous_allowance_conservatively_consumed": 500,
@@ -186,6 +198,8 @@ def main():
         runtime = json.loads(args.runtime_gate.read_text())
         device = CloudDevice(args.sdk, args.serial, env, runtime)
         device.preparation_path = args.out / "preparation.jsonl"
+        result["adb_client"] = adb_version_identity(
+            checked_call(device, records, "ADB_VERSION", "version").stdout)
         device.check_gate()
         result["runtime_control"] = {"sha256": sha256(args.runtime_gate), "serial": args.serial,
                                      "boot_id": runtime["boot_id"], "status": runtime["status"]}
@@ -210,13 +224,16 @@ def main():
         if device.pid(absent_ok=True) is not None:
             raise TrialBlocked("PROBE_UNEXPECTED_LAB_PROCESS")
         result["offline_after_provision"] = block_network(device, records)
-        result["status"] = "PROVISION_PATH_PASSED_HISTORICAL_FAILURE_NOT_REPRODUCED"
-        result["historical_failure_cause"] = "NOT_ESTABLISHED_BY_A_SUCCESSFUL_REPETITION"
+        result["status"] = "CORRECTED_PROVISION_PATH_PASSED"
+        result["historical_failure_cause"] = "EXEC_IN_QUOTING_CONTRACT_MISMATCH_REPRODUCED_ON_HOST"
     except (TrialBlocked, OSError, ValueError, TypeError, KeyError) as failure:
         reason = str(failure) if isinstance(failure, TrialBlocked) else "PROBE_INPUT_OR_IO_FAILURE"
         result["blocked_reason"] = reason if re.fullmatch(r"[A-Z0-9_]{1,160}", reason) else "PROBE_FAILURE_DETAILS_WITHHELD"
     finally:
         if device is not None:
+            result["shell_v2_confirmed"] = bool(getattr(device, "shell_v2_confirmed", False))
+            result["private_write_command_completed"] = bool(getattr(device, "private_write_command_completed", False))
+            result["config_write_confirmed"] = bool(getattr(device, "config_write_confirmed", False))
             cleanup["required"] = bool(getattr(device, "cleanup_required", False))
             cleanup["install_confirmed"] = bool(getattr(device, "install_confirmed", False))
             if cleanup["required"]:
@@ -262,7 +279,7 @@ def main():
         print(json.dumps({"status": result["status"], "blocked_reason": result.get("blocked_reason"),
                           "preparation_stages": len(result["preparation"]),
                           "cloud_send_attempted": False, "remaining_authorized_rows": 0}))
-    if result["status"] != "PROVISION_PATH_PASSED_HISTORICAL_FAILURE_NOT_REPRODUCED":
+    if result["status"] != "CORRECTED_PROVISION_PATH_PASSED":
         raise SystemExit(1)
 
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "INDEPENDENTLY_APPROVED_FOR_ONE_OFFLINE_DIAGNOSTIC_ATTEMPT",
+  "status": "APPROVE_SINGLE_OFFLINE_PROVISION_RUN_11_ATTEMPT_1",
   "base_head": "219261375c1179cb2ee21e10efb36c6fc7c74b3d",
   "branch": "experiment/telemetry-runtime-lab",
   "pr": 5,
@@ -101,6 +101,9 @@
   },
   "independent_review": "preparation-offline-source-review.json",
   "wrapper_failure_ref": "run-42064249734/summary.json",
-  "next_attempt_reason": "Explicit Bash wrapper corrects reproduced sh/pipefail defect; new source, not identical rerun.",
-  "next_run_number": 10
+  "next_attempt_reason": "Supported shell-T/shell_v2 replaces causally invalid prequoted exec-in; file confirmation requires mode and exact readback.",
+  "next_run_number": 11,
+  "current_reproduced_failure_ref": "run-42065607773/summary.json",
+  "causal_correction_ref": "provision-transport-cause.json",
+  "current_independent_review": "preparation-transport-fix-review.json"
 }

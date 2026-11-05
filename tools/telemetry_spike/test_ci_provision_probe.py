@@ -69,6 +69,15 @@ class ProvisionShellEntry(unittest.TestCase):
         self.assertEqual([call[0] for call in self.calls()], [
             "pinned-app/tools/telemetry_spike/runtime_control/smoke.py"])
 
+    def test_diagnostic_workflow_selects_single_bash_entry_and_only_next_attempt(self):
+        workflow = (self.repo / ".github/workflows/telemetry-runtime-control.yml").read_text()
+        diagnostic = workflow.split("  diagnostic-provision:\n", 1)[1]
+        self.assertIn("github.run_number == 11 && github.run_attempt == 1", diagnostic)
+        self.assertIn("github.event.head_commit.message == 'Diagnose isolated LAB provisioning offline (no cloud)'", diagnostic)
+        self.assertIn("script: bash tools/telemetry_spike/run_ci_provision_probe.sh", diagnostic)
+        self.assertNotIn("script: |", diagnostic)
+        self.assertNotIn("secrets.", diagnostic)
+
 
 class ProvisionProbeGuards(unittest.TestCase):
     def setUp(self):
@@ -87,6 +96,9 @@ class ProvisionProbeGuards(unittest.TestCase):
         self.device.cleanup_required = False
         self.device.install_confirmed = False
         self.device.provision_confirmed = False
+        self.device.shell_v2_confirmed = False
+        self.device.private_write_command_completed = False
+        self.device.config_write_confirmed = False
         self.device.preparation_records = []
         self.device.pid.return_value = None
         self.factory = self.start(patch.object(probe, "CloudDevice", return_value=self.device))
@@ -100,7 +112,9 @@ class ProvisionProbeGuards(unittest.TestCase):
         self.restore = self.start(patch.object(probe, "restore_radios"))
 
         def commands(_device, _records, stage, *_args, **_kwargs):
-            stdout = "package:/synthetic/base.apk\n" if stage == "CLEANUP_PACKAGE_CHECK" else ""
+            stdout = ("Android Debug Bridge version 1.0.41\nVersion 35.0.2-12147458\nInstalled as /private/path/adb\n"
+                      if stage == "ADB_VERSION" else
+                      "package:/synthetic/base.apk\n" if stage == "CLEANUP_PACKAGE_CHECK" else "")
             return subprocess.CompletedProcess([], 0, stdout, "")
         self.commands = self.start(patch.object(probe, "checked_call", side_effect=commands))
         self.output = io.StringIO()
@@ -132,6 +146,17 @@ class ProvisionProbeGuards(unittest.TestCase):
                       "Active default network: none\nActive default network: unknown\n"):
             with self.subTest(dump=value):
                 self.assertFalse(probe.no_active_default_network(value))
+
+    def test_adb_version_exports_only_numeric_identity_and_rejects_ambiguous_output(self):
+        raw = "Android Debug Bridge version 1.0.41\nVersion 35.0.2-12147458\nInstalled as /private/path/adb\n"
+        identity = probe.adb_version_identity(raw)
+        self.assertEqual(identity, {"protocol_version": "1.0.41", "platform_tools_version": "35.0.2",
+                                    "build_number": "12147458", "raw_output_published": False})
+        self.assertNotIn("private", json.dumps(identity))
+        for malformed in ("", raw + "Version 35.0.2-12147458\n", raw.replace("35.0.2", "tainted-value")):
+            with self.subTest(value=malformed):
+                with self.assertRaisesRegex(probe.TrialBlocked, "PROBE_ADB_VERSION_UNATTESTED"):
+                    probe.adb_version_identity(malformed)
 
     def test_real_credential_is_refused_before_device_and_never_exported(self):
         canary = "phc_HostOnlyCanaryNeverPublish123"
@@ -185,7 +210,7 @@ class ProvisionProbeGuards(unittest.TestCase):
         self.device.provision.assert_not_called()
         self.assert_unknown_budget(receipt)
 
-    def test_success_uses_one_fake_provision_and_never_refunds_or_claims_historical_cause(self):
+    def test_success_uses_one_fake_provision_and_never_refunds_or_claims_unchanged_transport(self):
         sequence = []
         def install(_apk):
             self.device.cleanup_required = True
@@ -194,6 +219,9 @@ class ProvisionProbeGuards(unittest.TestCase):
             self.assertEqual(json.loads(private_bytes), probe.FAKE_CONFIG)
             self.assertEqual(probe.FAKE_CONFIG["row_limit"], 0)
             self.device.provision_confirmed = True
+            self.device.shell_v2_confirmed = True
+            self.device.private_write_command_completed = True
+            self.device.config_write_confirmed = True
         self.device.install.side_effect = install
         self.device.provision.side_effect = provision
         self.device.prepare_call.side_effect = lambda phase, *_args: sequence.append(phase)
@@ -204,9 +232,13 @@ class ProvisionProbeGuards(unittest.TestCase):
         self.device.provision.assert_called_once()
         self.device.command.assert_not_called()
         self.assertEqual(sequence, ["PRIVATE_REMOVE", "PRIVATE_REMOVE_VERIFY", "RESTORE_RADIOS"])
-        self.assertEqual(receipt["status"], "PROVISION_PATH_PASSED_HISTORICAL_FAILURE_NOT_REPRODUCED")
-        self.assertEqual(receipt["historical_failure_cause"], "NOT_ESTABLISHED_BY_A_SUCCESSFUL_REPETITION")
+        self.assertEqual(receipt["status"], "CORRECTED_PROVISION_PATH_PASSED")
+        self.assertEqual(receipt["historical_failure_cause"], "EXEC_IN_QUOTING_CONTRACT_MISMATCH_REPRODUCED_ON_HOST")
         self.assertTrue(receipt["cleanup"]["fake_config_removed"])
+        self.assertTrue(receipt["shell_v2_confirmed"])
+        self.assertTrue(receipt["private_write_command_completed"])
+        self.assertTrue(receipt["config_write_confirmed"])
+        self.assertFalse(receipt["legacy_install_provision_argv_unchanged"])
         self.assert_unknown_budget(receipt)
         self.assertNotIn(probe.FAKE_CONFIG["api_key"], json.dumps(receipt))
         self.assertNotIn(probe.FAKE_CONFIG["endpoint"], json.dumps(receipt))

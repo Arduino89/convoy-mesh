@@ -220,7 +220,8 @@ def summarize_transport(preflight, transport, run_id, remaining, final):
 
 
 PREPARATION_PHASES = {"INSTALL_APK", "INSTALL_VERIFY", "PRIVATE_MKDIR", "PRIVATE_WRITE",
-                      "PRIVATE_STAT", "PRIVATE_VERIFY", "PRIVATE_REMOVE", "PRIVATE_REMOVE_VERIFY"}
+                      "PRIVATE_STAT", "PRIVATE_VERIFY", "PRIVATE_REMOVE", "PRIVATE_REMOVE_VERIFY",
+                      "PRIVATE_SHELL_FEATURES"}
 
 
 def sanitize_preparation_error(value):
@@ -300,8 +301,10 @@ class CloudDevice(Device):
         super().__init__(*args, **kwargs)
         self.cleanup_required = False
         self.install_confirmed = False
+        self.private_write_command_completed = False
         self.config_write_confirmed = False
         self.provision_confirmed = False
+        self.shell_v2_confirmed = False
 
     def _preparation_record(self, phase, output=None, category=None):
         if phase not in PREPARATION_PHASES:
@@ -351,13 +354,22 @@ class CloudDevice(Device):
         self.install_confirmed = True
 
     def provision(self, private_bytes):
+        self.private_write_command_completed = False
         self.config_write_confirmed = False
         self.provision_confirmed = False
+        self.shell_v2_confirmed = False
         if self.pid(absent_ok=True) is not None:
             raise TrialBlocked("PRIVATE_PROVISION_REQUIRES_STOPPED_LAB")
         self.prepare_call("PRIVATE_MKDIR", "shell", "run-as", PACKAGE, "mkdir", "-p", "files")
-        # Fixed remote shell program; secret bytes travel through stdin only.
-        argv = [self.adb, "-s", self.serial, "exec-in", "run-as", PACKAGE, "sh", "-c",
+        features = self.prepare_call("PRIVATE_SHELL_FEATURES", "features")
+        if "shell_v2" not in features.stdout.strip().split(","):
+            self._preparation_record("PRIVATE_SHELL_FEATURES", features, "OUTPUT_REJECTED")
+            raise TrialBlocked("CLOUD_PRIVATE_SHELL_FEATURES_OUTPUT_REJECTED")
+        self.shell_v2_confirmed = True
+        # adb shell joins arguments for the remote shell: exactly one quoting layer.
+        # Unlike exec-in, shell v2 waits for and reports the remote exit status.
+        # -T disables terminal transformations; secret bytes remain stdin-only.
+        argv = [self.adb, "-s", self.serial, "shell", "-T", "run-as", PACKAGE, "sh", "-c",
                 "'umask 077; cat > files/cloud-config.private.json'"]
         try:
             output = subprocess.run([str(part) for part in argv], input=private_bytes,
@@ -372,7 +384,7 @@ class CloudDevice(Device):
         if output.stdout or output.stderr:
             self._preparation_record("PRIVATE_WRITE", output, "OUTPUT_REJECTED")
             raise TrialBlocked("CLOUD_PRIVATE_WRITE_OUTPUT_REJECTED")
-        self.config_write_confirmed = True
+        self.private_write_command_completed = True
         checked = self.prepare_call("PRIVATE_STAT", "shell", "run-as", PACKAGE, "stat", "-c", "%a", "files/cloud-config.private.json")
         if checked.stdout.strip() != "600":
             self._preparation_record("PRIVATE_STAT", checked, "OUTPUT_REJECTED")
@@ -382,6 +394,7 @@ class CloudDevice(Device):
         if copied.stdout.encode("utf-8") != private_bytes or copied.stderr:
             self._preparation_record("PRIVATE_VERIFY", copied, "OUTPUT_REJECTED")
             raise TrialBlocked("CLOUD_PRIVATE_VERIFY_OUTPUT_REJECTED")
+        self.config_write_confirmed = True
         self.provision_confirmed = True
 
     def recover_budget(self, work, private_bytes, run_id, remaining):
@@ -601,6 +614,7 @@ def main():
         finally:
             cleanup = {"cleanup_required": cleanup_required,
                        "installation_confirmed": bool(device and getattr(device, "install_confirmed", False)),
+                       "private_write_command_completed": bool(device and getattr(device, "private_write_command_completed", False)),
                        "configuration_write_confirmed": bool(device and getattr(device, "config_write_confirmed", False)),
                        "provisioned": provisioned, "lab_stopped": False,
                        "private_config_removed": False, "initial_radio_settings_restored": False}

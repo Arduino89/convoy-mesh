@@ -143,6 +143,7 @@ class CloudPreparationEvidence(unittest.TestCase):
 
     def provision_responses(self, stat_code=0, mode='600\n', copied=None):
         return [subprocess.CompletedProcess([], 0, '', ''),
+                subprocess.CompletedProcess([], 0, 'shell_v2,cmd\n', ''),
                 subprocess.CompletedProcess([], 0, b'', b''),
                 subprocess.CompletedProcess([], stat_code, mode, '' if not stat_code else self.canary),
                 subprocess.CompletedProcess([], 0, self.private.decode() if copied is None else copied, '')]
@@ -151,17 +152,20 @@ class CloudPreparationEvidence(unittest.TestCase):
         with patch('ci_cloud_trial.subprocess.run', side_effect=self.provision_responses(stat_code=42)):
             with self.assertRaisesRegex(TrialBlocked, '^CLOUD_PRIVATE_STAT_NONZERO_EXIT$'):
                 self.device.provision(self.private)
-        self.assertIs(self.device.config_write_confirmed, True)
+        self.assertIs(self.device.config_write_confirmed, False)
+        self.assertIs(getattr(self.device, 'private_write_command_completed', False), True)
         self.assertIs(self.device.provision_confirmed, False)
         self.assert_safe_receipt(self.receipts()[-1], 'PRIVATE_STAT', 42)
 
     def test_private_write_failure_does_not_reach_stat_or_claim_write(self):
         responses = [subprocess.CompletedProcess([], 0, '', ''),
+                     subprocess.CompletedProcess([], 0, 'shell_v2\n', ''),
                      subprocess.CompletedProcess([], 29, b'', self.canary.encode())]
         with patch('ci_cloud_trial.subprocess.run', side_effect=responses) as command:
             with self.assertRaisesRegex(TrialBlocked, '^CLOUD_PRIVATE_WRITE_NONZERO_EXIT$'):
                 self.device.provision(self.private)
-        self.assertEqual(command.call_count, 2)
+        self.assertEqual(command.call_count, 3)
+        self.assertIs(self.device.private_write_command_completed, False)
         self.assertIs(self.device.config_write_confirmed, False)
         self.assertIs(self.device.provision_confirmed, False)
         self.assert_safe_receipt(self.receipts()[-1], 'PRIVATE_WRITE', 29)
@@ -174,19 +178,47 @@ class CloudPreparationEvidence(unittest.TestCase):
                 with patch('ci_cloud_trial.subprocess.run', side_effect=responses):
                     with self.assertRaisesRegex(TrialBlocked, '^CLOUD_' + label + '_OUTPUT_REJECTED$'):
                         self.device.provision(self.private)
-                self.assertIs(self.device.config_write_confirmed, True)
+                self.assertIs(self.device.private_write_command_completed, True)
+                self.assertIs(self.device.config_write_confirmed, False)
                 self.assertIs(self.device.provision_confirmed, False)
                 self.assert_safe_receipt(self.receipts()[-1], label, 0)
                 self.assertEqual(self.receipts()[-1]['error_category'], 'OUTPUT_REJECTED')
 
     def test_successful_provision_confirms_byte_equality_without_exporting_private_content(self):
-        with patch('ci_cloud_trial.subprocess.run', side_effect=self.provision_responses()):
+        with patch('ci_cloud_trial.subprocess.run', side_effect=self.provision_responses()) as command:
             self.device.provision(self.private)
+        self.assertIs(self.device.shell_v2_confirmed, True)
+        self.assertIs(self.device.private_write_command_completed, True)
         self.assertIs(self.device.config_write_confirmed, True)
         self.assertIs(self.device.provision_confirmed, True)
         self.assertEqual([r['phase'] for r in self.receipts()],
-                         ['PRIVATE_MKDIR', 'PRIVATE_WRITE', 'PRIVATE_STAT', 'PRIVATE_VERIFY'])
+                         ['PRIVATE_MKDIR', 'PRIVATE_SHELL_FEATURES', 'PRIVATE_WRITE', 'PRIVATE_STAT', 'PRIVATE_VERIFY'])
         self.assertNotIn(self.canary, self.device.preparation_path.read_text())
+        write_call = command.call_args_list[2]
+        argv = write_call.args[0]
+        self.assertEqual(argv[3:5], ['shell', '-T'])
+        self.assertNotIn('exec-in', argv)
+        self.assertNotIn('-x', argv)
+        self.assertNotIn(self.canary, ' '.join(argv))
+        self.assertEqual(write_call.kwargs['input'], self.private)
+
+    def test_missing_shell_v2_stops_before_private_bytes_are_submitted(self):
+        for advertised in ('', 'cmd,stat_v2\n', 'not_shell_v2\n', 'shell_v20\n'):
+            with self.subTest(features=advertised):
+                self.device.preparation_path.unlink(missing_ok=True)
+                responses = [subprocess.CompletedProcess([], 0, '', ''),
+                             subprocess.CompletedProcess([], 0, advertised, '')]
+                with patch('ci_cloud_trial.subprocess.run', side_effect=responses) as command:
+                    with self.assertRaisesRegex(TrialBlocked, '^CLOUD_PRIVATE_SHELL_FEATURES_OUTPUT_REJECTED$'):
+                        self.device.provision(self.private)
+                self.assertEqual(command.call_count, 2)
+                self.assertFalse(any('input' in call.kwargs for call in command.call_args_list))
+                self.assertIs(self.device.shell_v2_confirmed, False)
+                self.assertIs(self.device.private_write_command_completed, False)
+                self.assertIs(self.device.config_write_confirmed, False)
+                self.assertIs(self.device.provision_confirmed, False)
+                self.assertEqual(self.receipts()[-1]['phase'], 'PRIVATE_SHELL_FEATURES')
+                self.assertEqual(self.receipts()[-1]['error_category'], 'OUTPUT_REJECTED')
 
     def test_known_and_unknown_diagnostics_return_only_public_categories(self):
         for text, expected in [('No such file or directory ' + self.canary, 'FILE_NOT_FOUND'),
@@ -346,6 +378,8 @@ class CloudPreparationMainIntegration(unittest.TestCase):
 
         def call(*args, **kwargs):
             nonlocal installed
+            if args == ('features',):
+                return subprocess.CompletedProcess(args, 0, 'shell_v2\n', '')
             if args[0] == 'install':
                 installed = True
                 return subprocess.CompletedProcess(args, 0, 'Success\n', '')
@@ -381,7 +415,8 @@ class CloudPreparationMainIntegration(unittest.TestCase):
         self.assertEqual(result['blocked_reason'], 'CLOUD_PRIVATE_STAT_NONZERO_EXIT')
         self.assertIs(result['cleanup']['cleanup_required'], True)
         self.assertIs(result['cleanup']['installation_confirmed'], True)
-        self.assertIs(result['cleanup']['configuration_write_confirmed'], True)
+        self.assertIs(result['cleanup']['private_write_command_completed'], True)
+        self.assertIs(result['cleanup']['configuration_write_confirmed'], False)
         self.assertIs(result['cleanup']['provisioned'], False)
         self.assertIs(result['cleanup']['lab_stopped'], True)
         self.assertIs(result['cleanup']['private_config_removed'], not remove_fails)

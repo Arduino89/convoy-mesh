@@ -16,14 +16,14 @@
   "run8_budget_refund_authorized": false,
   "run8_remaining_for_future_launches": 0,
   "sha256": {
-    "tests": "ddde5277fca8d970d989c46ab57a4a4d4371e3f2b6254c698e26541e5eb41833",
-    "implementation": "82ea83e5eb205261b6f94781435ef2d0cd8bac3a9dca1f6074ab0fdba4570821",
+    "tests": "6bd50bdbccf07297a1d6a3fe5f4e0d1189e761c8fe53811dfe93eefc99afd407",
+    "implementation": "0caaa7c8b44eed5fa6791fc6c39309b1c033e5b01d2394f1f8c5f19f6095ed03",
     "red_log": "6887d690127991e1bf483eacd25491d6c5a75281729dbb24d1fde2977c97c148",
     "green_log": "7f8882d877a60b2472c7542323e98479087e3cfa6d283920351141a237b5e186"
   },
   "emitter_counterexample_sha256": "3b7084b6a7923f62c261f815f39c8a1c24e571ec8989d34d1d6f1d5bdeb8cead",
   "full_suite": {
-    "tests": 168,
+    "tests": 174,
     "failures": 0,
     "errors": 0,
     "scope": "HOST_ONLY_NO_ANDROID_NO_CLOUD",
@@ -35,5 +35,18 @@
     "failures": 0,
     "legacy_sh_exit": 2,
     "new_bash_entry": "PASS_ORDER_AND_ABORT"
+  },
+  "transport_fix_targeted": {
+    "preparation": 27,
+    "probe": 11,
+    "adb_contract": 3,
+    "independently_executed_total": 41,
+    "result": "PASS"
+  },
+  "file_confirmation_regression": {
+    "red": "exit0 incorrectly confirmed missing file",
+    "red_log_sha256": "1a0fdb459461fb6c8e104dc8ee92260ad045c01427817ddc0bc0adda9a184760",
+    "green": "write command completed is separate; file confirmed requires600and exact readback",
+    "green_log_sha256": "2e3a670f20276fa4587a2b3a4f82e04b911b9c45473acefc65a08cee5243c4cb"
   }
 }
