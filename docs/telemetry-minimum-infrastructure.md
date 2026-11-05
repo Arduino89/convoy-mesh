@@ -2,6 +2,14 @@
 
 Data aggiornamento: 5 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
 
+## Diagnosi circoscritta di installazione/configurazione — 5 novembre
+
+Mandato successivo di Cama: riprodurre e correggere il solo percorso di preparazione con credenziale fittizia e cloud bloccato. Nessun nuovo budget cloud. Il contatore del run8 resta sconosciuto:500conteggiati prudenzialmente e0residui autorizzati. La query vuota non ne recupera disponibilità.
+
+La modifica minima riusa CloudDevice e l’app LAB già fissata a2d76100: fase, codice d’uscita e categoria d’errore pubblici; output grezzi/argomenti/configurazione restano esclusi. `cleanup_required` viene registrato prima dell’installazione, `installation_confirmed` soltanto dopo Success e verifica del package; scrittura privata e configurazione verificata hanno riscontri separati. Una ricevuta budget esiste prima di qualsiasi comando Android e il recupero read-only del database proprio del LAB non dipende più da provisioned=true. Prenotazioni, tentativi, corpo scritto e ricezione cloud restano campi distinti. Dati assenti, corrotti o non legati alla prova restano null/sconosciuti; nessun rimborso automatico.
+
+La prova mirata riusa il workflow e il runner pubblici esistenti, con un solo job vincolato a ramo, messaggio esplicito, numero9/tentativo1; il job completo viene escluso per quel messaggio. Controllo Android prima della LAB, rete bloccata e assenza di rete predefinita attestate prima dell’installazione, configurazione fittizia intenzionalmente invalida per il sender cloud, nessun avvio dell’attività LAB o consenso/capture. Pulizia e assenza del file devono precedere il ripristino delle radio. **Nuova prova Android ancora NOT_RUN nella preparazione di questo checkpoint**; un eventuale successo non dimostra quale comando sia fallito storicamente. [Disegno, limiti e riuso](telemetry-evidence/2026-11-05/preparation-design.json).
+
 ## Esito della prova singola del 5 novembre
 
 **Android e regressioni locali superati; cloud bloccato durante installazione/configurazione privata.** [Run41993361681/job127130616352](https://github.com/Arduino89/convoy-mesh/actions/runs/41993361681/job/127130616352), numero8/tentativo1, conclusione FAILURE. Wrapper `655e545709f2a40c37fb663bb3b3a6c03a8ced66`; sorgente eseguibile estratto `2d76100fda1df0637e953f4ad90f26073028880c`. Nessun codice Android o Convoy modificato. [Riepilogo e limiti](telemetry-evidence/2026-11-05/run-41993361681/summary.json), ricevute sintetiche complete e manifest nella stessa cartella.
@@ -21,7 +29,7 @@ Data aggiornamento: 5 novembre 2026. Il nuovo mandato autorizza Android → prog
 
 Il codice imposta `installed=true` **prima** di chiamare l’installazione, per gestire anche un’installazione parziale: quel flag non dimostra che sia riuscita. `provisioned=false` e il codice d’errore restringono l’arresto a `adb install`, `run-as mkdir` oppure `run-as stat`; le evidenze non distinguono quale. Un errore nella scrittura privata avrebbe un altro codice. La causa precisa resta da accertare: non è una nuova prova fallita di revoca, né prova di un token errato. Cleanup confermato: LAB fermato, configurazione privata rimossa e impostazioni radio iniziali ripristinate; anche lo step finale di rimozione degli input privati è passato.
 
-La [revisione indipendente](telemetry-evidence/2026-11-05/run-41993361681/independent-runtime-review.json) ha verificato111hash e ricalcolato payload/stati, firme dei riferimenti e5hashsorgente; [comando riproducibile e input](telemetry-evidence/2026-11-05/run-41993361681/README.md). È revisione delle ricevute, non una seconda prova Android o approvazione d’adozione.
+La [revisione indipendente](telemetry-evidence/2026-11-05/run-41993361681/independent-runtime-review.json) ha verificato111hash e ricalcolato payload/stati, hash dei riferimenti e5hashsorgente; [comando riproducibile e input](telemetry-evidence/2026-11-05/run-41993361681/README.md). È revisione delle ricevute, non una seconda prova Android o approvazione d’adozione.
 
 Le prenotazioni native non sono attestate. Si applica la regola conservativa già revisionata: **500righe consumate per i gate futuri, residuo autorizzato0**, senza rimborso o reset automatico. Questo non significa che500eventi siano stati inviati: il numero realmente trasmesso resta non attestato. La lettura diagnostica zero non rifinanzia il budget e non produce PASS di consegna, revoca, privacy o deduplicazione cloud. Nessuna cancellazione richiesta o eseguita.
 

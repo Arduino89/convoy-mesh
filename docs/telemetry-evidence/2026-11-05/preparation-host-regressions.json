@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "scope": "HOST_ONLY_COMMAND_MOCK_AND_SQLITE_REGRESSIONS_NO_ANDROID_NO_CLOUD",
+  "status": "RED_THEN_GREEN",
+  "red": {
+    "tests": 1,
+    "failures": 1,
+    "observed": "COMMAND_NONZERO_EXIT",
+    "expected": "CLOUD_PRIVATE_MKDIR_NONZERO_EXIT"
+  },
+  "green": {
+    "tests": 26,
+    "failures": 0,
+    "errors": 0
+  },
+  "run8_budget_refund_authorized": false,
+  "run8_remaining_for_future_launches": 0,
+  "sha256": {
+    "tests": "ddde5277fca8d970d989c46ab57a4a4d4371e3f2b6254c698e26541e5eb41833",
+    "implementation": "82ea83e5eb205261b6f94781435ef2d0cd8bac3a9dca1f6074ab0fdba4570821",
+    "red_log": "6887d690127991e1bf483eacd25491d6c5a75281729dbb24d1fde2977c97c148",
+    "green_log": "7f8882d877a60b2472c7542323e98479087e3cfa6d283920351141a237b5e186"
+  },
+  "emitter_counterexample_sha256": "3b7084b6a7923f62c261f815f39c8a1c24e571ec8989d34d1d6f1d5bdeb8cead",
+  "full_suite": {
+    "tests": 165,
+    "failures": 0,
+    "errors": 0,
+    "scope": "HOST_ONLY_NO_ANDROID_NO_CLOUD",
+    "executed_by": "root"
+  },
+  "checked_at_utc": "2026-11-05T16:24:52.424499+00:00"
+}

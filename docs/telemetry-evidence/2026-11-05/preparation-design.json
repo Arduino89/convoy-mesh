@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "status": "INDEPENDENTLY_APPROVED_FOR_ONE_OFFLINE_DIAGNOSTIC_ATTEMPT",
+  "base_head": "219261375c1179cb2ee21e10efb36c6fc7c74b3d",
+  "branch": "experiment/telemetry-runtime-lab",
+  "pr": 5,
+  "user_mandate": "2026-11-05 attachment Per Jarvis.txt; diagnosis/correction offline only.",
+  "profile": {
+    "schemaVersion": 1,
+    "ideaId": "convoy_telemetry_minimum_2026_11_01",
+    "title": "Convoy telemetry isolated evaluation",
+    "summary": "Diagnose and correct the existing isolated LAB installation/private provisioning path using dummy-only configuration and blocked cloud; preserve the exhausted run8 budget.",
+    "stage": "EVALUATION",
+    "domains": [
+      "mobile",
+      "product_analytics"
+    ],
+    "requestedArtifacts": [
+      "research",
+      "prototype"
+    ],
+    "userContext": {
+      "targetUser": "Cama, future voluntary Convoy testers",
+      "environment": "personal",
+      "platforms": [
+        "Android",
+        "Flutter"
+      ],
+      "usageFrequency": "one isolated trial"
+    },
+    "signals": {
+      "requiresCode": true,
+      "interactionLevel": "LOW",
+      "freshResearch": false,
+      "externalData": false,
+      "realWorldIntegration": true,
+      "dataSensitivity": "LOW",
+      "novelty": "LOW",
+      "technicalComplexity": "MEDIUM",
+      "safetyImpact": "LOW",
+      "monetizationIntent": "NONE",
+      "regulatedContext": false,
+      "multiDevice": false,
+      "voiceOrMedia": false
+    },
+    "constraints": [
+      "Existing LAB branch and draft PR only; no app Convoy change.",
+      "Dummy configuration and no cloud ingress; no secrets bound to the diagnostic job.",
+      "Run8 unknown budget retains500conservativeused/0remaining; no refund or new cloud budget.",
+      "No spending, deletion, merge, release, real users or external contact."
+    ],
+    "knownUnknowns": [
+      "Exact install/mkdir/stat failure in run8; no attribution before runtime reproduction."
+    ],
+    "requestedOutcome": "Exact failed stage, minimal causal correction when reproduced, Android provisioning/cleanup proof and independent review.",
+    "humanDecisionRequired": true
+  },
+  "reuse_first": {
+    "preparation_code": 6,
+    "workflow": 5,
+    "evidence": "Reuse existing CloudDevice, own LAB database, pinned APK source, runtime control, existing public runner/workflow; add narrow stage instrumentation and offline probe, no server/SDK/new service."
+  },
+  "governance": {
+    "mode": "DIRECT_CANONICAL_INPUT_CONSULTATION_PARTIAL_PROJECT_CHECKOUT_NO_ENTERPRISE_EXECUTABLE_CHECKOUT",
+    "repository": "Arduino89/Cama-Enterprise",
+    "ref": "main",
+    "inputs": [
+      "AGENTS.md",
+      "00_company/source_of_truth_index.md",
+      "00_company/principles.md",
+      "00_company/operating_model.md",
+      "00_company/project_continuity_protocol.md",
+      "06_training/enterprise_pattern_registry.json",
+      "00_company/jarvis_operations_notebook.md"
+    ],
+    "patterns": [
+      "EP-001-canonical-source-and-artifact-roles",
+      "EP-003-human-sentinel-and-regression",
+      "EP-004-end-to-end-reality-check",
+      "EP-005-bounded-recovery-and-reversibility",
+      "EP-007-minimal-context-and-reuse-first",
+      "EP-009-executable-proof-escalation"
+    ],
+    "notebook_notes": [
+      "JON-2026-08-25-003",
+      "JON-2026-08-25-007",
+      "JON-2026-08-25-009",
+      "JON-2026-08-25-010",
+      "JON-2026-08-25-011",
+      "JON-2026-09-08-001"
+    ],
+    "routing_memory_status": "NOT_RECHECKED_NO_ROUTING_CLAIM"
+  },
+  "proof_boundary": "Android install/provision/cleanup with no cloud access, no LAB start with private configuration; host tests alone are not runtime proof.",
+  "retry_limit": "One instrumented diagnosis on exact code; stop dependent steps on failure. A later attempt requires a concrete reviewed causal change, not an identical rerun.",
+  "cloud_budget": {
+    "remaining": 0,
+    "prior_run_id": 41993361681,
+    "unknown_consumes_full500": true,
+    "automatic_refund": false
+  },
+  "independent_review": "preparation-offline-source-review.json"
+}

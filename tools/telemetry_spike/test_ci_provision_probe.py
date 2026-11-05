@@ -1,0 +1,157 @@
+"""Host-only guard regressions: simulated device commands, no Android or cloud."""
+from contextlib import redirect_stdout
+import io
+import json
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+from unittest.mock import Mock, patch
+
+import ci_provision_probe as probe
+
+
+class ProvisionProbeGuards(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.out = self.root / "result"
+        self.runtime = self.root / "runtime.json"
+        self.runtime.write_text(json.dumps({"boot_id": "synthetic-boot", "status": "PASS_NATIVE_RUNTIME_CONTROL"}))
+        self.argv = ["ci_provision_probe.py", "--sdk", "/synthetic-sdk", "--jdk", "/synthetic-jdk",
+                     "--apk", str(self.root / "lab.apk"), "--build-receipt", str(self.root / "build.json"),
+                     "--runtime-gate", str(self.runtime), "--out", str(self.out),
+                     "--serial", "emulator-5554", "--source-commit", "a" * 40,
+                     "--apk-source-commit", probe.PINNED_APP_SOURCE]
+        self.device = Mock(spec=probe.CloudDevice)
+        self.device.cleanup_required = False
+        self.device.install_confirmed = False
+        self.device.provision_confirmed = False
+        self.device.preparation_records = []
+        self.device.pid.return_value = None
+        self.factory = self.start(patch.object(probe, "CloudDevice", return_value=self.device))
+        self.start(patch("sys.argv", self.argv))
+        self.start(patch.dict(probe.os.environ, {}, clear=True))
+        self.start(patch.object(probe, "verify_apk", return_value={"synthetic_identity_checked": True}))
+        self.initial = {"airplane_mode_on": False, "wifi_on": True, "mobile_data": True}
+        self.start(patch.object(probe, "radio_snapshot", return_value=self.initial))
+        self.offline = self.start(patch.object(probe, "block_network", return_value={"active_default_network_absent": True}))
+        self.stopped = self.start(patch.object(probe, "assert_stopped"))
+        self.restore = self.start(patch.object(probe, "restore_radios"))
+
+        def commands(_device, _records, stage, *_args, **_kwargs):
+            stdout = "package:/synthetic/base.apk\n" if stage == "CLEANUP_PACKAGE_CHECK" else ""
+            return subprocess.CompletedProcess([], 0, stdout, "")
+        self.commands = self.start(patch.object(probe, "checked_call", side_effect=commands))
+        self.output = io.StringIO()
+        self.start(redirect_stdout(self.output))
+
+    def start(self, manager):
+        value = manager.__enter__()
+        self.addCleanup(manager.__exit__, None, None, None)
+        return value
+
+    def receipt(self):
+        return json.loads((self.out / "result.json").read_text())
+
+    def assert_unknown_budget(self, receipt):
+        budget = receipt["budget_recovery"]
+        self.assertEqual(budget["status"], "UNKNOWN_BLOCK_FUTURE_SENDS")
+        for field in ("reserved_rows", "reserved_attempts", "body_written_rows", "body_written_requests",
+                      "acknowledged_requests", "cloud_received_rows"):
+            self.assertIsNone(budget[field])
+        self.assertEqual(budget["conservative_consumed_for_future_launches"], 500)
+        self.assertEqual(budget["remaining_for_future_launches"], 0)
+        self.assertIs(budget["automatic_refund_allowed"], False)
+
+    def test_offline_parser_requires_exactly_one_absent_default_network(self):
+        self.assertTrue(probe.no_active_default_network("Synthetic heading\n  Active default network: none\n"))
+        for value in ("", "Active default network: 101\n", "Active default network: unknown\n",
+                      "Active default network: none\nActive default network: 101\n",
+                      "Active default network: none\nActive default network: none\n",
+                      "Active default network: none\nActive default network: unknown\n"):
+            with self.subTest(dump=value):
+                self.assertFalse(probe.no_active_default_network(value))
+
+    def test_real_credential_is_refused_before_device_and_never_exported(self):
+        canary = "phc_HostOnlyCanaryNeverPublish123"
+        with patch.dict(probe.os.environ, {"CONVOY_LAB_POSTHOG_TOKEN": canary}):
+            with self.assertRaises(SystemExit):
+                probe.main()
+        self.factory.assert_not_called()
+        self.device.install.assert_not_called()
+        receipt = self.receipt()
+        self.assertEqual(receipt["blocked_reason"], "PROBE_REAL_CLOUD_INPUT_REFUSED")
+        self.assert_unknown_budget(receipt)
+        self.assertNotIn(canary, json.dumps(receipt) + self.output.getvalue())
+
+    def test_unknown_budget_is_persisted_before_first_device_call_and_survives_failure(self):
+        def gate_failure():
+            self.assert_unknown_budget(self.receipt())
+            raise probe.TrialBlocked("SYNTHETIC_GATE_FAILURE")
+        self.device.check_gate.side_effect = gate_failure
+        with self.assertRaises(SystemExit):
+            probe.main()
+        receipt = self.receipt()
+        self.assertEqual(receipt["blocked_reason"], "SYNTHETIC_GATE_FAILURE")
+        self.assert_unknown_budget(receipt)
+        self.device.install.assert_not_called()
+        self.device.provision.assert_not_called()
+
+    def test_unattested_offline_barrier_blocks_both_install_and_provision(self):
+        self.offline.side_effect = probe.TrialBlocked("PROBE_OFFLINE_BARRIER_UNATTESTED")
+        with self.assertRaises(SystemExit):
+            probe.main()
+        self.device.install.assert_not_called()
+        self.device.provision.assert_not_called()
+        self.assertEqual(self.receipt()["blocked_reason"], "PROBE_OFFLINE_BARRIER_UNATTESTED")
+        self.assert_unknown_budget(self.receipt())
+
+    def test_failed_cleanup_keeps_radios_offline_and_preserves_primary_failure(self):
+        def fail_install(_apk):
+            self.device.cleanup_required = True
+            raise probe.TrialBlocked("CLOUD_INSTALL_APK_NONZERO_EXIT")
+        self.device.install.side_effect = fail_install
+        self.device.prepare_call.side_effect = probe.TrialBlocked("CLOUD_PRIVATE_REMOVE_NONZERO_EXIT")
+        with self.assertRaises(SystemExit):
+            probe.main()
+        receipt = self.receipt()
+        self.assertEqual(receipt["blocked_reason"], "CLOUD_INSTALL_APK_NONZERO_EXIT")
+        self.assertEqual(receipt["cleanup_error"], "PROBE_STOP_OR_PRIVATE_CLEANUP_UNATTESTED")
+        self.assertFalse(receipt["cleanup"]["install_confirmed"])
+        self.assertTrue(receipt["left_offline"]["active_default_network_absent"])
+        self.assertEqual(self.offline.call_count, 2)
+        self.restore.assert_not_called()
+        self.device.provision.assert_not_called()
+        self.assert_unknown_budget(receipt)
+
+    def test_success_uses_one_fake_provision_and_never_refunds_or_claims_historical_cause(self):
+        sequence = []
+        def install(_apk):
+            self.device.cleanup_required = True
+            self.device.install_confirmed = True
+        def provision(private_bytes):
+            self.assertEqual(json.loads(private_bytes), probe.FAKE_CONFIG)
+            self.assertEqual(probe.FAKE_CONFIG["row_limit"], 0)
+            self.device.provision_confirmed = True
+        self.device.install.side_effect = install
+        self.device.provision.side_effect = provision
+        self.device.prepare_call.side_effect = lambda phase, *_args: sequence.append(phase)
+        self.restore.side_effect = lambda *_args: sequence.append("RESTORE_RADIOS")
+        probe.main()
+        receipt = self.receipt()
+        self.device.install.assert_called_once()
+        self.device.provision.assert_called_once()
+        self.device.command.assert_not_called()
+        self.assertEqual(sequence, ["PRIVATE_REMOVE", "PRIVATE_REMOVE_VERIFY", "RESTORE_RADIOS"])
+        self.assertEqual(receipt["status"], "PROVISION_PATH_PASSED_HISTORICAL_FAILURE_NOT_REPRODUCED")
+        self.assertEqual(receipt["historical_failure_cause"], "NOT_ESTABLISHED_BY_A_SUCCESSFUL_REPETITION")
+        self.assertTrue(receipt["cleanup"]["fake_config_removed"])
+        self.assert_unknown_budget(receipt)
+        self.assertNotIn(probe.FAKE_CONFIG["api_key"], json.dumps(receipt))
+        self.assertNotIn(probe.FAKE_CONFIG["endpoint"], json.dumps(receipt))
+
+
+if __name__ == "__main__":
+    unittest.main()

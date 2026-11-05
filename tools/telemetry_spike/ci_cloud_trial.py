@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import re
+import sqlite3
 import stat
 import subprocess
 import tempfile
@@ -31,7 +32,7 @@ ENDPOINT = "https://" + HOST + "/batch/"
 CONTROLS = ("privacy", "retention", "deletion", "quota", "local_regression")
 FILES = {"result.json", "cloud-gate-reference.json", "runtime-gate-reference.json", "apk-receipt.json",
          "states.jsonl", "lifecycle.jsonl", "expected.jsonl", "revoked-intent.jsonl",
-         "preflight.jsonl", "transport.jsonl", "network.jsonl"}
+         "preflight.jsonl", "transport.jsonl", "network.jsonl", "preparation.jsonl", "budget-recovery.json"}
 NETWORK_KEYS = {"probe_available", "active_network", "internet_capable", "validated", "transports"}
 
 
@@ -218,11 +219,143 @@ def summarize_transport(preflight, transport, run_id, remaining, final):
             "http200_deliberately_ignored": len(ignored), "http_status_is_not_cloud_receipt": True}
 
 
+PREPARATION_PHASES = {"INSTALL_APK", "INSTALL_VERIFY", "PRIVATE_MKDIR", "PRIVATE_WRITE",
+                      "PRIVATE_STAT", "PRIVATE_VERIFY", "PRIVATE_REMOVE", "PRIVATE_REMOVE_VERIFY"}
+
+
+def sanitize_preparation_error(value):
+    """Classify known errors; never return arbitrary command output or secrets."""
+    text = value.decode("utf-8", errors="replace") if isinstance(value, bytes) else str(value)
+    for marker, category in (
+            ("INSTALL_FAILED_UPDATE_INCOMPATIBLE", "INSTALL_FAILED_UPDATE_INCOMPATIBLE"),
+            ("INSTALL_FAILED_VERSION_DOWNGRADE", "INSTALL_FAILED_VERSION_DOWNGRADE"),
+            ("INSTALL_FAILED_INSUFFICIENT_STORAGE", "INSTALL_FAILED_INSUFFICIENT_STORAGE"),
+            ("INSTALL_FAILED_USER_RESTRICTED", "INSTALL_FAILED_USER_RESTRICTED"),
+            ("not debuggable", "PACKAGE_NOT_DEBUGGABLE"),
+            ("unknown package", "PACKAGE_UNKNOWN"),
+            ("Permission denied", "PERMISSION_DENIED"),
+            ("No such file or directory", "FILE_NOT_FOUND"),
+            ("Bad mode", "STAT_FORMAT_REJECTED"),
+            ("device offline", "ADB_DEVICE_OFFLINE")):
+        if marker in text:
+            return category
+    return "OUTPUT_WITHHELD"
+
+
+def parse_budget_database(path, run_id, expected_binding, remaining):
+    """Read only the LAB's committed counters; never expose its private binding."""
+    names = ("run_id", "transport_mode", "cloud_binding", "cloud_rows_reserved",
+             "dispatch_attempts", "cloud_rows_written", "requests_started", "requests_acked")
+    if (not path.is_file() or path.is_symlink() or not 0 < path.stat().st_size <= 4 * 1024 * 1024
+            or type(remaining) is not int or not 1 <= remaining <= 500):
+        raise TrialBlocked("BUDGET_DATABASE_UNAVAILABLE")
+    connection = None
+    try:
+        connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro&immutable=1", uri=True)
+        connection.execute("PRAGMA query_only=ON")
+        if connection.execute("PRAGMA quick_check(1)").fetchall() != [("ok",)]:
+            raise TrialBlocked("BUDGET_DATABASE_INVALID")
+        rows = connection.execute("SELECT key,value FROM state WHERE key IN (" +
+                                  ",".join("?" for _ in names) + ")", names).fetchall()
+        values = dict(rows)
+        if (len(rows) != len(names) or set(values) != set(names) or values["run_id"] != run_id
+                or values["transport_mode"] != "posthog_cloud"
+                or not isinstance(expected_binding, str) or not re.fullmatch(r"[a-f0-9]{64}", expected_binding)
+                or values["cloud_binding"] != expected_binding):
+            raise TrialBlocked("BUDGET_DATABASE_BINDING_OR_SCHEMA_INVALID")
+        numeric = names[3:]
+        if any(not isinstance(values[name], str) or not re.fullmatch(r"0|[1-9][0-9]{0,3}", values[name])
+               for name in numeric):
+            raise TrialBlocked("BUDGET_DATABASE_COUNTER_INVALID")
+        counts = {name: int(values[name]) for name in numeric}
+        reserved, attempts, written, requests, acked = (counts[name] for name in numeric)
+        if not (0 <= written <= reserved <= remaining and 0 <= requests <= attempts <= reserved
+                and 0 <= acked <= requests):
+            raise TrialBlocked("BUDGET_DATABASE_COUNTER_INVALID")
+        return {"status": "OBSERVED_COMMITTED_LAB_LEDGER", "reserved_rows": reserved,
+                "reserved_attempts": attempts, "body_written_rows": written,
+                "body_written_requests": requests, "acknowledged_requests": acked,
+                "cloud_received_rows": None,
+                "body_written_counter_limit": "MAY_UNDERCOUNT_INTERRUPTION_AFTER_WRITE_BEFORE_COUNTER",
+                "automatic_refund_allowed": False}
+    except sqlite3.Error:
+        raise TrialBlocked("BUDGET_DATABASE_INVALID") from None
+    finally:
+        if connection is not None:
+            connection.close()
+
+
+def unknown_budget_receipt(run_id, source_commit, remaining=None):
+    return {"schema_version": 1, "observed_utc": now(), "run_id": run_id,
+            "source_commit": source_commit, "status": "UNKNOWN_BLOCK_FUTURE_SENDS",
+            "authorized_total_ceiling": 500, "current_attempt_limit": remaining,
+            "reserved_rows": None, "reserved_attempts": None, "body_written_rows": None,
+            "body_written_requests": None, "acknowledged_requests": None, "cloud_received_rows": None,
+            "conservative_consumed_for_future_launches": 500, "remaining_for_future_launches": 0,
+            "automatic_refund_allowed": False}
+
+
 class CloudDevice(Device):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cleanup_required = False
+        self.install_confirmed = False
+        self.config_write_confirmed = False
+        self.provision_confirmed = False
+
+    def _preparation_record(self, phase, output=None, category=None):
+        if phase not in PREPARATION_PHASES:
+            raise TrialBlocked("PREPARATION_PHASE_INVALID")
+        code = output.returncode if output is not None else None
+        row = {"schema_version": 1, "observed_utc": now(), "phase": phase,
+               "returncode": code,
+               "error_category": category or ("NONE" if code == 0 else sanitize_preparation_error(
+                   output.stderr or output.stdout)),
+               "stdout_present": bool(output is not None and output.stdout),
+               "stderr_present": bool(output is not None and output.stderr)}
+        validate_public_value(row)
+        if not hasattr(self, "preparation_records"):
+            self.preparation_records = []
+        self.preparation_records.append(row)
+        path = getattr(self, "preparation_path", None)
+        if path is not None:
+            with path.open("a") as stream:
+                stream.write(json.dumps(row, allow_nan=False) + "\n")
+
+    def prepare_call(self, phase, *args, timeout=45):
+        if phase not in PREPARATION_PHASES:
+            raise TrialBlocked("PREPARATION_PHASE_INVALID")
+        try:
+            output = self.call(*args, timeout=timeout, allow_failure=True)
+        except TrialBlocked as failure:
+            category = {"COMMAND_TIMEOUT": "TIMEOUT", "COMMAND_UNAVAILABLE": "UNAVAILABLE"}.get(
+                str(failure), "COMMAND_BLOCKED")
+            self._preparation_record(phase, category=category)
+            raise TrialBlocked("CLOUD_" + phase + "_" + category) from None
+        self._preparation_record(phase, output)
+        if output.returncode:
+            raise TrialBlocked("CLOUD_" + phase + "_NONZERO_EXIT")
+        return output
+
+    def install(self, apk):
+        self.cleanup_required = True  # Includes partial installs; never success evidence.
+        self.install_confirmed = False
+        output = self.prepare_call("INSTALL_APK", "install", str(apk), timeout=120)
+        if not re.search(r"^Success$", output.stdout, re.M):
+            self._preparation_record("INSTALL_APK", output, "OUTPUT_REJECTED")
+            raise TrialBlocked("CLOUD_INSTALL_APK_OUTPUT_REJECTED")
+        installed = self.prepare_call("INSTALL_VERIFY", "shell", "pm", "path", PACKAGE)
+        if not re.fullmatch(r"package:[^\r\n]+\n?", installed.stdout.strip()):
+            self._preparation_record("INSTALL_VERIFY", installed, "OUTPUT_REJECTED")
+            raise TrialBlocked("CLOUD_INSTALL_VERIFY_OUTPUT_REJECTED")
+        self.install_confirmed = True
+
     def provision(self, private_bytes):
+        self.config_write_confirmed = False
+        self.provision_confirmed = False
         if self.pid(absent_ok=True) is not None:
             raise TrialBlocked("PRIVATE_PROVISION_REQUIRES_STOPPED_LAB")
-        self.call("shell", "run-as", PACKAGE, "mkdir", "-p", "files")
+        self.prepare_call("PRIVATE_MKDIR", "shell", "run-as", PACKAGE, "mkdir", "-p", "files")
         # Fixed remote shell program; secret bytes travel through stdin only.
         argv = [self.adb, "-s", self.serial, "exec-in", "run-as", PACKAGE, "sh", "-c",
                 "'umask 077; cat > files/cloud-config.private.json'"]
@@ -230,12 +363,50 @@ class CloudDevice(Device):
             output = subprocess.run([str(part) for part in argv], input=private_bytes,
                                     env=self.env, capture_output=True, timeout=15)
         except (OSError, subprocess.TimeoutExpired) as exc:
-            raise TrialBlocked("PRIVATE_PROVISION_FAILED") from exc
-        if output.returncode or output.stdout or output.stderr:
-            raise TrialBlocked("PRIVATE_PROVISION_FAILED")
-        mode = self.call("shell", "run-as", PACKAGE, "stat", "-c", "%a", "files/cloud-config.private.json").stdout.strip()
-        if mode != "600":
-            raise TrialBlocked("PRIVATE_PROVISION_MODE_NOT_600")
+            category = "TIMEOUT" if isinstance(exc, subprocess.TimeoutExpired) else "UNAVAILABLE"
+            self._preparation_record("PRIVATE_WRITE", category=category)
+            raise TrialBlocked("CLOUD_PRIVATE_WRITE_" + category) from None
+        self._preparation_record("PRIVATE_WRITE", output)
+        if output.returncode:
+            raise TrialBlocked("CLOUD_PRIVATE_WRITE_NONZERO_EXIT")
+        if output.stdout or output.stderr:
+            self._preparation_record("PRIVATE_WRITE", output, "OUTPUT_REJECTED")
+            raise TrialBlocked("CLOUD_PRIVATE_WRITE_OUTPUT_REJECTED")
+        self.config_write_confirmed = True
+        checked = self.prepare_call("PRIVATE_STAT", "shell", "run-as", PACKAGE, "stat", "-c", "%a", "files/cloud-config.private.json")
+        if checked.stdout.strip() != "600":
+            self._preparation_record("PRIVATE_STAT", checked, "OUTPUT_REJECTED")
+            raise TrialBlocked("CLOUD_PRIVATE_STAT_OUTPUT_REJECTED")
+        copied = self.prepare_call("PRIVATE_VERIFY", "exec-out", "run-as", PACKAGE,
+                                   "cat", "files/cloud-config.private.json")
+        if copied.stdout.encode("utf-8") != private_bytes or copied.stderr:
+            self._preparation_record("PRIVATE_VERIFY", copied, "OUTPUT_REJECTED")
+            raise TrialBlocked("CLOUD_PRIVATE_VERIFY_OUTPUT_REJECTED")
+        self.provision_confirmed = True
+
+    def recover_budget(self, work, private_bytes, run_id, remaining):
+        """Never starts the app or changes its database; temporary copy is private."""
+        if self.pid(absent_ok=True) is not None:
+            raise TrialBlocked("BUDGET_RECOVERY_REQUIRES_STOPPED_LAB")
+        journal = self.call("shell", "run-as", PACKAGE, "test", "-e",
+                            "databases/synthetic_telemetry.db-journal", allow_failure=True)
+        if journal.returncode != 1 or journal.stdout or journal.stderr:
+            raise TrialBlocked("BUDGET_RECOVERY_JOURNAL_OR_ABSENCE_UNATTESTED")
+        try:
+            output = subprocess.run([str(self.adb), "-s", self.serial, "exec-out", "run-as", PACKAGE,
+                                     "cat", "databases/synthetic_telemetry.db"],
+                                    env=self.env, capture_output=True, timeout=15)
+        except (OSError, subprocess.TimeoutExpired):
+            raise TrialBlocked("BUDGET_RECOVERY_READ_FAILED") from None
+        if output.returncode or output.stderr or not 0 < len(output.stdout) <= 4 * 1024 * 1024:
+            raise TrialBlocked("BUDGET_RECOVERY_READ_FAILED")
+        path = work / "budget-snapshot.private.sqlite"
+        path.write_bytes(output.stdout)
+        path.chmod(0o600)
+        config = json.loads(private_bytes)
+        binding = hashlib.sha256((config["endpoint"] + "\n" + config["api_key"] + "\n" +
+                                  config["run_id"] + "\n" + str(config["row_limit"])).encode()).hexdigest()
+        return parse_budget_database(path, run_id, binding, remaining)
 
     def connectivity(self, state, online):
         value = state.get("connectivity", {})
@@ -361,7 +532,10 @@ def main():
               "limits": ["NO_REAL_USERS_NO_CONVOY_INTEGRATION", "HTTP_STATUS_IS_NOT_RECEIPT",
                          "PRECOMMIT_REVOCATION_UNACKNOWLEDGED_REQUESTS_ALREADY_STARTED_NOT_RECALLABLE",
                          "EMULATOR_CONNECTIVITY_NOT_PHYSICAL_RADIO_BATTERY_PROOF"]}
-    device, installed, provisioned, radios, remaining = None, False, False, None, None
+    device, cleanup_required, provisioned, radios, remaining = None, False, False, None, None
+    budget_recovery = unknown_budget_receipt(args.run_id, args.source_commit)
+    public_write(args.out / "budget-recovery.json", budget_recovery)
+    result["budget_recovery_ref"] = "budget-recovery.json"
     with tempfile.TemporaryDirectory(prefix="convoy-cloud-private-") as temporary:
         work = Path(temporary)
         try:
@@ -379,6 +553,7 @@ def main():
             env["PATH"] = str(args.jdk / "bin") + os.pathsep + env.get("PATH", "")
             runtime = json.loads(args.runtime_gate.read_text())
             device = CloudDevice(args.sdk, args.serial, env, runtime)
+            device.preparation_path = args.out / "preparation.jsonl"
             device.check_gate()
             public_write(args.out / "cloud-gate-reference.json", {
                 "sha256": sha256(args.cloud_gate), "status": "PASS", "project_id": PROJECT, "host": HOST,
@@ -399,9 +574,8 @@ def main():
                     raise TrialBlocked("INITIAL_RADIO_SETTING_NOT_ATTESTED")
                 initial_radios[key] = value == "1"
             radios = initial_radios
-            installed = True  # Cleanup must handle a partially successful install.
-            if not re.search(r"^Success$", device.call("install", str(args.apk.resolve()), timeout=120).stdout, re.M):
-                raise TrialBlocked("CLOUD_LAB_INSTALL_NOT_CONFIRMED")
+            cleanup_required = True
+            device.install(args.apk.resolve())
             device.provision(private_bytes)
             provisioned = True
             del private_bytes
@@ -425,9 +599,12 @@ def main():
             result["status"] = "BLOCKED"
             result["blocked_reason"] = str(exc) if isinstance(exc, TrialBlocked) else "CLOUD_HARNESS_INPUT_OR_IO_FAILURE"
         finally:
-            cleanup = {"installed": installed, "provisioned": provisioned, "lab_stopped": False,
+            cleanup = {"cleanup_required": cleanup_required,
+                       "installation_confirmed": bool(device and getattr(device, "install_confirmed", False)),
+                       "configuration_write_confirmed": bool(device and getattr(device, "config_write_confirmed", False)),
+                       "provisioned": provisioned, "lab_stopped": False,
                        "private_config_removed": False, "initial_radio_settings_restored": False}
-            if installed and device is not None:
+            if cleanup_required and device is not None:
                 try:
                     device.stop()
                     cleanup["lab_stopped"] = True
@@ -440,22 +617,40 @@ def main():
                                 result["last_state_is_snapshot_not_budget_refund_authority"] = True
                         except (TrialBlocked, OSError, ValueError, TypeError, KeyError):
                             result["last_snapshot_status"] = "UNAVAILABLE_OR_UNSAFE_NO_BUDGET_REFUND"
-                        # A partial run remains inspectable. Never hide writes just
-                        # because a later ADB step failed, and never refund unknown budget.
-                        try:
-                            if not (args.out / "preflight.jsonl").exists():
-                                partial, _ = sanitize_preflight(device.private_rows("cloud-preflight.jsonl"), args.run_id)
-                                write_rows(args.out / "preflight.jsonl", partial)
-                            if not (args.out / "transport.jsonl").exists():
-                                write_rows(args.out / "transport.jsonl", device.private_rows("cloud-transport.jsonl"))
-                        except (TrialBlocked, OSError, ValueError, TypeError, KeyError):
-                            result["partial_receipts"] = "INCOMPLETE_FULL_REMAINING_BUDGET_CONSUMED_FOR_ANY_FUTURE_GATE"
-                    device.call("shell", "run-as", PACKAGE, "rm", "-f", "files/cloud-config.private.json")
+                    device.prepare_call("PRIVATE_REMOVE", "shell", "run-as", PACKAGE,
+                                        "rm", "-f", "files/cloud-config.private.json")
+                    device.prepare_call("PRIVATE_REMOVE_VERIFY", "shell", "run-as", PACKAGE,
+                                        "test", "!", "-e", "files/cloud-config.private.json")
                     cleanup["private_config_removed"] = True
                 except (TrialBlocked, OSError, ValueError, TypeError, KeyError):
                     result["status"] = "BLOCKED"
                     result["cleanup_error"] = "CLOUD_PRIVATE_CLEANUP_NOT_ATTESTED"
-            if device is not None and radios is not None and (not installed or cleanup["lab_stopped"]):
+            # Always keep a receipt, including an install/stat failure before provisioned=true.
+            # Missing/unreadable counters remain unknown. No local observation authorizes a refund.
+            budget_recovery = unknown_budget_receipt(args.run_id, args.source_commit, remaining)
+            if cleanup_required and device is not None and cleanup["lab_stopped"] and remaining is not None:
+                try:
+                    observed = device.recover_budget(work,
+                        read_private_config(args.private_config, args.run_id, remaining), args.run_id, remaining)
+                    budget_recovery.update(observed)
+                    budget_recovery["observed_utc"] = now()
+                except (TrialBlocked, OSError, ValueError, TypeError, KeyError):
+                    budget_recovery["recovery_observation"] = "LEDGER_UNAVAILABLE_OR_UNBOUND_NO_REFUND"
+                # Recovery of partial receipts is independent of the provision success flag.
+                try:
+                    if not (args.out / "preflight.jsonl").exists():
+                        partial, _ = sanitize_preflight(device.private_rows("cloud-preflight.jsonl"), args.run_id)
+                        write_rows(args.out / "preflight.jsonl", partial)
+                    if not (args.out / "transport.jsonl").exists():
+                        rows = device.private_rows("cloud-transport.jsonl")
+                        for row in rows:
+                            validate_public_value(row)
+                        write_rows(args.out / "transport.jsonl", rows)
+                except (TrialBlocked, OSError, ValueError, TypeError, KeyError):
+                    budget_recovery["partial_transport_receipts"] = "UNAVAILABLE_OR_INCOMPLETE"
+            public_write(args.out / "budget-recovery.json", budget_recovery)
+            if device is not None and radios is not None and (not cleanup_required or
+                    (cleanup["lab_stopped"] and cleanup["private_config_removed"])):
                 try:
                     device.call("shell", "cmd", "connectivity", "airplane-mode", "enable" if radios["airplane_mode_on"] else "disable")
                     device.call("shell", "svc", "wifi", "enable" if radios["wifi_on"] else "disable")
@@ -467,13 +662,14 @@ def main():
                 except (TrialBlocked, OSError, ValueError, TypeError, KeyError):
                     result["status"] = "BLOCKED"
                     result["radio_cleanup_error"] = "INITIAL_RADIOS_NOT_RESTORED"
-            elif device is not None and installed and not cleanup["lab_stopped"]:
+            elif device is not None and cleanup_required and (
+                    not cleanup["lab_stopped"] or not cleanup["private_config_removed"]):
                 try:
                     for parts in (("cmd", "connectivity", "airplane-mode", "enable"), ("svc", "wifi", "disable"), ("svc", "data", "disable")):
                         device.call("shell", *parts, allow_failure=True)
                 except (TrialBlocked, OSError, ValueError, TypeError, KeyError):
                     result["offline_cleanup_error"] = "OFFLINE_FALLBACK_NOT_ATTESTED"
-                result["radio_cleanup_error"] = "LEFT_OFFLINE_BECAUSE_PROCESS_STOP_UNATTESTED"
+                result["radio_cleanup_error"] = "LEFT_OFFLINE_BECAUSE_STOP_OR_PRIVATE_CLEANUP_UNATTESTED"
             try:
                 for name in ("states.jsonl", "lifecycle.jsonl", "network.jsonl"):
                     path = work / name
