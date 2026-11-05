@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "status": "BLOCKED_BEFORE_CLOUD_SCENARIOS",
+  "checked_at_utc": "2026-11-05T08:27:37.283Z",
+  "repository": "Arduino89/convoy-mesh",
+  "branch": "experiment/telemetry-runtime-lab",
+  "pr": 5,
+  "draft": true,
+  "workflow_commit": "655e545709f2a40c37fb663bb3b3a6c03a8ced66",
+  "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+  "run_id": 41993361681,
+  "run_number": 8,
+  "run_attempt": 1,
+  "job_id": 127130616352,
+  "job_conclusion": "failure",
+  "synthetic_cloud_run_id": "synthetic-cloud-20261105-r8",
+  "runtime_control": "PASS_NATIVE_RUNTIME_CONTROL",
+  "host_tests": {
+    "passed": 133,
+    "failed": 0
+  },
+  "local_direct_trial": "PASSED",
+  "cloud": {
+    "status": "BLOCKED",
+    "blocked_reason": "COMMAND_NONZERO_EXIT",
+    "provisioned": false,
+    "precise_failing_command": "NOT_ATTESTED",
+    "candidate_commands": [
+      "adb install",
+      "run-as mkdir",
+      "run-as stat"
+    ],
+    "receipt_limit": "installed flag is set before adb install and does not attest its success; no cloud preflight/transport/state receipts exported."
+  },
+  "budget": {
+    "global_ceiling": 500,
+    "prior_reserved": 0,
+    "attested_reserved_rows": null,
+    "conservative_consumed_for_future_gates": 500,
+    "remaining_authorized_rows": 0,
+    "automatic_refund": false,
+    "actual_transmitted_rows": "NOT_ATTESTED"
+  },
+  "diagnostic_readback": {
+    "project_id": 330212,
+    "queries": {
+      "rows": "SELECT uuid, event, properties, timestamp, distinct_id, created_at, person_mode, person_id FROM events WHERE timestamp >= toDateTime('2026-11-05 08:18:12', 'UTC') AND timestamp <= toDateTime('2026-11-05 08:28:14', 'UTC') AND (properties.run_id = 'synthetic-cloud-20261105-r8' OR distinct_id = 'synthetic-cloud-20261105-r8') ORDER BY timestamp, uuid LIMIT 500",
+      "count": "SELECT count() AS raw_count FROM events WHERE timestamp >= toDateTime('2026-11-05 08:18:12', 'UTC') AND timestamp <= toDateTime('2026-11-05 08:28:14', 'UTC') AND (properties.run_id = 'synthetic-cloud-20261105-r8' OR distinct_id = 'synthetic-cloud-20261105-r8')"
+    },
+    "raw_rows": 0,
+    "raw_count": 0,
+    "query_responses_received_before_utc": "2026-11-05T08:27:14.935Z",
+    "scope": "IDENTITY_ONLY_FINITE_WINDOW_NO_CLIENT_UUIDS",
+    "not_delivery_pass": true,
+    "not_budget_refund_authority": true
+  },
+  "cleanup": {
+    "lab_stopped": true,
+    "private_config_removed": true,
+    "initial_radio_settings_restored": true,
+    "workflow_private_input_cleanup_step": "success"
+  },
+  "next_step": "Diagnose install/provision with separate constant public stage codes and a dummy-only offline provisioning probe; no identical cloud rerun. Any future cloud gate needs new exact-source evidence and explicit budget decision.",
+  "limits": [
+    "No cloud delivery/revocation/deduplication/privacy result was produced by this attempt.",
+    "No real users, Convoy integration, physical phones, GPS/Bluetooth or battery tests.",
+    "No actual deletion requested or executed.",
+    "Zero diagnostic rows in a finite window is not proof of universal absence or physical erasure."
+  ],
+  "workflow_restore": "Restore the exact original workflow in this evidence commit with skip-ci; no rerun."
+}

@@ -1,6 +1,33 @@
 # Convoy Mesh — valutazione telemetria minima
 
-Data aggiornamento: 3 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
+Data aggiornamento: 5 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
+
+## Esito della prova singola del 5 novembre
+
+**Android e regressioni locali superati; cloud bloccato durante installazione/configurazione privata.** [Run41993361681/job127130616352](https://github.com/Arduino89/convoy-mesh/actions/runs/41993361681/job/127130616352), numero8/tentativo1, conclusione FAILURE. Wrapper `655e545709f2a40c37fb663bb3b3a6c03a8ced66`; sorgente eseguibile estratto `2d76100fda1df0637e953f4ad90f26073028880c`. Nessun codice Android o Convoy modificato. [Riepilogo e limiti](telemetry-evidence/2026-11-05/run-41993361681/summary.json), ricevute sintetiche complete e manifest nella stessa cartella.
+
+| Verifica effettiva | Risultato |
+|---|---|
+| Controllo Android indipendente | Installazione, apertura, arresto e riapertura PASS sullo stesso avvio; due PID diversi, contatore persistito |
+| Test host | 133/133 PASS nel nuovo run |
+| Consegna locale dopo riavvio | 100/100, nessun mancante o duplicato |
+| Revoca completata e tre interruzioni dopo salvataggio | 80 vecchi eventi complessivi, zero riapparsi; nuovi consegnati |
+| Rifiuto | 30 tentati durante rifiuto, zero ricevuti; nuovi eventi successivi funzionanti |
+| Ritentativo locale | 20 righe per10eventi, UUID e contenuto invariati; non dimostra deduplicazione cloud |
+| Saturazione locale | 32/45 ricevuti;13più vecchi persi e contatore13visibile |
+| Contenuto locale e sentinelle |16richieste,232righe,222ID/UUID,98000byte;394stati, traccia e impostazione sintetiche integre |
+| Cloud | BLOCKED, `COMMAND_NONZERO_EXIT`; nessuna ricevuta prewrite/trasporto/stato, scenari non raggiunti |
+| Lettura diagnostica PostHog | Zero righe osservate con predicato run_id/distinct_id e conteggio raw uguale; finestra finita, nessuna UUID attestate dal client |
+
+Il codice imposta `installed=true` **prima** di chiamare l’installazione, per gestire anche un’installazione parziale: quel flag non dimostra che sia riuscita. `provisioned=false` e il codice d’errore restringono l’arresto a `adb install`, `run-as mkdir` oppure `run-as stat`; le evidenze non distinguono quale. Un errore nella scrittura privata avrebbe un altro codice. La causa precisa resta da accertare: non è una nuova prova fallita di revoca, né prova di un token errato. Cleanup confermato: LAB fermato, configurazione privata rimossa e impostazioni radio iniziali ripristinate; anche lo step finale di rimozione degli input privati è passato.
+
+La [revisione indipendente](telemetry-evidence/2026-11-05/run-41993361681/independent-runtime-review.json) ha verificato111hash e ricalcolato payload/stati, firme dei riferimenti e5hashsorgente; [comando riproducibile e input](telemetry-evidence/2026-11-05/run-41993361681/README.md). È revisione delle ricevute, non una seconda prova Android o approvazione d’adozione.
+
+Le prenotazioni native non sono attestate. Si applica la regola conservativa già revisionata: **500righe consumate per i gate futuri, residuo autorizzato0**, senza rimborso o reset automatico. Questo non significa che500eventi siano stati inviati: il numero realmente trasmesso resta non attestato. La lettura diagnostica zero non rifinanzia il budget e non produce PASS di consegna, revoca, privacy o deduplicazione cloud. Nessuna cancellazione richiesta o eseguita.
+
+APK LAB effettivamente compilata: package `com.cama.telemetry.direct_lab`, versione1.0/code1,45459byte, SHA256`98e024006d53afdab83c1dced6e2db1cc11444dbd4412d2c1cfcdf7d2fb163fd`, certificato SHA256`735396d25ff5ccf81049ae21e8cc5361d58388d81e6bbbd3d48b060022f3eced`, minSDK24/target36; permessi INTERNET e ACCESS_NETWORK_STATE. APK non distribuita come Convoy. Il diverso hash rispetto alla build precedente non è presentato come riproducibilità binaria: il runner genera una firma debug nuova, con sorgente fissato.
+
+Primo passo successivo: distinguere gli errori installazione/mkdir/scrittura/stat con codici pubblici costanti e una prova locale offline con credenziale fittizia, senza registrare argomenti o stderr privati. Nessun ritentativo identico del cloud. Un eventuale nuovo invio richiede nuova evidenza sull’esatto sorgente, revisione e decisione esplicita sul budget. Il workflow originale viene ripristinato con skip-ci in questo commit di evidenze; PR5resta in bozza. Consumi su telefoni, radio reale, GPS/Bluetooth, privacy dell’intera infrastruttura e cancellazione fisica restano non verificati. Le sezioni seguenti conservano i checkpoint storici e non sostituiscono questo stato corrente.
 
 ## Avvio cloud singolo sul ramo LAB — 5 novembre
 

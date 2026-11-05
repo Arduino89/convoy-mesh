@@ -1,5 +1,5 @@
 2ba2d52e61013a22d1f272689a4329780f3dd03063b21d06a1d0e329830aface  docs/telemetry-evidence/2026-11-03/cloud-http-retry-source-review.json
-686a67f6bdd66b6b7f680865d4bf209b5c695b6668538e528747008372f12348  docs/telemetry-evidence/2026-11-03/cloud-preflight.json
+7d0d808cc5bdc71b948c6cf2c54fb8784ccb97fdf7dfa2dd7d7d5b6ed46b2d06  docs/telemetry-evidence/2026-11-03/cloud-preflight.json
 81ebad05692c4b00fd1f5226255c0dbb6fd9abe61cc74a8a69dbe0351977cf18  docs/telemetry-evidence/2026-11-03/deletion-access-probe.json
 ecff6aa9b3d2c15de218f916a4d9ab12cb8c0283799a4526ae27e7afe569c469  docs/telemetry-evidence/2026-11-03/deletion-path-review.json
 c1d6ffd7456f3c8a52c94c1dd9078e4e14b32fd0a719b4070e4186d340991a33  docs/telemetry-evidence/2026-11-03/direct-review-41600690330/INDEPENDENT_REVIEW.md

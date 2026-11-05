@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "READY_FOR_SINGLE_AUTHORIZED_BRANCH_PUSH_NOT_YET_EXECUTED",
+  "status": "BLOCKED_AFTER_SINGLE_ATTEMPT_NO_AUTOMATIC_BUDGET_REFUND",
   "checked_at_utc": "2026-11-03T07:47:06.944Z",
   "project_id": 330212,
   "api_host": "https://eu.i.posthog.com",
@@ -78,7 +78,10 @@
     "maximum_transmitted_rows_including_retries": 500,
     "cloud_rows_sent_this_turn": 0
   },
-  "blockers": [],
+  "blockers": [
+    "Cloud COMMAND_NONZERO_EXIT before scenarios; exact install/mkdir/stat failure not attested.",
+    "Native cloud reservation receipts missing; conservative500consumed,0remaining for future gates."
+  ],
   "sources": [
     "PostHog project-get id330212",
     "PostHog billing-overview-get",
@@ -259,6 +262,8 @@
       "receipt_ref": "../2026-11-05/cloud-launch-review.json",
       "workflow_sha256": "dfb77a333f0bc79f33acf9481cf26d6e49830c3bc2443b416ff47f11d9d19709",
       "gate_sha256": "35b9191929ca83a5e796d294657cfdd3a4729c0b8ebbf4fd44a18912b016a54b"
-    }
+    },
+    "result_ref": "../2026-11-05/run-41993361681/summary.json",
+    "workflow_restore": "Exact original restored in this evidence commit, skip-ci."
   }
 }

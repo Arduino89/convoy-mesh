@@ -23,7 +23,7 @@ permissions:
   contents: read
 jobs:
   runtime-and-telemetry:
-    if: github.repository == 'Arduino89/convoy-mesh' && github.event.repository.private == false && (github.event_name != 'push' || github.event.head_commit.message != 'Execute authorized synthetic cloud laboratory once (budget 500)' || (github.event_name == 'push' && github.ref == 'refs/heads/experiment/telemetry-runtime-lab' && github.run_number == '8' && github.run_attempt == '1' && github.event.head_commit.message == 'Execute authorized synthetic cloud laboratory once (budget 500)'))
+    if: github.repository == 'Arduino89/convoy-mesh' && github.event.repository.private == false
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -33,14 +33,12 @@ jobs:
       DART_SUPPRESS_ANALYTICS: "true"
       DASH__SUPPRESS_ANALYTICS: "true"
       LAB_RUN_ID: synthetic-direct-${{ github.run_id }}
-      # Single authorized branch-local launch; run/attempt/message mismatch cannot ingest.
-      CONVOY_CLOUD_ENABLED: ${{ (github.event_name == 'workflow_dispatch' && inputs.cloud_gate_json != '' && inputs.cloud_gate_json != '{}') || (github.event_name == 'push' && github.ref == 'refs/heads/experiment/telemetry-runtime-lab' && github.run_number == '8' && github.run_attempt == '1' && github.event.head_commit.message == 'Execute authorized synthetic cloud laboratory once (budget 500)') }}
-      CONVOY_CLOUD_ONCE_GATE: '{"schema_version":1,"status":"PASS","project_id":330212,"api_host":"https://eu.i.posthog.com","source_commit":"2d76100fda1df0637e953f4ad90f26073028880c","run_id":"synthetic-cloud-20261105-r8","execution_id":"Isolated Android telemetry laboratory:8","run_attempt":1,"quota_rows_available":999838,"total_ceiling":500,"remaining_budget":500,"expires_utc":"2026-11-05T12:12:35.059Z","privacy":{"status":"VERIFIED","checked_at_utc":"2026-11-05T08:00:43.171Z","evidence_ref":"Existing cloud-preflight.json followup_2026_11_05: live project-get, EU endpoint, anonymize_ips true/replay false plus unchanged prewrite allowlist.","anonymize_ips":true,"session_recording_opt_in":false},"retention":{"status":"VERIFIED","checked_at_utc":"2026-11-05T08:00:43.171Z","evidence_ref":"Live billing plan entitlement: product_analytics_data_retention one-year query window; not a physical-erasure guarantee."},"deletion":{"status":"VERIFIED","checked_at_utc":"2026-11-05T08:12:35.059Z","evidence_ref":"Review of ticket80503 response read04Nov: vendor offers free selective personless support-run deletion by run_id/UUID; sends filter/count before approval. Actual deletion requires Cama exact-set approval; no deletion requested.","mode":"SUPPORTED_MANUAL_ASSISTED","performed":false},"quota":{"status":"VERIFIED","checked_at_utc":"2026-11-05T08:00:43.171Z","evidence_ref":"Live billing-overview-get Free/no active subscription, 162/1000000 used; 999838 available. Standard public ubuntu-24.04 runner; no artifacts/cache.","free_plan":true},"local_regression":{"status":"VERIFIED","checked_at_utc":"2026-11-05T08:12:35.059Z","evidence_ref":"Fresh GitHub recheck of completed successful run41600690330/job125798442094 attempt1 on exact source2d76100; original execution03Nov, not a new Android run. Independent runtime review preserved.","source_commit":"2d76100fda1df0637e953f4ad90f26073028880c","original_execution_date":"2026-11-03"}}'
+      CONVOY_CLOUD_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.cloud_gate_json != '' && inputs.cloud_gate_json != '{}' }}
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-          ref: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/experiment/telemetry-runtime-lab' && github.run_number == '8' && github.run_attempt == '1' && github.event.head_commit.message == 'Execute authorized synthetic cloud laboratory once (budget 500)') && '2d76100fda1df0637e953f4ad90f26073028880c') || inputs.source_commit || github.sha }}
+          ref: ${{ inputs.source_commit || github.sha }}
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -50,7 +48,7 @@ jobs:
       - name: Prepare private configuration only for an explicitly gated cloud run
         if: env.CONVOY_CLOUD_ENABLED == 'true'
         env:
-          CONVOY_CLOUD_GATE: ${{ inputs.cloud_gate_json || env.CONVOY_CLOUD_ONCE_GATE }}
+          CONVOY_CLOUD_GATE: ${{ inputs.cloud_gate_json }}
           CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
         run: python3 tools/telemetry_spike/prepare_ci_cloud.py
       - name: Require accelerated host
@@ -82,4 +80,3 @@ jobs:
       - name: Emit reviewed evidence without artifact or cache storage
         if: always()
         run: python3 tools/telemetry_spike/emit_ci_evidence.py "$RUNNER_TEMP"
-
