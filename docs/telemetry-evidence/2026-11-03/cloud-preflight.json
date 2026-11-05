@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "BLOCKED_EXECUTION_ENVIRONMENT_UNAVAILABLE",
+  "status": "READY_FOR_SINGLE_AUTHORIZED_BRANCH_PUSH_NOT_YET_EXECUTED",
   "checked_at_utc": "2026-11-03T07:47:06.944Z",
   "project_id": 330212,
   "api_host": "https://eu.i.posthog.com",
@@ -78,11 +78,7 @@
     "maximum_transmitted_rows_including_retries": 500,
     "cloud_rows_sent_this_turn": 0
   },
-  "blockers": [
-    "GitHub default branch is main and the LAB workflow is absent there; the UI offers no Run workflow. Official workflow_dispatch requires the file on the default branch.",
-    "Browser disconnected and the managed environment became unavailable before a fresh gate or cloud run was submitted. No identical retries or alternate cloud sends.",
-    "An explicit one-shot push wrapper on the existing LAB branch was reviewed conceptually as a possible minimum reuse path; no YAML change was implemented, tested, published or activated."
-  ],
+  "blockers": [],
   "sources": [
     "PostHog project-get id330212",
     "PostHog billing-overview-get",
@@ -197,5 +193,72 @@
       "https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow",
       "Previously read authenticated ticket80503 reply"
     ]
+  },
+  "single_launch_2026_11_05": {
+    "mode": "EXPLICIT_SINGLE_USE_EXISTING_BRANCH_PUSH",
+    "workflow_change_only": true,
+    "native_and_harness_source_unchanged": "2d76100fda1df0637e953f4ad90f26073028880c",
+    "gate": {
+      "schema_version": 1,
+      "status": "PASS",
+      "project_id": 330212,
+      "api_host": "https://eu.i.posthog.com",
+      "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+      "run_id": "synthetic-cloud-20261105-r8",
+      "execution_id": "Isolated Android telemetry laboratory:8",
+      "run_attempt": 1,
+      "quota_rows_available": 999838,
+      "total_ceiling": 500,
+      "remaining_budget": 500,
+      "expires_utc": "2026-11-05T12:12:35.059Z",
+      "privacy": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:00:43.171Z",
+        "evidence_ref": "Existing cloud-preflight.json followup_2026_11_05: live project-get, EU endpoint, anonymize_ips true/replay false plus unchanged prewrite allowlist.",
+        "anonymize_ips": true,
+        "session_recording_opt_in": false
+      },
+      "retention": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:00:43.171Z",
+        "evidence_ref": "Live billing plan entitlement: product_analytics_data_retention one-year query window; not a physical-erasure guarantee."
+      },
+      "deletion": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:12:35.059Z",
+        "evidence_ref": "Review of ticket80503 response read04Nov: vendor offers free selective personless support-run deletion by run_id/UUID; sends filter/count before approval. Actual deletion requires Cama exact-set approval; no deletion requested.",
+        "mode": "SUPPORTED_MANUAL_ASSISTED",
+        "performed": false
+      },
+      "quota": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:00:43.171Z",
+        "evidence_ref": "Live billing-overview-get Free/no active subscription, 162/1000000 used; 999838 available. Standard public ubuntu-24.04 runner; no artifacts/cache.",
+        "free_plan": true
+      },
+      "local_regression": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:12:35.059Z",
+        "evidence_ref": "Fresh GitHub recheck of completed successful run41600690330/job125798442094 attempt1 on exact source2d76100; original execution03Nov, not a new Android run. Independent runtime review preserved.",
+        "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+        "original_execution_date": "2026-11-03"
+      }
+    },
+    "expected_run_number": 8,
+    "run_attempt": 1,
+    "commit_message": "Execute authorized synthetic cloud laboratory once (budget 500)",
+    "cloud_rows_reserved_before_launch": 0,
+    "source_checkout_pinned": true,
+    "restore_original_workflow_after_run": true,
+    "deletion_requires_separate_exact_set_approval": true,
+    "reuse_first_level": 5,
+    "reason": "Compose existing push workflow and pinned LAB; no default-branch changes or new sending component.",
+    "independent_review": {
+      "status": "APPROVED_FOR_SINGLE_LAUNCH",
+      "checked_at_utc": "2026-11-05T08:15:58.240576+00:00",
+      "receipt_ref": "../2026-11-05/cloud-launch-review.json",
+      "workflow_sha256": "dfb77a333f0bc79f33acf9481cf26d6e49830c3bc2443b416ff47f11d9d19709",
+      "gate_sha256": "35b9191929ca83a5e796d294657cfdd3a4729c0b8ebbf4fd44a18912b016a54b"
+    }
   }
 }

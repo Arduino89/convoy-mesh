@@ -2,6 +2,10 @@
 
 Data aggiornamento: 3 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
 
+## Avvio cloud singolo sul ramo LAB — 5 novembre
+
+Ambiente ripristinato. Preparata per review una configurazione del trigger push esistente, vincolata a ramo LAB, messaggio completo esplicito, numero8 e tentativo1; checkout eseguibile fissato a `2d76100fda1df0637e953f4ad90f26073028880c`. Cambia solo l’orchestrazione, senza modificare codice Android, harness o main. Il gate conserva le cinque verifiche, scadenza quattro ore, progettoEU330212 e tetto globale500righe comprese tutte le ripetizioni; precedenti prenotazioni0. Segreto nel solo step privato, nessun rilancio automatico. Ripristinare il workflow originale dopo il run. La prova rimane in attesa di esecuzione Android e lettura raw tramite collegamento: HTTP200 non attesta ricezione. Procedura assistita di cancellazione confermata, ma nessuna cancellazione senza approvazione di Cama sull’insieme esatto.
+
 ## Ripartenza del 5 novembre — segreto presente, ambiente indisponibile
 
 **Segreto verificato nell’elenco GitHub, senza leggerne il valore:** `CONVOY_LAB_POSTHOG_TOKEN`, aggiornamento mostrato05Nov08:49GMT+1. PostHog330212: hostEU, IP anonimizzati e replay disattivato; piano gratuito senza abbonamento attivo,162/1000000eventi usati,999838disponibili. La validità del valore inserito sarà verificata dal job, non dalla presenza del nome. Nessun nuovo test, workflow o evento cloud eseguito.
