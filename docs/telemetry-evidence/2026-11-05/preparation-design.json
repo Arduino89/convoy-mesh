@@ -102,8 +102,10 @@
   "independent_review": "preparation-offline-source-review.json",
   "wrapper_failure_ref": "run-42064249734/summary.json",
   "next_attempt_reason": "Supported shell-T/shell_v2 replaces causally invalid prequoted exec-in; file confirmation requires mode and exact readback.",
-  "next_run_number": 11,
+  "next_run_number": 12,
   "current_reproduced_failure_ref": "run-42065607773/summary.json",
   "causal_correction_ref": "provision-transport-cause.json",
-  "current_independent_review": "preparation-transport-fix-review.json"
+  "current_independent_review": "preparation-offline-observation-review.json",
+  "last_network_failure_ref": "run-42068243243/summary.json",
+  "bounded_stop": "One final instrumented attempt12. If offline barrier fails, no further Android/cloud attempts."
 }

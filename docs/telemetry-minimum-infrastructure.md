@@ -2,6 +2,12 @@
 
 Data aggiornamento: 5 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
 
+## Blocco della barriera offline — prova11 e ultimo controllo circoscritto
+
+[Run42068243243/job127388407533](https://github.com/Arduino89/convoy-mesh/actions/runs/42068243243/job/127388407533), sorgente015d943f, numero11/tentativo1: controlloAndroidPASS; ADB37.0.1/build15733141. La barriera offline non è attestata entro45s e ferma il flusso prima dell’installazione: **correzione del trasferimento NOT_RUN**. La ricevuta sopravvive, ripristino radioPASS, contatori budgetnull/500conteggiati0autorizzati. Le72letture rete conservano codici d’uscita ma non i valori radio/classificazione default: la causa della mancata barriera non è localizzabile. [Ricevuta e revisione](telemetry-evidence/2026-11-05/run-42068243243/summary.json).
+
+Un solo ultimo avvio12/tentativo1 è revisionato per colmare questa lacuna: ultima osservazione tipizzata dei tre booleani radio, statoNONE/ACTIVE/UNKNOWN/AMBIGUOUS, conteggioetichette/campioni. Nessun indirizzo, identificativo o dump. Condizione e timeout invariati;176host controlliPASS,13probe rieseguiti indipendentemente. **Se la barriera fallisce ancora, si fermano ulteriori prove Android/cloud.** [Review del delta](telemetry-evidence/2026-11-05/preparation-offline-observation-review.json). Nessun nuovo budget o via libera alla trasmissione.
+
 ## Difetto di trasferimento riprodotto su Android — prova 10
 
 **Comando responsabile identificato:** [run42065607773/job127378742920](https://github.com/Arduino89/convoy-mesh/actions/runs/42065607773/job/127378742920), sorgenteb282c3f8, numero10/tentativo1. Controllo Android PASS, installazione confermata e directory privata creata. Il trasferimento exec-in risponde0 senza output; il successivo `stat` risponde1, categoriaFILE_NOT_FOUND. Il file non è confermato né arrivano a esecuzione controllo permessi/rilettura. Stop, rimozione/assenza del file e ripristino radio PASS. [Ricevute e revisione indipendente](telemetry-evidence/2026-11-05/run-42065607773/summary.json).

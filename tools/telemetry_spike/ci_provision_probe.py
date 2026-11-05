@@ -27,7 +27,7 @@ PREPARATION_FIELDS = {"schema_version", "observed_utc", "phase", "returncode", "
                       "stdout_present", "stderr_present"}
 
 
-def no_active_default_network(dump):
+def default_network_observation(dump):
     """AOSP ConnectivityService prints one current value; retain no raw dump.
 
     Source: platform/packages/modules/Connectivity, 7c17c283ea,
@@ -35,7 +35,19 @@ def no_active_default_network(dump):
     Missing/changed/duplicated formats fail closed rather than implying offline.
     """
     labels = re.findall(r"^[ \t]*Active default network:[ \t]*(.*)$", dump, re.M)
-    return len(labels) == 1 and labels[0].strip() == "none"
+    state = "UNKNOWN"
+    if len(labels) > 1:
+        state = "AMBIGUOUS"
+    elif len(labels) == 1:
+        if labels[0].strip() == "none":
+            state = "NONE"
+        elif re.fullmatch(r"[0-9]+", labels[0].strip()):
+            state = "ACTIVE"
+    return {"state": state, "label_count": len(labels)}
+
+
+def no_active_default_network(dump):
+    return default_network_observation(dump)["state"] == "NONE"
 
 
 def adb_version_identity(output):
@@ -90,7 +102,16 @@ def block_network(device, records):
     while time.monotonic() < deadline:
         radios = radio_snapshot(device, records)
         dump = checked_call(device, records, "CONNECTIVITY_OFFLINE_READ", "shell", "dumpsys", "connectivity").stdout
-        if radios == {"airplane_mode_on": True, "wifi_on": False, "mobile_data": False} and no_active_default_network(dump):
+        network = default_network_observation(dump)
+        device.offline_sample_count = getattr(device, "offline_sample_count", 0) + 1
+        device.last_offline_observation = {
+            "sample_index": device.offline_sample_count,
+            "radio_settings": {key: radios[key] for key in RADIO_KEYS},
+            "radio_flags_match_requested": radios == {"airplane_mode_on": True, "wifi_on": False, "mobile_data": False},
+            "default_network_state": network["state"], "default_network_label_count": network["label_count"],
+            "raw_connectivity_dump_published": False,
+        }
+        if device.last_offline_observation["radio_flags_match_requested"] and network["state"] == "NONE":
             return {"radio_settings": radios, "active_default_network_absent": True,
                     "raw_connectivity_dump_published": False}
         time.sleep(0.5)
@@ -180,6 +201,7 @@ def main():
               "diagnostic_source_sha256": {name: sha256(Path(__file__).resolve().parent / name)
                                            for name in ("ci_provision_probe.py", "ci_cloud_trial.py")},
               "diagnostic_commands": [], "preparation": [],
+              "offline_sample_count": 0, "last_offline_observation": None,
               "limits": ["ONE_PREPARATION_ATTEMPT_ONLY", "NO_APPLICATION_RUNTIME_OR_CLOUD_PROOF",
                          "REBUILT_PINNED_SOURCE_NOT_HISTORICAL_APK_BYTES"]}
     device, radios = None, None
@@ -198,6 +220,7 @@ def main():
         runtime = json.loads(args.runtime_gate.read_text())
         device = CloudDevice(args.sdk, args.serial, env, runtime)
         device.preparation_path = args.out / "preparation.jsonl"
+        device.offline_sample_count, device.last_offline_observation = 0, None
         result["adb_client"] = adb_version_identity(
             checked_call(device, records, "ADB_VERSION", "version").stdout)
         device.check_gate()
@@ -266,6 +289,8 @@ def main():
                 except (TrialBlocked, OSError, ValueError, TypeError):
                     result["status"] = "BLOCKED"
                     result["radio_cleanup_error"] = "PROBE_RADIO_CLEANUP_UNATTESTED"
+            result["offline_sample_count"] = device.offline_sample_count
+            result["last_offline_observation"] = device.last_offline_observation
             for row in getattr(device, "preparation_records", []):
                 if not isinstance(row, dict) or set(row) != PREPARATION_FIELDS:
                     result["status"] = "BLOCKED"

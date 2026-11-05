@@ -23,7 +23,7 @@
   },
   "emitter_counterexample_sha256": "3b7084b6a7923f62c261f815f39c8a1c24e571ec8989d34d1d6f1d5bdeb8cead",
   "full_suite": {
-    "tests": 174,
+    "tests": 176,
     "failures": 0,
     "errors": 0,
     "scope": "HOST_ONLY_NO_ANDROID_NO_CLOUD",
@@ -48,5 +48,10 @@
     "red_log_sha256": "1a0fdb459461fb6c8e104dc8ee92260ad045c01427817ddc0bc0adda9a184760",
     "green": "write command completed is separate; file confirmed requires600and exact readback",
     "green_log_sha256": "2e3a670f20276fa4587a2b3a4f82e04b911b9c45473acefc65a08cee5243c4cb"
+  },
+  "offline_observation_regressions": {
+    "tests": 2,
+    "result": "PASS",
+    "unchanged_predicate_and_45_seconds": true
   }
 }

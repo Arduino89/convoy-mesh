@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import ci_provision_probe as probe
+BLOCK_NETWORK = probe.block_network
 
 
 class ProvisionShellEntry(unittest.TestCase):
@@ -72,7 +73,7 @@ class ProvisionShellEntry(unittest.TestCase):
     def test_diagnostic_workflow_selects_single_bash_entry_and_only_next_attempt(self):
         workflow = (self.repo / ".github/workflows/telemetry-runtime-control.yml").read_text()
         diagnostic = workflow.split("  diagnostic-provision:\n", 1)[1]
-        self.assertIn("github.run_number == 11 && github.run_attempt == 1", diagnostic)
+        self.assertIn("github.run_number == 12 && github.run_attempt == 1", diagnostic)
         self.assertIn("github.event.head_commit.message == 'Diagnose isolated LAB provisioning offline (no cloud)'", diagnostic)
         self.assertIn("script: bash tools/telemetry_spike/run_ci_provision_probe.sh", diagnostic)
         self.assertNotIn("script: |", diagnostic)
@@ -146,6 +147,50 @@ class ProvisionProbeGuards(unittest.TestCase):
                       "Active default network: none\nActive default network: unknown\n"):
             with self.subTest(dump=value):
                 self.assertFalse(probe.no_active_default_network(value))
+
+    def test_default_network_observation_classifies_without_exporting_raw_values(self):
+        canary = "person@example.invalid phc_HostOnlyCanaryNeverPublish123 192.0.2.99"
+        samples = [("Active default network: none\n", "NONE", 1),
+                   ("Active default network: 123456789\n" + canary, "ACTIVE", 1),
+                   ("Unrecognized format: " + canary, "UNKNOWN", 0),
+                   ("Active default network: " + canary, "UNKNOWN", 1),
+                   ("Active default network: none\nActive default network: 123456789\n" + canary, "AMBIGUOUS", 2)]
+        for raw, state, count in samples:
+            with self.subTest(state=state, count=count):
+                actual = probe.default_network_observation(raw)
+                self.assertEqual(actual, {"state": state, "label_count": count})
+                serialized = json.dumps(actual)
+                self.assertNotIn(canary, serialized)
+                self.assertNotIn("123456789", serialized)
+
+    def test_timeout_retains_radio_booleans_and_sanitized_network_state_in_failure_receipt(self):
+        original_commands = self.commands.side_effect
+        canary = "person@example.invalid phc_HostOnlyCanaryNeverPublish123 192.0.2.99"
+        def commands(device, records, stage, *args, **kwargs):
+            if stage == "CONNECTIVITY_OFFLINE_READ":
+                return subprocess.CompletedProcess([], 0, "Active default network: 123456789\n" + canary, "")
+            return original_commands(device, records, stage, *args, **kwargs)
+        self.commands.side_effect = commands
+        self.offline.side_effect = BLOCK_NETWORK
+        # One actual block_network sample, then its unchanged 45s deadline expires.
+        with patch.object(probe.time, "monotonic", side_effect=[0, 1, 46]), patch.object(probe.time, "sleep"):
+            with self.assertRaises(SystemExit):
+                probe.main()
+        receipt = self.receipt()
+        self.assertEqual(receipt["blocked_reason"], "PROBE_OFFLINE_BARRIER_UNATTESTED")
+        self.assertEqual(receipt["offline_sample_count"], 1)
+        sample = receipt["last_offline_observation"]
+        self.assertEqual(sample["radio_settings"], self.initial)
+        self.assertTrue(all(type(value) is bool for value in sample["radio_settings"].values()))
+        self.assertIs(sample["radio_flags_match_requested"], False)
+        self.assertEqual(sample["default_network_state"], "ACTIVE")
+        self.assertEqual(sample["default_network_label_count"], 1)
+        self.assertFalse(sample["raw_connectivity_dump_published"])
+        self.device.install.assert_not_called()
+        self.device.provision.assert_not_called()
+        self.assertEqual(receipt["preparation"], [])
+        self.assertNotIn(canary, json.dumps(receipt) + self.output.getvalue())
+        self.assertNotIn("123456789", json.dumps(receipt))
 
     def test_adb_version_exports_only_numeric_identity_and_rejects_ambiguous_output(self):
         raw = "Android Debug Bridge version 1.0.41\nVersion 35.0.2-12147458\nInstalled as /private/path/adb\n"
