@@ -101,13 +101,18 @@
     "concrete_workflow": "GO_ONE_OFFLINE_RUN",
     "runtime": "PASS_OFFLINE_ANDROID_ACK_FUNCTIONS_NOT_CLOUD_APPROVAL",
     "runtime_ref": "independent-runtime-review.json",
-    "reproduction_script": "verify_runtime_evidence.py"
+    "reproduction_script": "verify_runtime_evidence.py",
+    "workflow_restoration": "PASS_ORIGINAL_WORKFLOW_RESTORED_NO_EXTRA_EXECUTION_OBSERVED",
+    "workflow_restoration_ref": "independent-restoration-review.json"
   },
   "original_workflow": {
-    "planned_restore_blob": "791740f6713090d153a49740ef2271560084a296",
-    "planned_restore_sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5",
-    "status": "RESTORED_IN_EVIDENCE_CLOSURE_TREE",
-    "independent_postpublication_check": "PENDING_SEPARATE_CLOSURE_CHECK"
+    "status": "INDEPENDENTLY_VERIFIED_RESTORED",
+    "restoration_commit": "24374ddd4f855a6df01780bfeb92c135704f5ee7",
+    "blob": "791740f6713090d153a49740ef2271560084a296",
+    "sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5",
+    "bytes": 3391,
+    "review_ref": "independent-restoration-review.json",
+    "final_checkpoint": "Documentation-only post-review skip-ci receipt commit; no new Android execution or workflow change."
   },
   "limits": [
     "No full sender, InputStream/UTF-8 IO, TLS or live response exercised by native fixtures.",

@@ -129,7 +129,7 @@
     "job_id": 128210433580,
     "job_name": "offline-ack-response",
     "status": "SUCCESS",
-    "original_workflow_restoration": "IN_EVIDENCE_CLOSURE_TREE"
+    "original_workflow_restoration": "INDEPENDENTLY_VERIFIED_AT_24374ddd4f855a6df01780bfeb92c135704f5ee7"
   },
   "resources_check": {
     "repository_public": true,
@@ -147,5 +147,6 @@
     "passed": 202,
     "skipped": 0
   },
-  "independent_runtime_review": "independent-runtime-review.json"
+  "independent_runtime_review": "independent-runtime-review.json",
+  "independent_restoration_review": "independent-restoration-review.json"
 }

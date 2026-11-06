@@ -30,7 +30,7 @@ The CI host suite passed **202/202, with no skips**. The earlier local host resu
 
 The baseline proof covers the old predicate. Candidate fixtures cover the real String classifier and shared SQLite ACK transaction. They do not execute the InputStream / UTF-8 I/O path, TLS, full sender, server storage or cloud delivery. Cloud revocation, new consent, retry / deduplication, physical phones, battery and overall infrastructure privacy remain unverified. Existing local Android runs #14 / #15 remain historical evidence.
 
-The prior 20 rows and closed 700-row prudential budget remain untouched, with future cloud allowance zero. The independently reviewed one-use public standard runner wrapper executed run #16, attempt 1. It contains no PostHog secrets or cloud inputs. The original workflow is restored byte for byte in the evidence closure with `[skip ci]`; a separate postpublication check will close the restoration receipt. [Plan](plan.json).
+The prior 20 rows and closed 700-row prudential budget remain untouched, with future cloud allowance zero. The independently reviewed one-use public standard runner wrapper executed run #16, attempt 1. It contains no PostHog secrets or cloud inputs. The original workflow was restored byte for byte in closure `24374ddd4f855a6df01780bfeb92c135704f5ee7` with `[skip ci]`, then independently checked on GitHub. [Restoration review](independent-restoration-review.json). [Plan](plan.json).
 
 ## Exact execution and result
 
@@ -63,4 +63,4 @@ The independent reviewer fetched the actual job logs and terminal metadata separ
 
 From this evidence directory, run `python3 verify_runtime_evidence.py android-result.json`. The verifier uses only the Python standard library and this receipt; it imports no producer predicate, runs no Android and makes no network request. It recomputes 33 cases / five accepted / 28 byte-identical retained queues, lifecycle order, source/build identities, permission reports, offline snapshots and cleanup. Its expected input SHA-256 is fixed to the actual export. Original APK bytes were not independently downloaded. Source/workflow review and actual GitHub provenance remain separate from this local recalculation.
 
-The runtime review's restoration status describes the point before publication of the closure. Final restoration is checked separately against the original workflow SHA-256 `5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5`.
+The runtime review's restoration status describes the point before publication of the closure. [Independent restoration review](independent-restoration-review.json) closes that pending field at commit `24374ddd4f855a6df01780bfeb92c135704f5ee7`: all nine executed code files are unchanged, PR #5 is draft, and the last run remains #16 with no extra execution observed. The final receipt commit changes documentation only. Verified original workflow SHA-256 `5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5`.

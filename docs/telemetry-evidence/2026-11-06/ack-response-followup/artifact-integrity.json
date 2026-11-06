@@ -4,8 +4,8 @@
   "source_commit": "d93b3095f78f4924e2cf132d82e4bc041a626f7c",
   "files": {
     "docs/telemetry-evidence/2026-11-06/ack-response-followup/README.md": {
-      "sha256": "a46531c19107b742733a23bc98302204246ec81c0ef59ce018c0cddaa4416853",
-      "bytes": 9365
+      "sha256": "b5ac3eff3cf5e93d1fe75b88dc08b469962bb0e785cddee29d78c21f2f94c311",
+      "bytes": 9707
     },
     "docs/telemetry-evidence/2026-11-06/ack-response-followup/android-result.json": {
       "sha256": "83278d90dec731556d8f93580dcec2c44be38ba1b7c64c7c8658d83a932ebeb1",
@@ -18,6 +18,10 @@
     "docs/telemetry-evidence/2026-11-06/ack-response-followup/host-red-green.json": {
       "sha256": "6b75c1f7688976cbeb1bd2b422688f1e630a92a27706f63ce30bcf049d7ef088",
       "bytes": 861
+    },
+    "docs/telemetry-evidence/2026-11-06/ack-response-followup/independent-restoration-review.json": {
+      "sha256": "bdbfed9c1f20a8dbc74335de1abc2cac055d23a57a711e1182af3c681e53b9de",
+      "bytes": 5155
     },
     "docs/telemetry-evidence/2026-11-06/ack-response-followup/independent-runtime-review.json": {
       "sha256": "7cee076c44d73f18ca43908330aded7c5e41c8418732571d005bfaa757dc2977",
@@ -32,24 +36,24 @@
       "bytes": 3955
     },
     "docs/telemetry-evidence/2026-11-06/ack-response-followup/plan.json": {
-      "sha256": "2e25ba3b14bd51d7edd973177dc16f16035b6310ea74747cc4b1d8bff7103750",
-      "bytes": 6949
+      "sha256": "e95b74734999acd810ef909094a68057d901d5e39efe06951e9225c057f040d5",
+      "bytes": 7066
     },
     "docs/telemetry-evidence/2026-11-06/ack-response-followup/summary.json": {
-      "sha256": "7768556e460920969d26a7b5c7791f80eb92638e345dbd723cafca26805f090c",
-      "bytes": 4991
+      "sha256": "d2deb1689cb049cf6f73d38e7b78ceb9f1019d7a442a45f864bc1855d12d5443",
+      "bytes": 5317
     },
     "docs/telemetry-evidence/2026-11-06/ack-response-followup/verify_runtime_evidence.py": {
       "sha256": "6ee3d2ce3a9df70929455c3cf3dd34ab59f77a69c8c0eabf2f95b2a5745ba17b",
       "bytes": 13363
     },
     "CONTINUITY.md": {
-      "sha256": "6306e0ea3fa73b9d82954e9ad1f70de8d69b345202e7d3aa81ab29ddc6fce6f7",
-      "bytes": 13990
+      "sha256": "e4b7d047fcc0861bd5d67f741fe5351c8fa5bad3e05df87d66414d1324bab269",
+      "bytes": 11589
     },
     "docs/telemetry-minimum-infrastructure.md": {
-      "sha256": "05f96e409145d9fe66fc1ff1e9530f7f7340ca57921a2ce683aa2fbe200f06a7",
-      "bytes": 120463
+      "sha256": "2fcc5772c05f4752dad597368d79b1834246ebce69ccacd91af2e7cdc70641aa",
+      "bytes": 120638
     },
     ".github/workflows/telemetry-runtime-control.yml": {
       "sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5",
