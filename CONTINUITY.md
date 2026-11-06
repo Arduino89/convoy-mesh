@@ -62,7 +62,9 @@ Exact-source local14 also SUCCESS: run42299072769/job128171820455;193/193host,10
 
 ## NEXT GATE
 
-Offline only: review the bounded response-shape receipt and immediate-stop proposal in response-acceptance-cause.json, preserveunknownvalues privately and add syntheticregressions; establish supported actual ACKcontract before changingacceptance. No furtherAndroid/cloudtrial is authorized by the closed single15gate. Any later cloudexecution requires a new concrete reviewedsource/run/budget decision; no automaticrefund, rerun or substitution. Actualdeletion separately requires Cama exactproject/run/UUIDset and previewapproval.
+Cama's 6 November mandate is an offline ACK compatibility correction: documented HTTP 200 `status: Ok`, the actual Android predicate RED before / GREEN after, SQLite queue retention for quota / unknown / malformed responses, immediate permanent-block reporting and category-only audit. **Zero new PostHog events, including retries of the old 20.** [Plan and source review](docs/telemetry-evidence/2026-11-06/ack-response-followup/README.md).
+
+Source review passed. Host controls: 202 total, 201 passed / one historical shell reproduction skipped; targeted fail-fast comparison: four failures before, 23/23 passed after. Android remains pending. Run only the two permissionless fixture APKs, with the verbatim baseline Java and candidate, after the independent Android control. No sender instance, credentials, cloud configuration or ingestion. Independently review the concrete one-use run #16 wrapper and pinned source before launch; restore the original workflow afterwards. No adoption, merge, release, integration or new cloud authority.
 
 ## DO NOT
 
@@ -84,4 +86,4 @@ No automatic removal of branches/builds. Keep the exact delivered APK; CI retent
 
 ## LAST CHECKPOINT
 
-2026-11-06 source809caf/run14localPASS193; run15/job128176961434BLOCKED with20actualcloudreceipts and ACKpredicatefailure, cloudrevocation/retryNOT_RUN. Independentreviews and reproduciblescripts under6November;24host-onlylabelregressionsPASS. Budget700conservative/future0; originalworkflowrestoredatclosure, no newrun. Application fieldcheckpoint remains README/PR4.
+6 November 2026: cloud run #15 / source `809caf` remains closed after 20 actual receipts; cumulative prudential budget 700, future allowance zero. The new offline ACK follow-up corrects documented `Ok`, preserves negative queues and reports permanent blocks immediately. Independent source review passed, host regressions passed as scoped above; Android execution is pending. PR #5 remains draft and Convoy is unchanged. The application field checkpoint remains README / PR #4.

@@ -13,6 +13,81 @@ from ci_cloud_trial import (CloudDevice, ENDPOINT, HOST, TrialBlocked, read_priv
                             unknown_budget_receipt, validate_cloud_gate, validate_public_value)
 from prepare_ci_cloud import prepare
 from probe import event
+from ci_cloud_trial import run_cases
+
+
+class PermanentCloudBlockStops(unittest.TestCase):
+    """Drive the real run_cases/drain path; no Android/network or waiting."""
+    class Device:
+        def __init__(self, reason, when="before_flush", budget=False, empty=False):
+            self.reason, self.when, self.budget, self.empty = reason, when, budget, empty
+            self.calls, self.observations = [], []
+            self.state = {"transport_mode": "posthog_cloud_https", "cloud_row_limit": 200,
+                "cloud_rows_reserved": 0, "requests_started": 0, "consent": False,
+                "queue_count": 0, "in_flight_count": 0, "trace_sha256": "synthetic-trace",
+                "setting_value": "synthetic-setting", "cloud_transport_blocked": 0,
+                "cloud_budget_blocked": 0, "cloud_block_reason": "", "online": False}
+
+        def blocked(self):
+            value = dict(self.state, cloud_transport_blocked=0 if self.budget else 1,
+                         cloud_budget_blocked=1 if self.budget else 0,
+                         cloud_block_reason=self.reason)
+            if self.empty: value["queue_count"] = 0
+            return value
+
+        def command(self, action, **kwargs):
+            self.calls.append(action)
+            if action == "preflight_checks":
+                from ci_direct_trial import SELF_CHECKS
+                return dict(self.state, preflight_checks=dict.fromkeys(SELF_CHECKS, True))
+            if action == "grant": self.state["consent"] = True
+            elif action == "capture": self.state["queue_count"] = 100
+            elif action not in ("configure", "flush", "state"):
+                raise AssertionError("Dependent phase reached after permanent block: " + action)
+            return dict(self.state)
+
+        def network(self, online):
+            self.state["online"] = online
+            return self.blocked() if online and self.when == "before_flush" else dict(self.state)
+
+        def connectivity(self, state, online): return state["online"] is online
+        def restart(self): return dict(self.state)
+
+        def observe(self, seconds, predicate=None):
+            self.observations.append(seconds)
+            if seconds == 12: return dict(self.state), True
+            value = self.blocked()
+            return value, predicate(value)
+
+    def run_blocked(self, device, expected):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(TrialBlocked) as failure:
+                run_cases(device, Path(tmp), "synthetic-block-control", 200)
+        self.assertEqual(str(failure.exception), expected)
+        self.assertNotIn("revoke", device.calls)
+        self.assertNotIn("arm_retry", device.calls)
+
+    def test_existing_block_stops_before_flush_or_120second_observation(self):
+        for reason in ("QUOTA_LIMITED", "UNRECOGNIZED_RESPONSE", "MALFORMED_RESPONSE", "RESPONSE_TOO_LARGE"):
+            device = self.Device(reason)
+            self.run_blocked(device, "CLOUD_PERMANENT_BLOCK_" + reason)
+            self.assertNotIn("flush", device.calls)
+            self.assertEqual(device.observations, [12])
+
+    def test_first_fresh_blocked_state_reports_cause_without_waiting_for_drain(self):
+        device = self.Device("UNRECOGNIZED_RESPONSE", when="observed")
+        self.run_blocked(device, "CLOUD_PERMANENT_BLOCK_UNRECOGNIZED_RESPONSE")
+        self.assertEqual(device.calls.count("flush"), 1)
+        self.assertEqual(device.observations, [12, 120])
+
+    def test_budget_block_and_empty_queue_cannot_pass(self):
+        device = self.Device("ROW_BUDGET", budget=True, empty=True)
+        self.run_blocked(device, "CLOUD_PERMANENT_BLOCK_ROW_BUDGET")
+        self.assertNotIn("flush", device.calls)
+
+    def test_unrecognized_native_reason_does_not_escape_in_public_error(self):
+        device = self.Device("synthetic-untrusted-status-value")
+        self.run_blocked(device, "CLOUD_PERMANENT_BLOCK_UNKNOWN")
 
 
 class CloudGates(unittest.TestCase):

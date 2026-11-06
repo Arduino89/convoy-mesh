@@ -9,16 +9,22 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Process;
 import android.util.AtomicFile;
+import android.util.JsonReader;
+import android.util.JsonToken;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.CharacterCodingException;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -319,6 +325,7 @@ final class DirectQueue {
         JSONArray batch = new JSONArray();
         boolean hasRows = false, acknowledged = false, started = false;
         boolean ackDiscarded = false, responseAccepted = false, quotaLimited = false;
+        String responseCategory = "HTTP_NOT_ACKNOWLEDGED";
         long attemptId = 0;
         int responseCode = 0;
         try {
@@ -402,18 +409,19 @@ final class DirectQueue {
             responseCode = connection.getResponseCode();
             responseAccepted = responseCode == 200;
             if (cloudMode && responseAccepted) {
-                JSONObject response;
-                try { response = readCloudResponse(connection); }
-                catch (Exception failure) {
-                    synchronized (store) { blockCloud("UNRECOGNIZED_RESPONSE"); }
-                    throw new IllegalStateException("UNRECOGNIZED_RESPONSE");
-                }
-                quotaLimited = quotaLimited(response);
-                responseAccepted = acceptedCloudResponse(response);
+                ResponseDecision response = readCloudResponse(connection);
+                quotaLimited = response.quotaLimited;
+                responseAccepted = response.accepted;
+                responseCategory = response.category;
                 if (!responseAccepted) {
-                    synchronized (store) { blockCloud(quotaLimited ? "QUOTA_LIMITED" : "UNRECOGNIZED_RESPONSE"); }
+                    synchronized (store) {
+                        blockCloud(responseCategory);
+                        if (responseCategory.equals("MALFORMED_RESPONSE") || responseCategory.equals("RESPONSE_TOO_LARGE")
+                                || responseCategory.equals("RESPONSE_READ_FAILED")) add("transport_failures", 1);
+                    }
                 }
             } else if (cloudMode && responseCode >= 300 && responseCode < 500) {
+                responseCategory = "HTTP_REJECTED";
                 synchronized (store) { blockCloud("HTTP_REJECTED"); }
             }
             acknowledged = responseAccepted;
@@ -430,19 +438,11 @@ final class DirectQueue {
                     JSONObject response = transportRecord(attemptId, "response", batch);
                     response.put("response_code", responseCode); response.put("response_accepted", responseAccepted);
                     response.put("quota_limited", quotaLimited); response.put("ack_discarded", ackDiscarded);
+                    response.put("response_category", responseCategory);
                     cloudAudit("cloud-transport.jsonl", response);
                 }
             }
-            if (acknowledged) {
-                synchronized (store) {
-                    db.beginTransaction();
-                    try {
-                        for (Long id : ids) db.execSQL("DELETE FROM queue WHERE id=?", new Object[]{id});
-                        add("requests_acked", 1);
-                        db.setTransactionSuccessful();
-                    } finally { db.endTransaction(); }
-                }
-            }
+            synchronized (store) { applyAcknowledgment(db, ids, acknowledged); }
         } catch (Exception failure) {
             // Preserve the exact serialized record and UUID for a later retry.
             synchronized (store) { add("transport_failures", 1); }
@@ -496,7 +496,81 @@ final class DirectQueue {
     }
 
     private static boolean acceptedCloudResponse(JSONObject response) throws Exception {
-        return response.opt("status") instanceof Integer && response.getInt("status") == 1 && !quotaLimited(response);
+        Object status = response.opt("status");
+        return ("Ok".equals(status) || status instanceof Integer && ((Integer) status) == 1)
+            && !quotaLimited(response);
+    }
+
+    /** Shared by the real sender and the permissionless offline SQLite proof. */
+    private static void applyAcknowledgment(SQLiteDatabase database, List<Long> ids, boolean acknowledged) {
+        if (!acknowledged) return;
+        database.beginTransaction();
+        try {
+            for (Long id : ids) database.execSQL("DELETE FROM queue WHERE id=?", new Object[]{id});
+            long count;
+            try (Cursor c = database.rawQuery("SELECT value FROM state WHERE key='requests_acked'", null)) {
+                if (!c.moveToFirst()) throw new IllegalStateException("STATE_MISSING");
+                count = Long.parseLong(c.getString(0));
+            }
+            database.execSQL("UPDATE state SET value=? WHERE key='requests_acked'",
+                new Object[]{Long.toString(count + 1)});
+            database.setTransactionSuccessful();
+        } finally { database.endTransaction(); }
+    }
+
+    private static final class ResponseDecision {
+        final boolean accepted, quotaLimited;
+        final String category;
+        ResponseDecision(boolean accepted, boolean quotaLimited, String category) {
+            this.accepted = accepted; this.quotaLimited = quotaLimited; this.category = category;
+        }
+    }
+
+    /** No body, unknown value or body hash is persisted: only a finite category. */
+    private static ResponseDecision classifyCloudResponse(int code, String body) {
+        if (code != 200) return new ResponseDecision(false, false,
+            code >= 300 && code < 500 ? "HTTP_REJECTED" : "HTTP_NOT_ACKNOWLEDGED");
+        if (body == null) return new ResponseDecision(false, false, "MALFORMED_RESPONSE");
+        if (body.getBytes(StandardCharsets.UTF_8).length > 8192)
+            return new ResponseDecision(false, false, "RESPONSE_TOO_LARGE");
+        try (JsonReader reader = new JsonReader(new StringReader(body))) {
+            reader.setLenient(false);
+            if (reader.peek() != JsonToken.BEGIN_OBJECT) throw new IllegalArgumentException();
+            strictResponseValue(reader, 0);
+            if (reader.peek() != JsonToken.END_DOCUMENT) throw new IllegalArgumentException();
+            JSONObject value = new JSONObject(body);
+            boolean limited = quotaLimited(value);
+            boolean accepted = acceptedCloudResponse(value);
+            return new ResponseDecision(accepted, limited,
+                accepted ? "ACKNOWLEDGED" : limited ? "QUOTA_LIMITED" : "UNRECOGNIZED_RESPONSE");
+        } catch (Exception failure) {
+            return new ResponseDecision(false, false, "MALFORMED_RESPONSE");
+        }
+    }
+
+    private static void strictResponseValue(JsonReader reader, int depth) throws Exception {
+        if (depth > 16) throw new IllegalArgumentException();
+        switch (reader.peek()) {
+            case BEGIN_OBJECT:
+                reader.beginObject(); Set<String> keys = new HashSet<>();
+                while (reader.hasNext()) {
+                    if (!keys.add(reader.nextName())) throw new IllegalArgumentException();
+                    strictResponseValue(reader, depth + 1);
+                }
+                reader.endObject(); break;
+            case BEGIN_ARRAY:
+                reader.beginArray();
+                while (reader.hasNext()) strictResponseValue(reader, depth + 1);
+                reader.endArray(); break;
+            case STRING: reader.nextString(); break;
+            case NUMBER:
+                double number = Double.parseDouble(reader.nextString());
+                if (Double.isInfinite(number) || Double.isNaN(number)) throw new IllegalArgumentException();
+                break;
+            case BOOLEAN: reader.nextBoolean(); break;
+            case NULL: reader.nextNull(); break;
+            default: throw new IllegalArgumentException();
+        }
     }
 
     private boolean shouldDiscardAck(JSONArray batch) throws Exception {
@@ -509,14 +583,22 @@ final class DirectQueue {
         return true;
     }
 
-    private static JSONObject readCloudResponse(HttpURLConnection connection) throws Exception {
+    private static ResponseDecision readCloudResponse(HttpURLConnection connection) {
         try (InputStream input = connection.getInputStream(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             byte[] bytes = new byte[1024]; int count;
             while ((count = input.read(bytes)) != -1) {
-                if (output.size() + count > 8192) throw new IllegalStateException("RESPONSE_TOO_LARGE");
+                if (output.size() + count > 8192)
+                    return new ResponseDecision(false, false, "RESPONSE_TOO_LARGE");
                 output.write(bytes, 0, count);
             }
-            return new JSONObject(new String(output.toByteArray(), StandardCharsets.UTF_8));
+            String body = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(output.toByteArray())).toString();
+            return classifyCloudResponse(200, body);
+        } catch (CharacterCodingException failure) {
+            return new ResponseDecision(false, false, "MALFORMED_RESPONSE");
+        } catch (Exception failure) {
+            return new ResponseDecision(false, false, "RESPONSE_READ_FAILED");
         }
     }
 
@@ -685,6 +767,7 @@ final class DirectQueue {
         result.put("cloud_response_quota_limited_rejected",
             !acceptedCloudResponse(new JSONObject("{\"status\":1,\"quota_limited\":[\"product_analytics\"]}")));
         result.put("cloud_response_status_1_accepted", acceptedCloudResponse(new JSONObject("{\"status\":1}")));
+        result.put("cloud_response_status_ok_accepted", acceptedCloudResponse(new JSONObject("{\"status\":\"Ok\"}")));
         Iterator<String> checks = result.keys();
         while (checks.hasNext()) {
             if (!Boolean.TRUE.equals(result.get(checks.next()))) throw new IllegalStateException("COUNTEREXAMPLE_ACCEPTED");

@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "status": "INDEPENDENT_SOURCE_REVIEW_PASSED_ANDROID_PENDING",
+  "mandate": "Cama 6November2026: correct documentedHTTP200statusOk offline, prove sameAndroidcontrol before/after, queue retention onquota/unknown/malformed; immediatepermanentblock; categoryonly; zeroingestion includingold20; samePR5draft/noConvoymerge.",
+  "repository": "Arduino89/convoy-mesh",
+  "branch": "experiment/telemetry-runtime-lab",
+  "pr": 5,
+  "base_head": "75b83254c99f20703f8a4ddbcc0da92a41d9990c",
+  "budget": {
+    "new_posthog_rows_authorized": 0,
+    "old_rows_may_be_retried": false,
+    "prior_cloud_trial_closed": true,
+    "conservative_cumulative_rows": 700,
+    "future_cloud_allowance": 0
+  },
+  "documented_contract": {
+    "url": "https://posthog.com/docs/api#status-code-200",
+    "checked_date": "2026-11-06",
+    "fixture_status": "Ok",
+    "http_code": 200,
+    "acknowledgment_is_not_storage": true,
+    "prior_run15_body": "NOT_RECORDED",
+    "retrieval": "PostHoglearn/docs-search consulted; direct opening of user-citedofficialAPIpage confirmed Responses/200. No inferencefromthirdpartyissues."
+  },
+  "reuse_first": {
+    "platform_level": 4,
+    "composition_level": 5,
+    "code_level": 6,
+    "decision": "Reuse AndroidJsonReader/SQLite, existingSDK36/JDK17/buildtools36, existingruntimecontrol/emulator/publicstandardworkflow. Extend exactACKpredicate, extract unchangedACKtransaction, shareclassifier/readpath and reuseDevice/offlinebarrier. No SDKfork, backend, arbitrarytestendpoint, productiontestmode or newdependency.",
+    "why_new_proof_harness": "Original preflightChecks provespredicate only; permissionlessreflectionAPK lets originalclass staybyte-identical and exercises actualcandidatefunctions/SQLite withoutconstructing sender or loadingcloudconfig."
+  },
+  "governance": {
+    "mode": "DIRECT_CANONICAL_INPUTS_PARTIAL_PROJECT_CHECKOUT_NO_ENTERPRISE_EXECUTABLE_CHECKOUT",
+    "repository": "Arduino89/Cama-Enterprise",
+    "ref": "main",
+    "inputs": [
+      "AGENTS.md",
+      "00_company/source_of_truth_index.md",
+      "00_company/principles.md",
+      "00_company/operating_model.md",
+      "00_company/project_continuity_protocol.md",
+      "06_training/enterprise_pattern_registry.json",
+      "00_company/jarvis_operations_notebook.md",
+      "06_training/routing_memory.json"
+    ],
+    "profile_reused_from": "../execution-design.json; ../../2026-11-05/preparation-design.json",
+    "changed_signals": {
+      "externalData": false
+    },
+    "phase": "VALIDATION_LOCAL_PROTOCOL_CORRECTION",
+    "patterns": [
+      "EP-001",
+      "EP-003",
+      "EP-004",
+      "EP-005",
+      "EP-007",
+      "EP-009"
+    ],
+    "notebook": [
+      "JON-2026-08-25-003",
+      "JON-2026-08-25-007",
+      "JON-2026-08-25-009",
+      "JON-2026-08-25-010",
+      "JON-2026-08-25-011",
+      "JON-2026-09-08-001"
+    ],
+    "routing_memory": "READ_CURRENT_ADVISORY_ZERO_RULE_EVIDENCE"
+  },
+  "baseline": {
+    "source_commit": "75b83254c99f20703f8a4ddbcc0da92a41d9990c",
+    "java_sha256": "81222e42f65f27d5524ad80b5b66eb5f685b6f3091e5d467a564636ecaa31312",
+    "same_java_as_actual_cloud_source": "809caf200f6232b162fee009fa2a7c2b484d7855"
+  },
+  "proof_design": {
+    "android_control_first": true,
+    "baseline": "PermissionlessAPK compilesverbatimDirectQueue.java; reflectioninvokesactualprivatepredicate; statusOkmustbe rejectedbefore.",
+    "candidate": "Identicalactivityharness pluscorrectedclass; reflectactualsharedclassification+SQLiteACKtransaction.33cases compareID/UUID/body bytes, counters, unaffectedtail anddeliberatelydiscardedACK; sender neverinstantiated.",
+    "negative_cases": [
+      "quota",
+      "unknownstatus/types",
+      "malformed/truncated/lenientJSON",
+      "duplicatekeys/trailingdata",
+      "non200",
+      "oversize"
+    ],
+    "no_network_boundary": [
+      "Bothproofmanifestszero permissions, independentlyaapt/signaturecheckedbeforeinstall.",
+      "Radio/defaultnetworkbarrierbeforeandaftereachvariant.",
+      "Nocloudgate/secret/configorPOSTmethod invoked; separateproofpackages."
+    ],
+    "host_failfast": "Actualrun_cases path withsyntheticfreshstates; beforeflagsfix4testsfail, afterfixallpass. No120sloopwhenpermanentflag present, budgetblock/emptyqueueguard included, untrustedreasonmappedUNKNOWN.",
+    "workflow": "Oneguardedstandardpublicrun16attempt1, immutablepreparedsourcecheckout+oldbaseline75bsparsecheckout; no secrets or cloudinputs; restoreoriginalworkflowafter.",
+    "limits": [
+      "Baselinepredicateonly, notoldwholecloudsender.",
+      "Candidatefunction+SQLiteproofonly, notTLS/serverdelivery/cloudrevocation/dedupe.",
+      "ExistingfullLOCALAndroid14/15 remains historical; thisphase sendsnoevents, evenloopback."
+    ]
+  },
+  "success_criteria": [
+    "OldstatusOkfalse/newtrue onAndroid; legacyinteger1preserved.",
+    "Allcandidate33nativefixturespass;rejectkeepsbyte-identicalrows/counter0;acceptedremovesonlyselectedbatch/tailintact.",
+    "Permanentblockreportsallowlistedcategorybeforetimeout/nextphase.",
+    "No responsebody/unknownstatusvalue/hash persists; categoryonly.",
+    "Independentcode/workflow/runtimeevidencereview; samePRdraft/CONTINUITYupdated; nopublishingAPK."
+  ],
+  "host_result": {
+    "suite_total": 202,
+    "passed": 201,
+    "skipped": 1,
+    "skip_reason": "Historicalshpipefailreproduction onlocalDashwithpipefailsupport; notAndroidproof",
+    "failfast_red": {
+      "total": 23,
+      "failed": 4
+    },
+    "failfast_green": {
+      "total": 23,
+      "passed": 23
+    }
+  },
+  "android_status": "NOT_RUN_YET",
+  "new_access_required": false
+}

@@ -49,7 +49,7 @@ SELF_CHECKS = {"valid_fixture_accepted", "foreign_distinct_id_rejected", "extra_
                "cloud_budget_490_plus_20_rejected", "cloud_budget_490_plus_10_allowed",
                "cloud_budget_500_plus_1_rejected", "cloud_budget_limit_over_500_rejected",
                "cloud_response_fractional_status_rejected", "cloud_response_quota_limited_rejected",
-               "cloud_response_status_1_accepted"}
+               "cloud_response_status_1_accepted", "cloud_response_status_ok_accepted"}
 WIRE_SCOPE = "DIRECT_SENDER_LOOPBACK_WIRE_AUDIT_NOT_CLOUD_NOT_PRODUCTION"
 BUILD_SOURCES = {"tools/telemetry_spike/direct_trial/" + name for name in
                  ("AndroidManifest.xml", "MainActivity.java", "DirectQueue.java", "build.py")} | {

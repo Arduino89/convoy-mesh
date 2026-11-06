@@ -489,6 +489,8 @@ class CloudDevice(Device):
         deadline = time.monotonic() + 45
         while time.monotonic() < deadline:
             state = self.command("state")
+            if online:
+                cloud_drain_complete(state)
             if self.connectivity(state, online):
                 row = {"online_requested": online, "connectivity": state["connectivity"],
                        "pid": state["pid"], "action_nonce": state["action_nonce"],
@@ -505,6 +507,22 @@ class CloudDevice(Device):
         if result.returncode or len(result.stdout) > 2 * 1024 * 1024:
             raise TrialBlocked("NATIVE_CLOUD_RECEIPTS_UNAVAILABLE_OR_TOO_LARGE")
         return [json.loads(line) for line in result.stdout.splitlines() if line]
+
+
+PERMANENT_BLOCK_CATEGORIES = {"QUOTA_LIMITED", "UNRECOGNIZED_RESPONSE", "MALFORMED_RESPONSE",
+    "RESPONSE_TOO_LARGE", "RESPONSE_READ_FAILED", "HTTP_REJECTED", "AUDIT_WRITE_FAILED", "ROW_BUDGET"}
+
+
+def cloud_drain_complete(state):
+    """A fresh permanent block wins even when the queue appears empty."""
+    flags = [state.get(key) for key in ("cloud_transport_blocked", "cloud_budget_blocked")]
+    if any(type(value) is not int or value not in (0, 1) for value in flags):
+        raise TrialBlocked("CLOUD_BLOCK_STATE_INVALID")
+    if any(flags):
+        raw = state.get("cloud_block_reason")
+        category = raw if type(raw) is str and raw in PERMANENT_BLOCK_CATEGORIES else "UNKNOWN"
+        raise TrialBlocked("CLOUD_PERMANENT_BLOCK_" + category)
+    return state["queue_count"] == 0 and state["in_flight_count"] == 0
 
 
 def run_cases(device, work, run_id, remaining):
@@ -534,9 +552,10 @@ def run_cases(device, work, run_id, remaining):
               end["requests_started"] == state["requests_started"], "OFFLINE_ATTEMPT_OR_CONNECTIVITY_VIOLATION")
         return end
     def drain():
-        device.network(True)
-        device.command("flush")
-        end, completed = device.observe(120, lambda s: s["queue_count"] == 0 and s["in_flight_count"] == 0)
+        cloud_drain_complete(device.command("state"))
+        cloud_drain_complete(device.network(True))
+        cloud_drain_complete(device.command("flush"))
+        end, completed = device.observe(120, cloud_drain_complete)
         check(completed, "HTTP_TRANSPORT_DRAIN_WINDOW_EXPIRED")
         sentinels(end)
         return end
