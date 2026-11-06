@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "status": "PASS_STATIC_SOURCE_REVIEW_ONLY",
+  "reviewer": "/root/review_launch",
+  "checked_at_utc": "2026-11-06T21:42:16.066065+00:00",
+  "scope": "INDEPENDENT_REVIEW_OF_BUDGET_AND_RECONCILER_CHANGES_NOT_ANDROID_OR_CLOUD",
+  "base_commit": "b1a80436a52a8adfc3d50bd4867e3ba9792feaa9",
+  "reviewed_source_commit": null,
+  "source_commit_limit": "Commit not created at review time; this review binds the exact file SHA256 values below.",
+  "file_sha256": {
+    "tools/telemetry_spike/ci_cloud_trial.py": "69e1b7e5a2eb5babfa923fb85173dc62efdbbfb77462512652fb2d54109ba4cf",
+    "tools/telemetry_spike/prepare_ci_cloud.py": "fb6c1be2c6b27f40302512785374c65e75aa93b7ba471f076574fc6739ea656d",
+    "tools/telemetry_spike/reconcile_cloud_trial.py": "6118f91f0d20af596623ffbbf8c3d1bb03d5f65eb4df3decaf6046f8c1f90e0f",
+    "tools/telemetry_spike/test_ci_cloud_trial.py": "0dc8d7d1abd82d9fbf1150e39454c97fba99c77b879420924d688de961dc69c6",
+    "tools/telemetry_spike/test_cloud_preparation.py": "931e89ae5d63f92e4e450494e6f419fe0c22f6efef7a0c566e74e348757db672",
+    "tools/telemetry_spike/test_reconcile_cloud_trial.py": "658b2a821ab528c08afacb3b1dea2fbc3a55117e035779bd1ac96081f3d1b348",
+    "tools/telemetry_spike/test_ci_provision_probe.py": "d3e0d670ce635f175adb5fcfe36839aafc5c3d425307c7c0bc45abb7527008d0"
+  },
+  "native_source_sha256": {
+    "tools/telemetry_spike/direct_trial/MainActivity.java": "e520e97c6639643eb37a95aa60b85241b3d6b82a18824e3943aa1b4c0ff308f4",
+    "tools/telemetry_spike/direct_trial/DirectQueue.java": "81222e42f65f27d5524ad80b5b66eb5f685b6f3091e5d467a564636ecaa31312",
+    "tools/telemetry_spike/direct_trial/AndroidManifest.xml": "dff2a8c38aab22edb716312e1f47f6368cbfece96dc01c054722cc070d084345",
+    "tools/telemetry_spike/direct_trial/build.py": "c51cbe3989c6ff21b0acdaab68c5e4c372b041e90c99dc2d1bd615a42fcd81d6",
+    "tools/telemetry_spike/runtime_control/build.py": "0965a5ae2f41015ecca8b8c70236f6f074be57388dcc95d6de3f0e32af08c743"
+  },
+  "native_equivalence_reference": "Five native application/build hashes match the previous verified source2d76100fda1df0637e953f4ad90f26073028880c; this is static equivalence, not a new Android execution.",
+  "findings": [
+    "Schema2 keeps prior_rows_conservative_consumed500 distinct from actual observed rows and adds one-use additional_rows_authorized200 for cumulative700.",
+    "Strict integer arithmetic rejects inconsistent total, missing authorization, stale receipt, mixed legacy accounting and booleans; native per-execution hard maximum500 remains unchanged and private cap becomes200.",
+    "Accepted schema2 writes the conservative700 receipt before any ADB operation; unavailable or zero observed counters never authorize a refund or future launch.",
+    "Reconciler uses the shared accounting arithmetic and retains strict type identity. Introduced False/0.0 legacy-prior acceptance was reproduced, corrected, and preserved as a regression.",
+    "Local_regression still requires the exact executable source. A new local-only run is required before the one-use cloud wrapper; historical Android success is not relabeled as a new-source execution.",
+    "Only the historical shell reproduction test is conditional on current host capability; supported production Bash entry, abort ordering and archived run9 failure remain intact."
+  ],
+  "tests": {
+    "command": "python3 -m unittest discover -s tools/telemetry_spike -p 'test_*.py' -q",
+    "executed_by_reviewer": true,
+    "total": 193,
+    "passed": 192,
+    "skipped": 1,
+    "failed": 0,
+    "skip_test": "ProvisionShellEntry.test_previous_action_first_line_reproduces_pipefail_error",
+    "skip_reason": "Current /usr/bin/sh resolves to Dash and supports set -o pipefail; the historical run9 unsupported-shell rejection is not reproduced on this host.",
+    "targeted_reconciler_tests": 24,
+    "targeted_reconciler_passed": 24
+  },
+  "reviewer_authored_files_excluded_from_independent_approval": [
+    "tools/telemetry_spike/review_cloud_launch.py",
+    "tools/telemetry_spike/test_cloud_launch_gate.py",
+    "docs/telemetry-evidence/2026-11-06/workflow-original.yml",
+    "this review receipt",
+    "conditional historical shell test edit"
+  ],
+  "limits": [
+    "No Android, PostHog ingestion, connector readback, deletion or phone-consumption test executed by this reviewer.",
+    "Exact source commit and current live account controls must be bound before cloud launch.",
+    "One-use wrapper and reviewer-authored helper need separate review; this receipt does not approve its own implementation.",
+    "A skipped host historical reproduction does not validate an unexecuted Android or cloud scenario.",
+    "No merge, release, Convoy integration, real users, service activation or new spending authorized by this review."
+  ]
+}

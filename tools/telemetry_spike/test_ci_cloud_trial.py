@@ -9,8 +9,8 @@ import unittest
 import uuid
 
 from ci_cloud_trial import (CloudDevice, ENDPOINT, HOST, TrialBlocked, read_private_config,
-                            sanitize_preflight, summarize_transport, validate_cloud_gate,
-                            validate_public_value)
+                            budget_accounting, sanitize_preflight, summarize_transport,
+                            unknown_budget_receipt, validate_cloud_gate, validate_public_value)
 from prepare_ci_cloud import prepare
 from probe import event
 
@@ -37,6 +37,66 @@ class CloudGates(unittest.TestCase):
 
     def validate(self, value):
         return validate_cloud_gate(value, self.source, self.run_id, self.execution, 1, self.clock)
+
+    def additional_gate(self):
+        value = self.gate()
+        value.update(schema_version=2, prior_rows_conservative_consumed=500,
+                     additional_rows_authorized=200, total_ceiling=700, remaining_budget=200)
+        value["budget_authorization"] = {
+            "status": "VERIFIED", "checked_at_utc": self.clock.isoformat(),
+            "evidence_ref": "synthetic-additional-one-use-authorization",
+            "prior_rows_conservative_consumed": 500, "additional_rows_authorized": 200,
+            "total_ceiling": 700}
+        return value
+
+    def test_additional_authorization_preserves_all_500_historical_unknown_rows(self):
+        value = self.additional_gate()
+        self.assertEqual(self.validate(value), 200)
+        accounting = budget_accounting(value)
+        self.assertEqual(accounting, {"accounting_schema_version": 2, "limit": 200,
+            "total_ceiling": 700, "prior_rows_conservative_consumed": 500,
+            "additional_rows_authorized": 200})
+        self.assertNotIn("prior_rows_reserved", accounting)
+        receipt = unknown_budget_receipt(self.run_id, self.source, 200, accounting)
+        self.assertEqual(receipt["authorized_total_ceiling"], 700)
+        self.assertEqual(receipt["conservative_consumed_for_future_launches"], 700)
+        self.assertEqual(receipt["remaining_for_future_launches"], 0)
+        self.assertIs(receipt["automatic_refund_allowed"], False)
+
+    def test_additional_authorization_requires_consistent_explicit_fresh_receipt(self):
+        changes = ({"total_ceiling": 500}, {"total_ceiling": 701},
+                   {"prior_rows_conservative_consumed": 300}, {"prior_rows_conservative_consumed": -1},
+                   {"prior_rows_conservative_consumed": True}, {"additional_rows_authorized": 201},
+                   {"additional_rows_authorized": True}, {"remaining_budget": 201},
+                   {"remaining_budget": 501, "additional_rows_authorized": 501, "total_ceiling": 1001},
+                   {"prior_rows_reserved": 300})
+        for change in changes:
+            with self.subTest(change=change), self.assertRaises(TrialBlocked):
+                self.validate(dict(self.additional_gate(), **change))
+        for key in ("prior_rows_conservative_consumed", "additional_rows_authorized", "budget_authorization"):
+            value = self.additional_gate(); del value[key]
+            with self.subTest(missing=key), self.assertRaises(TrialBlocked): self.validate(value)
+        for change in ({"status": "PENDING"}, {"additional_rows_authorized": 201},
+                       {"total_ceiling": True}, {"prior_rows_conservative_consumed": 300},
+                       {"checked_at_utc": (self.clock - timedelta(days=2)).isoformat()}):
+            value = self.additional_gate(); value["budget_authorization"].update(change)
+            with self.subTest(receipt=change), self.assertRaises(TrialBlocked): self.validate(value)
+        # A new tranche cannot be smuggled through the historical gate schema.
+        value = self.additional_gate(); value.update(schema_version=1, total_ceiling=500)
+        with self.assertRaises(TrialBlocked): self.validate(value)
+
+    def test_additional_allowance_private_native_limit_is_200_and_same_source_stays_required(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            value = self.additional_gate()
+            environment = self.environment(); environment["CONVOY_CLOUD_GATE"] = json.dumps(value)
+            out = Path(tmp) / "cloud-private"
+            result = prepare(out, environment, self.source, self.clock)
+            config = json.loads(read_private_config(out / "config.json", self.run_id, 200))
+            self.assertEqual(config["row_limit"], 200)
+            self.assertEqual(result["authorization_accounting"]["total_ceiling"], 700)
+            self.assertNotIn(environment["CONVOY_LAB_POSTHOG_TOKEN"], json.dumps(result))
+        value = self.additional_gate(); value["local_regression"]["source_commit"] = "b" * 40
+        with self.assertRaises(TrialBlocked): self.validate(value)
 
     def test_all_controls_are_required_before_any_execution(self):
         self.assertEqual(self.validate(self.gate()), 500)
@@ -157,6 +217,19 @@ class CloudTransportEvidence(unittest.TestCase):
         self.assertEqual(result["http200_deliberately_ignored"], 1)
         self.assertEqual(result["body_written_rows"], 130)
         self.assertEqual(result["unique_body_written_ids"], 120)
+
+    def test_new_200_row_transport_retains_500_history_and_counts_retry_in_cumulative_total(self):
+        preflight, transport, final = self.fixtures()
+        final["cloud_row_limit"] = 200
+        accounting = budget_accounting(CloudGates().additional_gate())
+        result = summarize_transport(preflight, transport, self.run_id, 200, final, accounting)
+        self.assertFalse(result["failures"])
+        self.assertEqual(result["budget"], dict(accounting, reserved_rows=130))
+        self.assertEqual(result["body_written_rows"], 130)
+        self.assertEqual(result["unique_body_written_ids"], 120)
+        self.assertEqual(result["budget"]["prior_rows_conservative_consumed"], 500)
+        self.assertEqual(result["budget"]["total_ceiling"], 700)
+        self.assertNotIn("prior_rows_reserved", result["budget"])
 
     def test_cloud_receipt_redaction_keeps_event_fields_without_fake_credential_claim(self):
         preflight, _, _ = self.fixtures()

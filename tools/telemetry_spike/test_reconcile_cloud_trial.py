@@ -93,6 +93,37 @@ class CloudReadbackGuards(unittest.TestCase):
         self.assertEqual(result["status"], "FAILED")
         self.assertEqual(len(result["overall"]["missing_ids"]), 120)
 
+    def test_new_allowance_preserves_conservative_history_in_readback(self):
+        self.transport["budget"] = {
+            "accounting_schema_version": 2, "reserved_rows": 130, "limit": 200,
+            "total_ceiling": 700, "prior_rows_conservative_consumed": 500,
+            "additional_rows_authorized": 200}
+        result, _ = self.analyze()
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(result["budget"]["total_ceiling"], 700)
+        self.assertEqual(result["budget"]["prior_rows_conservative_consumed"], 500)
+        self.assertEqual(result["budget"]["body_written_rows"], 130)
+        self.assertNotIn("prior_rows_reserved", result["budget"])
+        valid = copy.deepcopy(self.transport["budget"])
+        for field, value in (("total_ceiling", 500), ("limit", 201),
+                             ("prior_rows_conservative_consumed", 499),
+                             ("additional_rows_authorized", True),
+                             ("accounting_schema_version", 3),
+                             ("prior_rows_reserved", 300)):
+            with self.subTest(field=field):
+                self.transport["budget"] = dict(valid, **{field: value})
+                result, _ = self.analyze()
+                self.assertEqual(result["status"], "BLOCKED")
+                self.assertEqual(result["client_evidence_failure"], "TRANSMISSION_BUDGET_NOT_ATTESTED")
+
+    def test_legacy_budget_rejects_boolean_and_float_prior(self):
+        for value in (False, 0.0):
+            with self.subTest(value=value):
+                self.transport["budget"]["prior_rows_reserved"] = value
+                result, _ = self.analyze()
+                self.assertEqual(result["status"], "BLOCKED")
+                self.assertEqual(result["client_evidence_failure"], "TRANSMISSION_BUDGET_NOT_ATTESTED")
+
     def test_failed_transport_preserves_actual_cloud_rows_without_acceptance_pass(self):
         self.transport["status"] = "FAILED"
         self.readback["rows"].append(copy.deepcopy(self.cloud_items[101]))

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gated synthetic Android -> existing PostHog EU project trial, <=500 rows.
+"""Gated synthetic Android -> existing PostHog EU project trial, <=500 rows/run.
 
 No automatic activation: verified project/quota/deletion/privacy/retention and
 same-source local regression receipts are required before any ADB operation.
@@ -48,10 +48,43 @@ def iso(value):
     return result
 
 
+def budget_accounting(gate):
+    """Bind the one-run cap to an explicitly authorized cumulative allowance.
+
+    Schema 1 retains the historical 500-row authorization for reproducibility.
+    Schema 2 never infers previous consumption by subtracting from that old cap.
+    Its additional allowance is one-use: unused rows authorize no later launch.
+    """
+    remaining = gate.get("remaining_budget")
+    if type(remaining) is not int or not 130 <= remaining <= 500:
+        raise TrialBlocked("CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT")
+    version = gate.get("schema_version")
+    if type(version) is not int:
+        raise TrialBlocked("CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT")
+    if version == 1:
+        if (type(gate.get("total_ceiling")) is not int or gate["total_ceiling"] != 500 or
+                any(key in gate for key in ("prior_rows_conservative_consumed", "additional_rows_authorized"))):
+            raise TrialBlocked("CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT")
+        return {"limit": remaining, "total_ceiling": 500, "prior_rows_reserved": 500 - remaining}
+    prior = gate.get("prior_rows_conservative_consumed")
+    additional = gate.get("additional_rows_authorized")
+    total = gate.get("total_ceiling")
+    if (version != 2 or "prior_rows_reserved" in gate or
+            any(type(value) is not int for value in (prior, additional, total)) or
+            prior < 0 or additional != remaining or total != prior + additional):
+        raise TrialBlocked("CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT")
+    return {"accounting_schema_version": 2, "limit": remaining, "total_ceiling": total,
+            "prior_rows_conservative_consumed": prior, "additional_rows_authorized": additional}
+
+
+def required_controls(gate):
+    return CONTROLS + (("budget_authorization",) if gate.get("schema_version") == 2 else ())
+
+
 def validate_cloud_gate(gate, source, run_id, execution_id, run_attempt, clock=None):
     """Pending/unknown prechecks are never interpreted as permission to ingest."""
     clock = clock or datetime.now(timezone.utc)
-    if (not isinstance(gate, dict) or type(gate.get("schema_version")) is not int or gate.get("schema_version") != 1 or gate.get("status") != "PASS" or
+    if (not isinstance(gate, dict) or type(gate.get("schema_version")) is not int or gate.get("schema_version") not in (1, 2) or gate.get("status") != "PASS" or
             gate.get("project_id") != PROJECT or gate.get("api_host") != "https://" + HOST or
             gate.get("source_commit") != source or gate.get("run_id") != run_id or
             gate.get("execution_id") != execution_id or type(gate.get("run_attempt")) is not int or
@@ -61,12 +94,12 @@ def validate_cloud_gate(gate, source, run_id, execution_id, run_attempt, clock=N
         raise TrialBlocked("CLOUD_EXECUTION_IDENTITY_INVALID")
     event(run_id, 140)
     quota, remaining = gate.get("quota_rows_available"), gate.get("remaining_budget")
-    if (type(quota) is not int or quota < 500 or type(remaining) is not int or
-            not 130 <= remaining <= 500 or gate.get("total_ceiling") != 500):
+    if type(quota) is not int or quota < 500:
         raise TrialBlocked("CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT")
+    budget_accounting(gate)
     if not clock < iso(gate.get("expires_utc")) <= clock + timedelta(hours=24):
         raise TrialBlocked("CLOUD_GATE_EXPIRED_OR_VALIDITY_TOO_LONG")
-    for name in CONTROLS:
+    for name in required_controls(gate):
         value = gate.get(name, {})
         if (not isinstance(value, dict) or value.get("status") != "VERIFIED" or
                 not isinstance(value.get("evidence_ref"), str) or not 1 <= len(value["evidence_ref"]) <= 2000 or
@@ -77,6 +110,11 @@ def validate_cloud_gate(gate, source, run_id, execution_id, run_attempt, clock=N
             gate["quota"].get("free_plan") is not True or
             gate["local_regression"].get("source_commit") != source):
         raise TrialBlocked("CLOUD_PRIVACY_OR_SAME_SOURCE_REGRESSION_NOT_ATTESTED")
+    if gate["schema_version"] == 2 and any(
+            type(gate["budget_authorization"].get(key)) is not int or
+            gate["budget_authorization"][key] != gate[key]
+            for key in ("prior_rows_conservative_consumed", "additional_rows_authorized", "total_ceiling")):
+        raise TrialBlocked("CLOUD_BUDGET_AUTHORIZATION_NOT_ATTESTED")
     return remaining
 
 
@@ -127,7 +165,7 @@ def sanitize_preflight(records, run_id):
     return sanitized, failures
 
 
-def summarize_transport(preflight, transport, run_id, remaining, final):
+def summarize_transport(preflight, transport, run_id, remaining, final, accounting=None):
     """Evidence from attempted writes, deliberately separate from cloud rows."""
     failures, attempts, reserved, by_id, written, stages, acknowledged_ids = [], {}, 0, {}, set(), {}, set()
     for row in preflight:
@@ -211,8 +249,9 @@ def summarize_transport(preflight, transport, run_id, remaining, final):
     if (any(final.get(key) != 0 for key in ("cloud_budget_blocked", "cloud_transport_blocked", "cloud_audit_failures")) or
             final.get("retry_ack_discarded") != 1 or final.get("cloud_rows_written") != sum(len(by_id[k]) for k in by_id)):
         failures.append("NATIVE_CLOUD_SAFETY_COUNTERS_NOT_ATTESTED")
-    return {"failures": sorted(set(failures)), "budget": {"reserved_rows": reserved, "limit": remaining,
-            "total_ceiling": 500, "prior_rows_reserved": 500 - remaining},
+    accounting = accounting if accounting is not None else {
+        "limit": remaining, "total_ceiling": 500, "prior_rows_reserved": 500 - remaining}
+    return {"failures": sorted(set(failures)), "budget": dict(accounting, reserved_rows=reserved),
             "retry_same_uuid_attested": same_retry, "body_written_attempts": len(written),
             "body_written_rows": sum(len(by_id[k]) for k in by_id),
             "unique_body_written_ids": len(by_id), "revoked_ids_attempted": sorted(attempted_ids & revoked_ids),
@@ -286,14 +325,18 @@ def parse_budget_database(path, run_id, expected_binding, remaining):
             connection.close()
 
 
-def unknown_budget_receipt(run_id, source_commit, remaining=None):
-    return {"schema_version": 1, "observed_utc": now(), "run_id": run_id,
+def unknown_budget_receipt(run_id, source_commit, remaining=None, accounting=None):
+    total = accounting["total_ceiling"] if accounting is not None else 500
+    receipt = {"schema_version": 1, "observed_utc": now(), "run_id": run_id,
             "source_commit": source_commit, "status": "UNKNOWN_BLOCK_FUTURE_SENDS",
-            "authorized_total_ceiling": 500, "current_attempt_limit": remaining,
+            "authorized_total_ceiling": total, "current_attempt_limit": remaining,
             "reserved_rows": None, "reserved_attempts": None, "body_written_rows": None,
             "body_written_requests": None, "acknowledged_requests": None, "cloud_received_rows": None,
-            "conservative_consumed_for_future_launches": 500, "remaining_for_future_launches": 0,
+            "conservative_consumed_for_future_launches": total, "remaining_for_future_launches": 0,
             "automatic_refund_allowed": False}
+    if accounting is not None:
+        receipt["authorization_accounting"] = dict(accounting)
+    return receipt
 
 
 class CloudDevice(Device):
@@ -552,7 +595,7 @@ def main():
               "limits": ["NO_REAL_USERS_NO_CONVOY_INTEGRATION", "HTTP_STATUS_IS_NOT_RECEIPT",
                          "PRECOMMIT_REVOCATION_UNACKNOWLEDGED_REQUESTS_ALREADY_STARTED_NOT_RECALLABLE",
                          "EMULATOR_CONNECTIVITY_NOT_PHYSICAL_RADIO_BATTERY_PROOF"]}
-    device, cleanup_required, provisioned, radios, remaining = None, False, False, None, None
+    device, cleanup_required, provisioned, radios, remaining, accounting = None, False, False, None, None, None
     budget_recovery = unknown_budget_receipt(args.run_id, args.source_commit)
     public_write(args.out / "budget-recovery.json", budget_recovery)
     result["budget_recovery_ref"] = "budget-recovery.json"
@@ -561,8 +604,12 @@ def main():
         try:
             gate = json.loads(args.cloud_gate.read_text())
             remaining = validate_cloud_gate(gate, args.source_commit, args.run_id, args.execution_id, args.run_attempt)
-            result["budget"] = {"reserved_rows": None, "limit": remaining, "total_ceiling": 500,
-                                "prior_rows_reserved": 500 - remaining, "unattested_consume_full_remaining": True}
+            accounting = budget_accounting(gate)
+            result["budget"] = dict(accounting, reserved_rows=None, unattested_consume_full_remaining=True)
+            # Once the one-use gate has been accepted, even an immediate failure
+            # preserves the complete cumulative reservation before any ADB call.
+            public_write(args.out / "budget-recovery.json", unknown_budget_receipt(
+                args.run_id, args.source_commit, remaining, accounting))
             if os.environ.get("GITHUB_RUN_ATTEMPT", "1") != "1":
                 raise TrialBlocked("CLOUD_AUTOMATIC_RERUN_REFUSED")
             private_bytes = read_private_config(args.private_config, args.run_id, remaining)
@@ -578,10 +625,11 @@ def main():
             public_write(args.out / "cloud-gate-reference.json", {
                 "sha256": sha256(args.cloud_gate), "status": "PASS", "project_id": PROJECT, "host": HOST,
                 "path": "/batch/", "execution_id": args.execution_id, "run_attempt": 1,
-                "remaining_budget": remaining, "total_ceiling": 500,
+                "remaining_budget": remaining, "total_ceiling": accounting["total_ceiling"],
+                "authorization_accounting": accounting,
                 "controls": {key: {"status": gate[key]["status"], "checked_at_utc": gate[key]["checked_at_utc"],
                                    "evidence_reference_sha256": hashlib.sha256(gate[key]["evidence_ref"].encode()).hexdigest()}
-                             for key in CONTROLS}})
+                             for key in required_controls(gate)}})
             public_write(args.out / "runtime-gate-reference.json", {"sha256": sha256(args.runtime_gate),
                          "serial": args.serial, "boot_id": runtime["boot_id"], "status": runtime["status"]})
             public_write(args.out / "apk-receipt.json", verify_apk(args, env))
@@ -611,7 +659,7 @@ def main():
                 validate_public_value(row)
             write_rows(args.out / "preflight.jsonl", preflight)
             write_rows(args.out / "transport.jsonl", transport)
-            finding = summarize_transport(preflight, transport, args.run_id, remaining, final)
+            finding = summarize_transport(preflight, transport, args.run_id, remaining, final, accounting)
             finding["failures"] = sorted(set(finding["failures"] + failures + preflight_errors))
             result.update(finding)
             result["status"] = "FAILED" if finding["failures"] else "TRANSPORT_COMPLETE_READBACK_PENDING"
@@ -648,7 +696,7 @@ def main():
                     result["cleanup_error"] = "CLOUD_PRIVATE_CLEANUP_NOT_ATTESTED"
             # Always keep a receipt, including an install/stat failure before provisioned=true.
             # Missing/unreadable counters remain unknown. No local observation authorizes a refund.
-            budget_recovery = unknown_budget_receipt(args.run_id, args.source_commit, remaining)
+            budget_recovery = unknown_budget_receipt(args.run_id, args.source_commit, remaining, accounting)
             if cleanup_required and device is not None and cleanup["lab_stopped"] and remaining is not None:
                 try:
                     observed = device.recover_budget(work,

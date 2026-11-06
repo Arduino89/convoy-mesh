@@ -393,15 +393,25 @@ class CloudPreparationMainIntegration(unittest.TestCase):
         self.assertEqual(receipt['remaining_for_future_launches'], 0)
         self.assertIs(receipt['automatic_refund_allowed'], False)
 
-    def simulate_stat_failure(self, remove_fails=False):
+    def simulate_stat_failure(self, remove_fails=False, additional_allowance=False):
         canary = 'phc_MainIntegrationCanaryDoNotExport123'
         private = json.dumps({'api_key':canary}).encode()
         gate = {name:{'status':'VERIFIED', 'checked_at_utc':'2026-11-05T12:00:00+00:00',
                       'evidence_ref':'synthetic-host-fixture'} for name in cloud.CONTROLS}
+        gate.update(schema_version=1, total_ceiling=500, remaining_budget=500)
+        if additional_allowance:
+            gate.update(schema_version=2, total_ceiling=700, remaining_budget=200,
+                        prior_rows_conservative_consumed=500, additional_rows_authorized=200)
+            gate['budget_authorization'] = {'status':'VERIFIED', 'checked_at_utc':'2026-11-05T12:00:00+00:00',
+                                           'evidence_ref':'synthetic-extra-allowance'}
         self.gate.write_text(json.dumps(gate))
         device = CloudDevice(self.directory/'sdk', 'emulator-5554', {}, {})
         device.pid = Mock(return_value=None)
-        device.check_gate = Mock()
+        def check_before_adb():
+            receipt = json.loads((self.out/'budget-recovery.json').read_text())
+            self.assertEqual(receipt['conservative_consumed_for_future_launches'], 700 if additional_allowance else 500)
+            self.assertEqual(receipt['remaining_for_future_launches'], 0)
+        device.check_gate = Mock(side_effect=check_before_adb)
         device.command = Mock(side_effect=AssertionError('No app launch or capture is allowed'))
         installed = False
 
@@ -430,7 +440,7 @@ class CloudPreparationMainIntegration(unittest.TestCase):
         device.private_rows = Mock(side_effect=TrialBlocked('NATIVE_CLOUD_RECEIPTS_UNAVAILABLE_OR_TOO_LARGE'))
         writer = subprocess.CompletedProcess([], 0, b'', b'')
         with patch('sys.argv', self.argv), patch('ci_cloud_trial.CloudDevice', return_value=device), \
-                patch('ci_cloud_trial.validate_cloud_gate', return_value=500), \
+                patch('ci_cloud_trial.validate_cloud_gate', return_value=200 if additional_allowance else 500), \
                 patch('ci_cloud_trial.read_private_config', return_value=private), \
                 patch('ci_cloud_trial.verify_apk', return_value={'source_commit':self.source}), \
                 patch('ci_cloud_trial.run_cases') as cases, \
@@ -456,7 +466,7 @@ class CloudPreparationMainIntegration(unittest.TestCase):
         receipt = json.loads((self.out/'budget-recovery.json').read_text())
         self.assertEqual(receipt['reserved_rows'], 20)
         self.assertIsNone(receipt['cloud_received_rows'])
-        self.assertEqual(receipt['conservative_consumed_for_future_launches'], 500)
+        self.assertEqual(receipt['conservative_consumed_for_future_launches'], 700 if additional_allowance else 500)
         self.assertEqual(receipt['remaining_for_future_launches'], 0)
         self.assertIs(receipt['automatic_refund_allowed'], False)
         public = '\n'.join(path.read_text() for path in self.out.iterdir() if path.is_file())
@@ -466,6 +476,18 @@ class CloudPreparationMainIntegration(unittest.TestCase):
 
     def test_stat_failure_after_write_still_cleans_and_recovers_without_successful_provision(self):
         self.simulate_stat_failure()
+
+    def test_new_allowance_failed_preparation_preserves_700_cumulative_ceiling_without_refund(self):
+        _, result = self.simulate_stat_failure(additional_allowance=True)
+        self.assertEqual(result['budget']['prior_rows_conservative_consumed'], 500)
+        self.assertEqual(result['budget']['additional_rows_authorized'], 200)
+        self.assertEqual(result['budget']['limit'], 200)
+        self.assertEqual(result['budget']['total_ceiling'], 700)
+        receipt = json.loads((self.out/'budget-recovery.json').read_text())
+        self.assertEqual(receipt['reserved_rows'], 20)
+        self.assertEqual(receipt['authorization_accounting']['prior_rows_conservative_consumed'], 500)
+        self.assertEqual(receipt['authorized_total_ceiling'], 700)
+        self.assertNotIn('prior_rows_reserved', result['budget'])
 
     def test_cleanup_failure_preserves_primary_error_and_budget_without_restoring_network(self):
         device, result = self.simulate_stat_failure(remove_fails=True)

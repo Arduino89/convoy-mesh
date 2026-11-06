@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 
 from ci_native_trial import TrialBlocked, public_write, validate_public_value
+from ci_cloud_trial import budget_accounting
 from probe import event, reconcile, validate
 from wire_audit_receiver import FIELDS, PROPERTIES, TOKEN, audit_payload, is_uuid, key, shape
 
@@ -140,10 +141,16 @@ def client_evidence(transport, preflight, attempts):
     if transport.get("status") != "TRANSPORT_COMPLETE_READBACK_PENDING" or transport.get("failures"):
         raise TrialBlocked("TRANSPORT_NOT_COMPLETE")
     budget = transport.get("budget", {})
-    values = [budget.get(name) for name in ("reserved_rows", "limit", "total_ceiling", "prior_rows_reserved")]
-    if (any(type(value) is not int for value in values) or values[2] != 500 or
-            not 0 <= values[3] <= 500 or not 1 <= values[1] <= 500 or
-            not 0 < values[0] <= values[1] or values[3] + values[1] > 500):
+    version = budget.get("accounting_schema_version", 1)
+    try:
+        accounting = budget_accounting(dict(budget, schema_version=version,
+                                            remaining_budget=budget.get("limit")))
+    except (TrialBlocked, TypeError):
+        raise TrialBlocked("TRANSMISSION_BUDGET_NOT_ATTESTED")
+    if (type(budget.get("reserved_rows")) is not int or
+            not 0 < budget["reserved_rows"] <= accounting["limit"] or
+            any(type(budget.get(name)) is not type(value) or budget.get(name) != value
+                for name, value in accounting.items())):
         raise TrialBlocked("TRANSMISSION_BUDGET_NOT_ATTESTED")
     by_attempt, originals, uuid_owners, reserved = {}, {}, {}, 0
     for receipt in preflight:
@@ -225,8 +232,7 @@ def client_evidence(transport, preflight, attempts):
             any(written[identity] < 2 for identity in retry_ids) or
             transport.get("retry_same_uuid_attested") is not True):
         raise TrialBlocked("CLIENT_COHORT_OR_CONTROLLED_RETRY_NOT_ATTESTED")
-    return originals, {"reserved_rows": reserved, "limit": budget["limit"],
-                       "prior_rows_reserved": budget["prior_rows_reserved"], "total_ceiling": 500,
+    return originals, {"reserved_rows": reserved, **accounting,
                        "body_written_rows": sum(written.values()), "written_rows_per_id": dict(written),
                        "ignored_200_response_count": len(ignored),
                        "http_success_is_not_receipt": True}

@@ -44,6 +44,10 @@ class ProvisionShellEntry(unittest.TestCase):
         return [json.loads(line) for line in self.log.read_text().splitlines()]
 
     def test_previous_action_first_line_reproduces_pipefail_error(self):
+        capability = subprocess.run(["/usr/bin/sh", "-c", "set -o pipefail"],
+                                    capture_output=True, text=True, timeout=10)
+        if capability.returncode == 0:
+            self.skipTest("Host sh supports pipefail; historical run9 rejection is not reproduced on this shell")
         old = subprocess.run(["/usr/bin/sh", "-c", "set -euo pipefail"],
                              capture_output=True, text=True, timeout=10)
         self.assertEqual(old.returncode, 2)

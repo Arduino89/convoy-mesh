@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 import subprocess
 
-from ci_cloud_trial import ENDPOINT, TrialBlocked, validate_cloud_gate
+from ci_cloud_trial import ENDPOINT, TrialBlocked, budget_accounting, validate_cloud_gate
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -41,7 +41,7 @@ def prepare(out, environment, source, clock=None):
             os.fsync(output.fileno())
     return {"status": "PREPARED_PRIVATE_CLOUD_INPUTS", "source_commit": source,
             "run_id": run_id, "execution_id": execution, "run_attempt": attempt,
-            "remaining_budget": remaining}
+            "remaining_budget": remaining, "authorization_accounting": budget_accounting(gate)}
 
 
 def main():
