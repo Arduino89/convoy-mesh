@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "REVIEWED_READY_FOR_SINGLE_CLOUD15",
+  "status": "CLOSED_BLOCKED_ACKNOWLEDGMENT_DIAGNOSTIC_NO_FURTHER_CLOUD_AUTHORITY",
   "user_decision": {
     "date": "2026-11-06",
     "decision": "Cama answered ok procedi to the separate proposal for200additional synthetic cloud rows/cumulative700.",
@@ -22,7 +22,10 @@
     "nominal_unique_events": 120,
     "automatic_refund": false,
     "automatic_rerun": false,
-    "unused_rows_authorize_future_launch": false
+    "unused_rows_authorize_future_launch": false,
+    "native_observed_reserved_rows": 20,
+    "future_launch_allowance": 0,
+    "unused_native_rows_are_not_future_authority": 180
   },
   "reuse_first": {
     "workflow_level": 5,
@@ -99,7 +102,7 @@
     "No new external contact",
     "No actual deletion without exact-set Cama approval"
   ],
-  "next_gate": "One guarded cloud15 attempt1 on source809caf; exact wrapper and gate independently reviewed in cloud-launch-review.json, then raw readback. No auto rerun/refund.",
+  "next_gate": "Offline bounded ACKresponseclassification/fail-fast design and regressions; establish supported actualresponsecontract beforechangingpredicate. No furthercloudtrial,budget,adoptionordeleteauthorized.",
   "local_result": {
     "run_id": 42299072769,
     "job_id": 128171820455,
@@ -109,5 +112,40 @@
     "host_tests": 193,
     "cloud_preparation": "SKIPPED_DISABLED",
     "export_sha256": "4e04af33698d083efa9a46b9bd6287ad99fbc81a41c49211bffb123388585390"
+  },
+  "cloud_result": {
+    "run_id": 42300571195,
+    "job_id": 128176961434,
+    "number": 15,
+    "attempt": 1,
+    "workflow_commit": "340571da315d9f19e35ef3374902fcd2be8cfd62",
+    "runtime_source": "809caf200f6232b162fee009fa2a7c2b484d7855",
+    "conclusion": "failure",
+    "first_batch20_received": true,
+    "revocation_retry": "NOT_RUN",
+    "summary_ref": "run-42300571195/summary.json"
+  },
+  "learningSweep": {
+    "triggerDecisions": [
+      {
+        "trigger": "INCOMPLETE_ACK_PROTOCOL_ASSUMPTION",
+        "decision": "PROJECT_SPECIFIC_DIAGNOSTIC_RETAINED",
+        "evidence": "run-42300571195/response-acceptance-cause.json",
+        "general_promotion": false
+      },
+      {
+        "trigger": "PARTIAL_RECEIPT_MISLEADING_RETRY_LABEL",
+        "decision": "PROJECT_HOST_ANALYZER_REGRESSION",
+        "evidence": "analysis-label-review.json",
+        "general_promotion": false
+      }
+    ],
+    "existing_context_reused": [
+      "EP-002",
+      "EP-003",
+      "EP-004",
+      "JON-2026-09-08-001"
+    ],
+    "central_governance_changed": false
   }
 }

@@ -1,0 +1,21 @@
+{
+  "wrapper_commit": "340571da315d9f19e35ef3374902fcd2be8cfd62",
+  "source": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "tree": "e99938fcfc5450a7dc32bf827041a07d67ddcc63",
+  "latest_run": 42299072769,
+  "latest_number": 14,
+  "pr_draft": true,
+  "scope_verified": true,
+  "attempt": 1,
+  "run_id": 42300571195,
+  "number": 15,
+  "status": "IN_PROGRESS_NOT_A_RESULT",
+  "observed_utc": "2026-11-06T21:55:03Z",
+  "no_rerun": true,
+  "terminal": {
+    "status": "completed",
+    "conclusion": "failure",
+    "job_id": 128176961434,
+    "summary_ref": "run-42300571195/summary.json"
+  }
+}

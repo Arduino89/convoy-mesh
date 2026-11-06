@@ -131,6 +131,9 @@ class CloudReadbackGuards(unittest.TestCase):
         self.assertEqual(result["status"], "BLOCKED")
         self.assertFalse(result["client_evidence_complete"])
         self.assertEqual(result["raw_rows_seen"], 121)
+        self.assertEqual(result["retry_storage_observation"]["interpretation"],
+                         "NOT_ATTESTED_INCOMPLETE_CLIENT_EVIDENCE")
+        self.assertFalse(result["retry_storage_observation"]["universal_deduplication_guarantee"])
         self.assertEqual(result["phases"]["revoked"]["received_rows"], 1)
         self.assertEqual(len(rows), 121)
 

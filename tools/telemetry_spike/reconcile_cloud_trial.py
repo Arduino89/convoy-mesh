@@ -390,7 +390,8 @@ def reconcile_trial(transport, preflight, attempts, readback=None):
         retry_counts = Counter(row["event_id"] for row in normalized if 131 <= row["sequence"] <= 140)
         result["retry_storage_observation"] = {
             "rows_per_id": dict(retry_counts),
-            "interpretation": "DUPLICATE_STORED_ROWS_OBSERVED" if any(v > 1 for v in retry_counts.values()) else
+            "interpretation": "NOT_ATTESTED_INCOMPLETE_CLIENT_EVIDENCE" if client_error else
+                              "DUPLICATE_STORED_ROWS_OBSERVED" if any(v > 1 for v in retry_counts.values()) else
                               "ONE_OR_ZERO_STORED_ROWS_PER_ID_AFTER_MULTIPLE_CLIENT_BODY_WRITES",
             "universal_deduplication_guarantee": False}
         failures = result["failures"]

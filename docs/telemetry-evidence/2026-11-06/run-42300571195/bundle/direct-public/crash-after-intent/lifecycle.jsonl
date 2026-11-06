@@ -1,0 +1,6 @@
+{"action": "local_route", "online": false}
+{"action": "force_stop", "old_pid": 3985, "pid_absent": true}
+{"action": "local_route", "online": true}
+{"action": "local_route", "online": true}
+{"action": "force_stop", "old_pid": 4148, "pid_absent": true}
+{"action": "local_route", "online": false}

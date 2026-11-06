@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "REVIEWED_READY_FOR_SINGLE_CLOUD15",
+  "status": "HISTORICAL_VERIFIED_PRELAUNCH_CONTROLS_USED_FOR_SINGLE15",
   "checked_at_utc": "2026-11-06T21:47:00Z",
   "project_id": 330212,
   "api_host": "https://eu.i.posthog.com",
@@ -59,7 +59,8 @@
     "github_secret": "Existing CONVOY_LAB_POSTHOG_TOKEN presence previously verified; no value read or changed. Server validity remains unverified until actual response.",
     "new_access_needed": false,
     "new_services": false,
-    "spending_authorized": false
+    "spending_authorized": false,
+    "server_validity": "FIRST20SYNTHETICRECORDS_RECEIVED_IN330212;no fulltrialpromise"
   },
   "safer_alternative": {
     "project_get": "Automatic review rejected fullsettingsread because it returns token; not retried.",

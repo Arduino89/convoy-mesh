@@ -1,8 +1,34 @@
 # Convoy Mesh — valutazione telemetria minima
 
-Data aggiornamento: 5 novembre 2026. Il nuovo mandato autorizza Android → progetto PostHog Cloud LAB esistente → lettura tramite collegamento di analisi, con massimo 500 righe trasmesse, ritentativi compresi. Convoy resta invariata; PR #5 in bozza, nessun merge, utente reale o nuova spesa. I risultati storici restano distinti.
+Data aggiornamento: 6 novembre 2026. Cama ha autorizzato una sola prova cloud con200righe aggiuntive, ritentativi compresi; tetto cumulativo prudenziale700 comprendente500precedenti sconosciute. Convoy resta invariata e PR#5inbozza; nessun merge, release, utente reale, cancellazione o nuova spesa.
 
-## Risultato corrente — preparazione offline corretta e verificata
+## Risultato corrente —20eventi ricevuti, prova cloud bloccata dalla conferma
+
+[Run15/job128176961434](https://github.com/Arduino89/convoy-mesh/actions/runs/42300571195/job/128176961434), tentativo1:FAILURE. Wrapper`340571da315d9f19e35ef3374902fcd2be8cfd62`, sorgente eseguibile esatto`809caf200f6232b162fee009fa2a7c2b484d7855`. [Evidenze, causa e riproduzione](telemetry-evidence/2026-11-06/run-42300571195/README.md). Nessuna nuova prova dopo questo tentativo.
+
+| Confine verificato | Risultato |
+|---|---|
+| Controlli host e Android |193/193inCI, app di controllo e tutte le regressioni locali PASS |
+| Configurazione cloud privata |9/9fasi PASS, shell_v2/file600/rilettura esatta |
+| Registrazione normale offline e riavvio |100eventi conservati prima di qualunque invio |
+| Prima richiesta cloud |20prenotati e scritti una volta; HTTP200, conferma rifiutata dal laboratorio |
+| Lettura PostHog indipendente |20/20identità e UUID corrispondenti, campi/flag previsti invariati, zero duplicati nella singola richiesta |
+| Resto della sequenza cloud |80normali non tentati; revoca, nuovo consenso/nuovi10, retry e deduplicazione NOT_RUN |
+| Pulizia |Processo fermo, fileprivato rimosso/assenza verificata, radio ripristinate e inputprivati del workflow rimossi |
+
+Il problema è nel criterio di conferma: il codice ha letto un oggetto JSON dal200, ma `status` non soddisfaceva il requisito locale di intero1. Il valore/tipo effettivi non sono stati conservati; non affermiamo che fosse una stringa specifica o un errore di parsing. La coda rimane100 perché comprende i20già ricevuti ma non confermati e gli80mai tentati. Il timeout successivo di120secondi deriva dal controllo che attende lo svuotamento senza reagire subito al blocco permanente. La [diagnosi circoscritta](telemetry-evidence/2026-11-06/run-42300571195/response-acceptance-cause.json) propone solo il minimo passo offline: ricevuta tipizzata/minimizzata della risposta e arresto immediato, regressioni sintetiche, contratto supportato prima di modificare l'accettazione. Nessun nuovo predicato o invio improvvisato.
+
+La prova resta **BLOCKED**. I20ricevuti non dimostrano la revoca cloud né il ritentativo, che non sono stati eseguiti. Il riconciliatore conserva lettura raw/count, identità e finestra senza DISTINCT. È stata corretta soltanto un'etichetta che parlava di ritentativi anche con prove client incomplete: ora indica nonattestato;24regressioni host PASS, stato/conteggi/soglie identici e revisione indipendente. Questa modifica dell'analisi appartiene al commit di chiusura, non al runtime809caf. Originale e risultato corretto rimangono entrambi consultabili.
+
+Il recupero read-only del databaseLAB è ora osservato su Android:20righe/1tentativo/0conferme. Non autorizza rimborsi:500precedenti incerti+200nuove restano700di tetto prudenziale,0nuovi invii autorizzati; i180nonusati non permettono un altro run. Il limite configurato200non è stato saturato. Nessuna spesa, cancellazione, merge, release o integrazione. Workflow originale ripristinato byte per byte con skip-ci, PR5ancora inbozza.
+
+[Run14/job128171820455](https://github.com/Arduino89/convoy-mesh/actions/runs/42299072769/job/128171820455) sullo stesso809caf è SUCCESS:193/193host e tutte le prove Android locali. [Ricalcolo indipendente](telemetry-evidence/2026-11-06/run-42299072769/README.md):100normali,80revocati/30rifiutati assenti,10coppie di dati sintetici conservate, retry20righe/10identità,13perdite da saturazione visibili. I confini prima della revoca durevole e delle richieste già ricevute restano espliciti. Anche le regressioni locali15 sono passate e riesaminate; nessun successo locale sostituisce le prove cloud mancanti.
+
+Privacy verificata soltanto sul primo lotto: corpo finale minimizzato e otto proprietà nel cloud corrispondenti, nessun nuovo campo in quelle proprietà. Le colonne server person_mode/person_id restano una valutazione separata, valori privati: un person_id non prova da solo la creazione di un profilo. IPdiscard attivo/replayspento verificati prima del run; il percorso supportato gratuito di cancellazione selettiva rimane distinto da un'effettiva cancellazione, mai richiesta. Retention1anno è finestra di interrogazione, non erasure fisica. Le risposte originali minimizzate sono conservate privatamente; pubblicati soltanto dati sintetici e metadati redatti.
+
+APKLAB15:1.0/code1,package`com.cama.telemetry.direct_lab`,45.459byte,SHA256`3328825328979304ab929ca0b35bc637c5e5074e73e7dac862a39dfc7898a33a`,certificato`bbaeaa7f902d6e784f733355bdaf7cecc30870e4c66fa9d93855880ba3913aa5`,min24/target36,INTERNET+ACCESS_NETWORK_STATE. Identità verificata inCI e collegata ai5hash nativi invariati; APK non distribuita né scaricata indipendentemente. Convoy rimane invariata. Telefoni fisici, consumi, GPS/Bluetooth e privacy dell'intera infrastruttura restano non verificati.
+
+## Checkpoint storico — preparazione offline verificata il5novembre
 
 **La prova Android del correttivo è riuscita:** [run42072267635/job127403084581](https://github.com/Arduino89/convoy-mesh/actions/runs/42072267635/job/127403084581), numero13/tentativo1, sorgente eseguibile del diagnostico `e094db2d815b10aca3ce49cdd9007304818220b3`, conclusioneSUCCESS. Sorgente nativo LAB fissato a `2d76100fda1df0637e953f4ad90f26073028880c`, invariato. [Ricevute e riepilogo](telemetry-evidence/2026-11-05/run-42072267635/summary.json).178/178controlli host separati e45mirati nel jobPASS; le prove Python restano distinte da Android.
 
@@ -30,7 +56,7 @@ APK LAB della prova: package `com.cama.telemetry.direct_lab`, versione1.0/code1,
 
 La [revisione indipendente](telemetry-evidence/2026-11-05/run-42072267635/independent-review.json) conferma il risultato; il [ricalcolo con sola libreria standard](telemetry-evidence/2026-11-05/run-42072267635/README.md) è stato rieseguito e produce la stessa ricevuta byte per byte. È una revisione delle evidenze, non una seconda esecuzione Android. I fallimenti restano nelle rispettive cartelle; nessun rilancio identico e nessuna asserzione allentata. Il workflow originale viene ripristinato con skip-ci nel commit finale di evidenze. Restano non verificati invio/consenso/revoca cloud, deduplicazione, privacy dell’intera infrastruttura e consumi sui telefoni. Le regressioni native/locali precedenti rimangono valide sui sorgenti invariati, senza nuova esecuzione attribuita. **Convoy invariata, PR5DRAFT; nessuna integrazione, cancellazione, spesa, merge, release o utente reale.**
 
-## Proposta per il successivo gate cloud — NON AUTORIZZATA
+## Proposta storica del5novembre — autorizzata separatamente il6novembre
 
 La preparazione offline è verificata; la proposta resta subordinata alla revisione delle ricevute e a una decisione separata di Cama. **Nessun invio avviato e nessun nuovo plafond concesso da questo incarico.**
 

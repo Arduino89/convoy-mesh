@@ -1,5 +1,13 @@
 # Telemetry spike — istruzioni riproducibili
 
+## Current checkpoint —6November2026
+
+Exact runtime source809caf200f6232b162fee009fa2a7c2b484d7855: local14SUCCESS/193CIcontrols; cloud15run42300571195/job128176961434FAILURE after20events actually arrived. Parseable200JSON rejected by LABstatus-integer1predicate; exactvalue/type notrecorded.100normalqueued, first20sentonce,20rawcloudsameIDs/UUIDs/properties; revocation/newconsent/retry cloudNOT_RUN. No rerun. Ledger20observed, cumulative700conservative/future0; unused180isnotfutureauthority. Nativeapp unchanged, originalworkflow restoredskip-ci. PR5draft/Convoyunchanged/noadoption,release,spend,deletionorrealusers.
+
+[Current receipts/cause/reproduction](../../docs/telemetry-evidence/2026-11-06/run-42300571195/README.md) · [local14](../../docs/telemetry-evidence/2026-11-06/run-42299072769/README.md) · [summary report](../../docs/telemetry-minimum-infrastructure.md). Host-only partialretrylabel correction:24regressionsPASS, original/corrected outputs bothBLOCKED withsamecounts/thresholds. Offline ACKdiagnostic/fail-fast proposal is next; no new cloudauthorization.
+
+Everything below is historical evidence and must not override this checkpoint.
+
 **Mandato attuale del5novembre: sola diagnosi/correzione offline di installazione e configurazione.** Stesso LAB/ramo e PR5in bozza, sorgente nativo fissato a2d76100. Credenziale fittizia intenzionalmente invalida, nessun avvio LAB o consenso/capture, rete bloccata prima dell’installazione. Il vecchio run8 mantiene500conteggiati prudenzialmente/0autorizzati e contatori sconosciuti: nessun nuovo invio cloud è autorizzato.
 
 Il run10 ha identificato PRIVATE_STAT1/FILE_NOT_FOUND dopo exec-in0; installazione e directory riuscite. La causa è la prequotatura incompatibile con l’escaping exec-in, che non certifica l’esito remoto. Il correttivo usa shell-T con shell_v2 richiesto e conferma il file soltanto dopo600/rilettura esatta. [Causa, fonte primaria e riproduzione host](../../docs/telemetry-evidence/2026-11-05/provision-transport-cause.json). **Preparazione corretta verificata:** sorgente diagnostico `e094db2d815b10aca3ce49cdd9007304818220b3`, [run42072267635/numero13/tentativo1](https://github.com/Arduino89/convoy-mesh/actions/runs/42072267635), installazione/protocollo/file600/rilettura/pulizia PASS;178host test separati e45mirati nel job PASS. Nessuna attività LAB o cloud. Il verificatore legge correttamente una funzione per riga, richiede una sola shell_v2esatta e conserva solo conteggi tipizzati. [Ricevute](../../docs/telemetry-evidence/2026-11-05/run-42072267635/summary.json). Il precedente errore sh/pipefail del run9 è separato e corretto con ingresso Bash esplicito.

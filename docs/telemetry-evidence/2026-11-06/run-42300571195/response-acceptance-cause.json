@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "status": "ACKNOWLEDGMENT_PREDICATE_REJECTION_LOCALIZED_BODY_VALUE_NOT_RECORDED",
+  "checked_at_utc": "2026-11-06T22:10:57.825812+00:00",
+  "scope": "BOUNDED_READ_ONLY_SOURCE_AND_EXISTING_RECEIPT_CAUSAL_AUDIT",
+  "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "project_id": 330212,
+  "run_id": "synthetic-cloud-20261106-r15",
+  "execution_id": "Isolated Android telemetry laboratory:15",
+  "github_run_id": 42300571195,
+  "github_run_number": 15,
+  "github_run_attempt": 1,
+  "evidence": [
+    {
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "sha256": "81222e42f65f27d5524ad80b5b66eb5f685b6f3091e5d467a564636ecaa31312",
+      "bytes": 43076
+    },
+    {
+      "path": "tools/telemetry_spike/ci_cloud_trial.py",
+      "sha256": "69e1b7e5a2eb5babfa923fb85173dc62efdbbfb77462512652fb2d54109ba4cf",
+      "bytes": 47653
+    },
+    {
+      "path": "docs/telemetry-evidence/2026-11-06/run-42300571195/bundle/cloud-public/result.json",
+      "sha256": "8424f2bbd6dc96d84b7c76bade5e306635ade01e943ed1e3412a9b87e92c1992",
+      "bytes": 2656
+    },
+    {
+      "path": "docs/telemetry-evidence/2026-11-06/run-42300571195/bundle/cloud-public/transport.jsonl",
+      "sha256": "88c79ae579eccc1aa06a9f1ebed6ff24f096e9758f7b8fe783172af2e584753a",
+      "bytes": 7229
+    },
+    {
+      "path": "docs/telemetry-evidence/2026-11-06/run-42300571195/bundle/cloud-public/preflight.jsonl",
+      "sha256": "f0853c47a89eb71d652bf57046f3fcd80a124ec2dcec928ca0b962fae7ea54e9",
+      "bytes": 12159
+    },
+    {
+      "path": "docs/telemetry-evidence/2026-11-06/run-42300571195/bundle/cloud-public/budget-recovery.json",
+      "sha256": "db6ea198a951063dda7d701bc60bc19c7e303a969fe06c36216cb369d290cbf1",
+      "bytes": 821
+    },
+    {
+      "path": "docs/telemetry-evidence/2026-11-06/run-42300571195/readback-public/result.json",
+      "sha256": "83b60e6880b0f610d6bc941f2754528e51e01fa47c1593aa9b560d7429d7c77c",
+      "bytes": 14845
+    }
+  ],
+  "observed": {
+    "attempts": 1,
+    "reserved_rows": 20,
+    "body_written_rows": 20,
+    "transport_phases": [
+      "reserved",
+      "body_written",
+      "response",
+      "finished"
+    ],
+    "http_response_code": 200,
+    "response_accepted": false,
+    "quota_limited": false,
+    "ack_discarded": false,
+    "acknowledged": false,
+    "transport_failures": 0,
+    "cloud_block_reason": "UNRECOGNIZED_RESPONSE",
+    "cloud_transport_blocked": 1,
+    "reported_harness_block": "HTTP_TRANSPORT_DRAIN_WINDOW_EXPIRED"
+  },
+  "source_control_flow": {
+    "native_acknowledgment_path": {
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        402,
+        437
+      ]
+    },
+    "native_acceptance_predicate": {
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        498,
+        500
+      ],
+      "requirement": "status must be a Java Integer equal to 1, and quotaLimited(response) must be false"
+    },
+    "native_reader": {
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        511,
+        520
+      ],
+      "maximum_body_bytes": 8192
+    },
+    "logical_inference_from_existing_response_receipt": "The response audit record is written only after readCloudResponse returns a JSONObject. A reader exception instead throws before that record. The present response record and zero transport_failures therefore establish that the JSON-object reader path completed in this attempt.",
+    "logical_inference_from_rejected_response": "With quota_limited false and response_accepted false, the status Java-Integer-equal-to-1 predicate was not satisfied. It may have been absent/null, another Java type, or an Integer other than 1. No particular value or type is established.",
+    "downstream_timeout": {
+      "path": "tools/telemetry_spike/ci_cloud_trial.py",
+      "lines": [
+        536,
+        540
+      ],
+      "seconds": 120,
+      "finding": "drain waits for an empty queue and no in-flight request, but does not terminate on cloud_transport_blocked. The native rejection preserves the queue and blocks sending, so the reported drain timeout is downstream of that rejection."
+    }
+  },
+  "not_recorded": {
+    "actual_response_body": "NOT_RECORDED",
+    "actual_status_value": "NOT_RECORDED",
+    "actual_status_type": "NOT_RECORDED",
+    "actual_quota_field_value_and_type": "NOT_RECORDED",
+    "content_type": "NOT_RECORDED"
+  },
+  "interpretation_limits": [
+    "The audit localizes the LAB acknowledgment decision. It does not prove a particular PostHog response-body format or a service defect.",
+    "No claim is made that status was the string Ok, the string 1, or any other specific value.",
+    "The separate readback evidence reports the first 20 client identities in storage; that does not complete normal delivery, cloud revocation/new-consent or cloud retry scenarios.",
+    "No acknowledgment or success condition has been weakened, and no source or dependency was modified by this audit."
+  ],
+  "bounded_primary_documentation_search": {
+    "channel": "Connected PostHog documentation tools; read-only",
+    "topics": [
+      "Capture/batch success response JSON and quota_limited",
+      "CaptureResponse status Ok versus integer 1"
+    ],
+    "relevant_primary_reference": "https://posthog.com/docs/api/capture",
+    "result": "No explicit supported success-response-body contract was returned by these bounded primary-documentation searches.",
+    "limit": "This search result is not proof that such a contract does not exist. Third-party issue content was excluded as a success-contract or runtime-body proof."
+  },
+  "minimum_next_offline_proposal_only": [
+    "Add a bounded, allowlisted response-classification receipt: bytes read within the existing 8192-byte cap, reader outcome, status type and whether it matches the current predicate, plus quota type/classification. Do not publish raw bodies or unknown scalar values.",
+    "Make the harness stop promptly on an attested permanent native transport block, preserving its allowlisted reason and partial receipts instead of reporting only a 120-second drain timeout.",
+    "Add offline regression fixtures covering the observed decision boundaries and safe classification. Obtain a supported response contract or appropriately minimized actual response evidence before changing the acceptance predicate.",
+    "Any later cloud transmission needs its own available authorization and budget; this audit initiates none."
+  ],
+  "actions": {
+    "new_cloud_transmission": false,
+    "new_android_trial": false,
+    "predicate_changed": false,
+    "native_source_changed": false,
+    "deletion": false,
+    "new_external_contact": false
+  }
+}

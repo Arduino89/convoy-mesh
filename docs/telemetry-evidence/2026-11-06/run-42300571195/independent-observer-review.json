@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "status": "PASS_INDEPENDENT_PRIVATE_CONNECTOR_EXTRACTION_REVIEW",
+  "reviewer": "/root/review_launch",
+  "scope": "READ_ONLY_ACTUAL_ROW_COUNT_EQUIVALENCE_AND_SYNTHETIC_EXTRACTOR_CONTROLS_NOT_NEW_CLOUD_EXECUTION",
+  "observer_sha256": "5e0e5e55bb221983b7fae3f2ac2e4cfacde8c7d926358e0245f7233980adb98d",
+  "synthetic_harness_sha256": "b9f5c4416a15d07d2a6bbbb24d8c563ab434ccb767897c70a24c24504087ee37",
+  "synthetic_review_sha256": "a667450b35cbcf10c31918eaadee4bbc2b9a59019785fc2f8ef74e3877451f8f",
+  "synthetic_tests": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0,
+    "network_called": false
+  },
+  "actual_recheck": {
+    "raw_rows": 20,
+    "raw_count": 20,
+    "row_response_sha256": "777c73f667434e70f4bfe5f24f34b86fd7c72fed33d145afe6ef40a5d7a46c5e",
+    "count_response_sha256": "65ef7922ac4aa115fb07794f0408354c6d494909059e78c90c88a18aea0948f5",
+    "normalized_private_readback_sha256": "974b6ddd1cda1eb3e1fe020f7e6e65a07e83e17e8d6f074f032003eb5818c835",
+    "exact_row_order_preserved": true,
+    "no_deduplication_or_event_filter_added": true,
+    "properties_JSON_not_split_at_internal_pipes": true,
+    "raw_response_query_matches_requested_raw_and_count_queries": true,
+    "values_of_person_columns_not_published": true
+  },
+  "method": "Independently re-read strict original outer/inner JSON, bind each embedded exact query, parse the8-column pipe table around its complete JSON properties field, compare every row in order to the private normalized readback, and compare separate same-predicate count. Rerun parent synthetic observer harness and inspect extractor source.",
+  "cases": [
+    {
+      "case": "embedded_pipe_and_duplicate_rows",
+      "expected_success": true,
+      "exit_code": 0,
+      "output_created": true,
+      "raw_count": 2,
+      "rows_preserved": 2,
+      "identical_rows_preserved": true,
+      "embedded_pipe_preserved": true,
+      "scalar_NULL_preserved_as_string": true,
+      "raw_row_hash_matches": true,
+      "raw_count_hash_matches": true,
+      "passed": true
+    },
+    {
+      "case": "duplicate_property_key",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "nonfinite_property_NaN",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "nonfinite_property_Infinity",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "duplicate_outer_key",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "duplicate_inner_key",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "count_mismatch",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "wrong_column_count",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "blank_internal_row",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "unexpected_tail_width",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    }
+  ],
+  "limits": [
+    "The actual two non-null person columns remain private strings from the connector table; non-null is not proof of person-profile creation.",
+    "The synthetic harness uses repository fixture data; no real network or Android is executed by it.",
+    "Raw response files and normalized readback stay private; hashes refer to connector receipts, not cryptographic attestation of server behavior.",
+    "Delivery of the first20 is diagnostic evidence only. Normal100 completion, revocation, new consent and controlled retry were not reached."
+  ]
+}
