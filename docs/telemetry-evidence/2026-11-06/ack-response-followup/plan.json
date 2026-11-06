@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "INDEPENDENT_SOURCE_REVIEW_PASSED_ANDROID_PENDING",
+  "status": "PASS_OFFLINE_ANDROID_ACK_COMPATIBILITY_INDEPENDENTLY_REVIEWED_NO_CLOUD_APPROVAL",
   "mandate": "Cama 6November2026: correct documentedHTTP200statusOk offline, prove sameAndroidcontrol before/after, queue retention onquota/unknown/malformed; immediatepermanentblock; categoryonly; zeroingestion includingold20; samePR5draft/noConvoymerge.",
   "repository": "Arduino89/convoy-mesh",
   "branch": "experiment/telemetry-runtime-lab",
@@ -86,14 +86,14 @@
     "no_network_boundary": [
       "Bothproofmanifestszero permissions, independentlyaapt/signaturecheckedbeforeinstall.",
       "Radio/defaultnetworkbarrierbeforeandaftereachvariant.",
-      "Nocloudgate/secret/configorPOSTmethod invoked; separateproofpackages."
+      "Native fixture entry point invokes no cloud gate, secret, configuration or POST method. Inherited host tests may use loopback fixtures; runner bootstrap uses network."
     ],
     "host_failfast": "Actualrun_cases path withsyntheticfreshstates; beforeflagsfix4testsfail, afterfixallpass. No120sloopwhenpermanentflag present, budgetblock/emptyqueueguard included, untrustedreasonmappedUNKNOWN.",
     "workflow": "Oneguardedstandardpublicrun16attempt1, immutablepreparedsourcecheckout+oldbaseline75bsparsecheckout; no secrets or cloudinputs; restoreoriginalworkflowafter.",
     "limits": [
       "Baselinepredicateonly, notoldwholecloudsender.",
       "Candidatefunction+SQLiteproofonly, notTLS/serverdelivery/cloudrevocation/dedupe.",
-      "ExistingfullLOCALAndroid14/15 remains historical; thisphase sendsnoevents, evenloopback."
+      "Existing full LOCAL Android runs14/15 remain historical. This native fixture phase never constructs the sender; zero PostHog ingestion, not a claim of no bootstrap or host-loopback networking."
     ]
   },
   "success_criteria": [
@@ -117,6 +117,35 @@
       "passed": 23
     }
   },
-  "android_status": "NOT_RUN_YET",
-  "new_access_required": false
+  "android_status": "PASSED_OFFLINE_ANDROID_ACK_COMPATIBILITY",
+  "new_access_required": false,
+  "execution": {
+    "candidate_source_commit": "d93b3095f78f4924e2cf132d82e4bc041a626f7c",
+    "wrapper_commit": "8d6c7c023eb404098d77392ef7ed0504d86572f6",
+    "wrapper_workflow_sha256": "9a08fba8fd0e566e1a95147656512a045c848f8f002d1b789fa41b039d5b90dd",
+    "run_id": 42310498585,
+    "run_number": 16,
+    "attempt": 1,
+    "job_id": 128210433580,
+    "job_name": "offline-ack-response",
+    "status": "SUCCESS",
+    "original_workflow_restoration": "IN_EVIDENCE_CLOSURE_TREE"
+  },
+  "resources_check": {
+    "repository_public": true,
+    "runner": "ubuntu-24.04",
+    "standard_hosted_runner": true,
+    "timeout_minutes": 25,
+    "artifact_uploads": 0,
+    "cache_actions": 0,
+    "billing_docs": "https://docs.github.com/en/billing/concepts/product-billing/github-actions",
+    "billing_checked_date": "2026-11-06",
+    "finding": "Standard hosted runners in public repositories are free; no paid runner or service activated."
+  },
+  "ci_host_result": {
+    "total": 202,
+    "passed": 202,
+    "skipped": 0
+  },
+  "independent_runtime_review": "independent-runtime-review.json"
 }

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "status": "GO_FOR_ONE_OFFLINE_ANDROID_RUN_NOT_RUNTIME_APPROVAL",
+  "scope": "INDEPENDENT_CONCRETE_WORKFLOW_AND_TRANSITIVE_ENTRYPOINT_REVIEW",
+  "reviewer": "/root/ack_independent_review",
+  "checked_at_utc": "2026-11-06T23:13:43.355141+00:00",
+  "repository": "Arduino89/convoy-mesh",
+  "branch": "experiment/telemetry-runtime-lab",
+  "pr": 5,
+  "pr_draft": true,
+  "reviewed_workflow_sha256": "9a08fba8fd0e566e1a95147656512a045c848f8f002d1b789fa41b039d5b90dd",
+  "candidate_source_commit": "d93b3095f78f4924e2cf132d82e4bc041a626f7c",
+  "baseline_source_commit": "75b83254c99f20703f8a4ddbcc0da92a41d9990c",
+  "baseline_java_sha256": "81222e42f65f27d5524ad80b5b66eb5f685b6f3091e5d467a564636ecaa31312",
+  "remote_candidate_source_files_independently_verified": 9,
+  "source_review_ref": "independent-source-review.json",
+  "source_review_sha256": "007ade246050a40d6c50dcaf7c97add8f6c0adecb9f5ca27273afd77ee9ff409",
+  "live_github_recheck": {
+    "pr_head": "d93b3095f78f4924e2cf132d82e4bc041a626f7c",
+    "pr_state": "open",
+    "pr_draft": true,
+    "latest_workflow_id": 404372675,
+    "latest_run_id": 42300571195,
+    "latest_run_number": 15,
+    "latest_status": "completed",
+    "latest_conclusion": "failure"
+  },
+  "required_launch_identity": {
+    "next_run_number": 16,
+    "attempt": 1,
+    "event": "push",
+    "full_commit_message": "Verify offline Android ACK response compatibility (zero ingestion)"
+  },
+  "concrete_checks": {
+    "one_job_only": true,
+    "exact_repository_public_branch_event_number_attempt_message_guards": true,
+    "immutable_candidate_checkout": true,
+    "immutable_verbatim_baseline_sparse_checkout": true,
+    "no_workflow_dispatch_or_cloud_inputs": true,
+    "no_PostHog_secret_reference_or_configuration_preparation": true,
+    "no_cloud_enabled_environment": true,
+    "contents_read_only": true,
+    "standard_public_ubuntu24_runner": true,
+    "no_artifact_or_cache_action": true,
+    "explicit_single_Bash_entry": true,
+    "lifecycle_control_before_fixture_build_and_execution": true,
+    "both_fixture_APKs_manifest_zero_permissions_verified_by_builder_and_runner": true,
+    "test_activity_never_instantiates_sender": true,
+    "proof_entrypoint_never_runs_main_LAB_or_cloud_trial": true,
+    "separate_fresh_before_after_package_names": true,
+    "offline_barrier_before_and_after_each_native_variant": true,
+    "finite_category_only_sanitized_evidence_export": true,
+    "old20records_not_loaded_or_replayed": true,
+    "no_new_sdk_or_external_service": true
+  },
+  "transitive_entrypoint": {
+    "file": "tools/telemetry_spike/run_ci_ack_response.sh",
+    "sha256": "5b4ab28cca0ced6d011e560af99d3563b7121caab08f605a1c4c239bb7616e6d",
+    "ordered_calls": [
+      "runtime_control/smoke.py",
+      "ack_response_trial/build.py",
+      "ci_ack_response_trial.py"
+    ],
+    "failure_stops_dependent_calls": "Bash set-euo-pipefail",
+    "proof_scope": "old Android predicate, new Android classifier and isolated SQLite ACK helper; no sender or TLS request"
+  },
+  "new_posthog_rows_authorized": 0,
+  "actual_cloud_execution_approved": false,
+  "integration_or_merge_approved": false,
+  "limitations": [
+    "Static source and YAML review is not GitHub Actions expression/runtime execution.",
+    "Host tests include existing loopback/mocked cases; zero-PostHog-ingestion does not claim the hosted runner has no bootstrap networking.",
+    "Android proof results remain pending until exact run16/attempt1/job/evidence is inspected.",
+    "The exact wrapper commit must be recorded and its tree checked before push; no self-referential commit guard is claimed.",
+    "Recheck PR head/branch lease/latest counter immediately before pushing; a race or failed run must not trigger automatic rerun or number substitution.",
+    "Restore exact original workflow after the run with skip-ci. No further cloud trial, old20 replay, adoption, merge, release or real-user activation."
+  ]
+}

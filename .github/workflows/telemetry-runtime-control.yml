@@ -1,8 +1,20 @@
 name: Isolated Android telemetry laboratory
 on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: 'Exact reviewed source SHA; empty uses this branch commit'
+        required: false
+        type: string
+      cloud_gate_json:
+        description: 'Reviewed, unexpired gate JSON for this one run; {} keeps cloud disabled'
+        required: false
+        default: '{}'
+        type: string
   push:
     branches: [experiment/telemetry-runtime-lab]
     paths:
+      - 'tools/telemetry_spike/**'
       - '.github/workflows/telemetry-runtime-control.yml'
 concurrency:
   group: telemetry-lab-${{ github.ref }}
@@ -10,42 +22,35 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  offline-ack-response:
-    if: >-
-      github.repository == 'Arduino89/convoy-mesh' &&
-      github.event.repository.private == false &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/experiment/telemetry-runtime-lab' &&
-      github.run_number == 16 &&
-      github.run_attempt == 1 &&
-      github.event.head_commit.message == 'Verify offline Android ACK response compatibility (zero ingestion)'
+  runtime-and-telemetry:
+    if: github.repository == 'Arduino89/convoy-mesh' && github.event.repository.private == false
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 45
     env:
       CI: "true"
       BOT: "true"
       FLUTTER_SUPPRESS_ANALYTICS: "true"
       DART_SUPPRESS_ANALYTICS: "true"
+      DASH__SUPPRESS_ANALYTICS: "true"
+      LAB_RUN_ID: synthetic-direct-${{ github.run_id }}
+      CONVOY_CLOUD_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.cloud_gate_json != '' && inputs.cloud_gate_json != '{}' }}
     steps:
-      - name: Check out independently reviewed immutable candidate
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-          ref: d93b3095f78f4924e2cf132d82e4bc041a626f7c
-      - name: Check out verbatim original queue source
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          ref: 75b83254c99f20703f8a4ddbcc0da92a41d9990c
-          path: baseline-ack-source
-          sparse-checkout: tools/telemetry_spike/direct_trial/DirectQueue.java
-          sparse-checkout-cone-mode: false
+          ref: ${{ inputs.source_commit || github.sha }}
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
       - name: Verify host analysis controls
         run: python3 -m unittest discover -s tools/telemetry_spike -p 'test_*.py' -q
+      - name: Prepare private configuration only for an explicitly gated cloud run
+        if: env.CONVOY_CLOUD_ENABLED == 'true'
+        env:
+          CONVOY_CLOUD_GATE: ${{ inputs.cloud_gate_json }}
+          CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
+        run: python3 tools/telemetry_spike/prepare_ci_cloud.py
       - name: Require accelerated host
         run: |
           test -c /dev/kvm
@@ -54,15 +59,13 @@ jobs:
         run: |
           test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
-      - name: Build tiny native lifecycle control
+      - name: Build tiny native control only
         run: >-
           python3 tools/telemetry_spike/runtime_control/build.py
           --sdk "$ANDROID_HOME" --jdk "$JAVA_HOME"
           --out "$RUNNER_TEMP/runtime-control-build"
-      - name: Control Android first, then compare permissionless ACK fixtures
+      - name: Control Android first, then execute synthetic direct-sender cases
         uses: ReactiveCircus/android-emulator-runner@v2
-        env:
-          BASELINE_JAVA: ${{ github.workspace }}/baseline-ack-source/tools/telemetry_spike/direct_trial/DirectQueue.java
         with:
           api-level: 35
           target: google_apis
@@ -70,12 +73,10 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: bash tools/telemetry_spike/run_ci_ack_response.sh
-      - name: Emit only sanitized offline evidence without artifacts or cache
+          script: bash tools/telemetry_spike/run_ci_lab.sh
+      - name: Remove private cloud inputs
+        if: always() && env.CONVOY_CLOUD_ENABLED == 'true'
+        run: rm -f -- "$RUNNER_TEMP/cloud-private/config.json" "$RUNNER_TEMP/cloud-private/gate.json"
+      - name: Emit reviewed evidence without artifact or cache storage
         if: always()
-        run: |
-          if test -f "$RUNNER_TEMP/ack-proof-public/result.json"; then
-            python3 tools/telemetry_spike/ci_ack_response_trial.py --emit "$RUNNER_TEMP/ack-proof-public/result.json"
-          else
-            echo 'CONVOY_ACK_PROOF_STATUS=NOT_RUN_NO_RECEIPT'
-          fi
+        run: python3 tools/telemetry_spike/emit_ci_evidence.py "$RUNNER_TEMP"

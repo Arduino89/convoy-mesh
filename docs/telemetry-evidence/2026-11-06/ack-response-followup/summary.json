@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "status": "PASS_OFFLINE_ANDROID_ACK_COMPATIBILITY_NOT_ADOPTION",
+  "scope": "ANDROID_PREDICATE_CLASSIFIER_AND_ISOLATED_SQLITE_ACK_HELPER_PLUS_HOST_FAILFAST",
+  "repository": "Arduino89/convoy-mesh",
+  "branch": "experiment/telemetry-runtime-lab",
+  "pr": 5,
+  "pr_draft": true,
+  "candidate_source_commit": "d93b3095f78f4924e2cf132d82e4bc041a626f7c",
+  "baseline_source_commit": "75b83254c99f20703f8a4ddbcc0da92a41d9990c",
+  "baseline_same_java_as_run15_source": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "wrapper_commit": "8d6c7c023eb404098d77392ef7ed0504d86572f6",
+  "ci": {
+    "id": 42310498585,
+    "number": 16,
+    "attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "8d6c7c023eb404098d77392ef7ed0504d86572f6",
+    "event": "push",
+    "branch": "experiment/telemetry-runtime-lab",
+    "started_utc": "2026-11-06T23:14:14Z",
+    "finished_utc": "2026-11-06T23:16:44Z",
+    "url": "https://github.com/Arduino89/convoy-mesh/actions/runs/42310498585"
+  },
+  "job": {
+    "id": 128210433580,
+    "name": "offline-ack-response",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/Arduino89/convoy-mesh/actions/runs/42310498585/job/128210433580"
+  },
+  "host_controls": {
+    "total": 202,
+    "passed": 202,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 5.162,
+    "log_result": "OK"
+  },
+  "host_failfast_red_green_ref": "host-red-green.json",
+  "android_control": {
+    "status": "PASS_NATIVE_RUNTIME_CONTROL",
+    "stages_passed": 8,
+    "same_boot": true,
+    "first_pid": 2527,
+    "second_pid": 2729
+  },
+  "android_proof": {
+    "documented_ok_accepted_before": false,
+    "documented_ok_accepted_after": true,
+    "legacy_integer_one_accepted_both": true,
+    "candidate_cases_total": 33,
+    "candidate_cases_passed": 33,
+    "accepted_cases": 5,
+    "rejected_cases": 28,
+    "categories": {
+      "ACKNOWLEDGED": 5,
+      "UNRECOGNIZED_RESPONSE": 10,
+      "QUOTA_LIMITED": 5,
+      "MALFORMED_RESPONSE": 10,
+      "HTTP_REJECTED": 1,
+      "HTTP_NOT_ACKNOWLEDGED": 1,
+      "RESPONSE_TOO_LARGE": 1
+    },
+    "rejected_queues_byte_identical": true,
+    "all_unrelated_tails_preserved": true,
+    "accepted_acknowledgments_delete_only_selected_rows": true,
+    "permissionless_packages": {
+      "before": "com.cama.telemetry.ack_before",
+      "after": "com.cama.telemetry.ack_after"
+    },
+    "runtime_control_precedes_fixture_build_and_execution": true,
+    "offline_barriers_passed": 3,
+    "processes_stopped": true,
+    "initial_radios_restored": true
+  },
+  "proof_export": {
+    "file": "android-result.json",
+    "bytes": 18842,
+    "sha256": "83278d90dec731556d8f93580dcec2c44be38ba1b7c64c7c8658d83a932ebeb1"
+  },
+  "budget": {
+    "new_posthog_rows_authorized": 0,
+    "old20_retried": false,
+    "capture_path_executed": false,
+    "project_credentials_loaded": false,
+    "cloud_readback_performed": false,
+    "cloud_received_count_this_phase": "NOT_QUERIED_NO_CAPTURE_PATH",
+    "conservative_prior_ceiling": 700,
+    "future_allowance": 0
+  },
+  "response_audit": {
+    "finite_category_only": true,
+    "raw_server_body_retained": false,
+    "actual_historical_run15_body": "UNKNOWN_NOT_RECORDED",
+    "http_ack_is_not_cloud_storage": true
+  },
+  "independent_review": {
+    "source": "PASS",
+    "concrete_workflow": "GO_ONE_OFFLINE_RUN",
+    "runtime": "PASS_OFFLINE_ANDROID_ACK_FUNCTIONS_NOT_CLOUD_APPROVAL",
+    "runtime_ref": "independent-runtime-review.json",
+    "reproduction_script": "verify_runtime_evidence.py"
+  },
+  "original_workflow": {
+    "planned_restore_blob": "791740f6713090d153a49740ef2271560084a296",
+    "planned_restore_sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5",
+    "status": "RESTORED_IN_EVIDENCE_CLOSURE_TREE",
+    "independent_postpublication_check": "PENDING_SEPARATE_CLOSURE_CHECK"
+  },
+  "limits": [
+    "No full sender, InputStream/UTF-8 IO, TLS or live response exercised by native fixtures.",
+    "No new cloud storage, revocation, new consent, retry or deduplication proof.",
+    "All native queue databases are in-memory test databases, not the old100-row cloud queue.",
+    "Host fail-fast regression is a synthetic actual-run_cases test, not new Android cloud behavior.",
+    "APK hashes and signatures were checked by tools in the runner; proof APK bytes were not independently downloaded or distributed.",
+    "Existing local runs14/15 remain historical; new entire sender/revocation/saturation scenarios were not rerun.",
+    "No physical phone, battery, GPS/BLE, integration or adoption approval."
+  ],
+  "public_evidence_review": {
+    "runtime_receipt_field_guard": "PASS",
+    "metadata_reference_urls": "Only public GitHub repository/run, official PostHog API docs and GitHub billing docs; no credentials or query strings.",
+    "new_code_review_hashes_unchanged": 9,
+    "synthetic_proofs_only": true,
+    "actual_private_receipts_or_diagnostic_logs_uploaded": false
+  }
+}

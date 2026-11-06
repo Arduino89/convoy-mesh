@@ -1,10 +1,20 @@
 # Convoy Mesh — valutazione telemetria minima
 
-Data aggiornamento: 6 novembre 2026. Cama ha autorizzato una sola prova cloud con200righe aggiuntive, ritentativi compresi; tetto cumulativo prudenziale700 comprendente500precedenti sconosciute. Convoy resta invariata e PR#5inbozza; nessun merge, release, utente reale, cancellazione o nuova spesa.
+Data aggiornamento: 6 novembre 2026. Ultimo mandato: correzione e prova esclusivamente offline del laboratorio nella PR #5. **Zero nuovi invii PostHog**, inclusi i 20 già ricevuti. Convoy invariata; nessun merge, release, utente reale o nuova spesa.
 
-## Risultato corrente —20eventi ricevuti, prova cloud bloccata dalla conferma
+## Risultato corrente — conferma corretta e verificata offline su Android
 
-[Run15/job128176961434](https://github.com/Arduino89/convoy-mesh/actions/runs/42300571195/job/128176961434), tentativo1:FAILURE. Wrapper`340571da315d9f19e35ef3374902fcd2be8cfd62`, sorgente eseguibile esatto`809caf200f6232b162fee009fa2a7c2b484d7855`. [Evidenze, causa e riproduzione](telemetry-evidence/2026-11-06/run-42300571195/README.md). Nessuna nuova prova dopo questo tentativo.
+[Run16 / job128210433580](https://github.com/Arduino89/convoy-mesh/actions/runs/42310498585/job/128210433580), tentativo1: **SUCCESS**, sorgente esatto `d93b3095f78f4924e2cf132d82e4bc041a626f7c`, wrapper `8d6c7c023eb404098d77392ef7ed0504d86572f6`. [Prove riproducibili, APK e limiti](telemetry-evidence/2026-11-06/ack-response-followup/README.md).
+
+Il controllo Android precedente, compilato senza modificarne il Java, rifiuta la risposta documentata `{"status":"Ok"}`; quello corretto la accetta e conserva il supporto all'intero1. **202/202 controlli host in CI**, controllo Android indipendente8/8 prima della prova e **33/33 casi nativi** passati. Nei28casi negativi — quota, risposta sconosciuta, JSON malformato e altri rifiuti — la coda SQLite in memoria conserva identità e byte; nei5positivi cancella soltanto il lotto scelto e preserva la coda restante. Le quattro regressioni host sul blocco permanente falliscono prima e passano dopo: la causa viene riportata subito, senza proseguire al timeout120s. L'audit salva solo categorie finite, non il corpo o valori arbitrari della risposta.
+
+Le due APK di prova non richiedono permessi e non costruiscono il mittente: nessuna credenziale/configurazione PostHog né caricamento della vecchia coda. Barriere offline e pulizia passate. Le prove host possono usare fixture loopback; bootstrap del runner e prova Android restano confini distinti. Revisione indipendente di sorgente, workflow concreto e ricevute runtime passata, con ricalcolo standard library riproducibile senza Android o rete. Workflow originale ripristinato byte per byte nella chiusura con skip-ci; controllo separato dopo la pubblicazione ancora da completare.
+
+Questa fase dimostra compatibilità del controllo e della transazione di conferma, **non consegna o revoca nel cloud**. Non esercita la lettura InputStream/decodifica UTF-8, TLS o l'intero mittente; le regressioni Android complete14/15 restano storiche sul sorgente precedente. Il corpo effettivo del vecchio run15 resta sconosciuto. I20eventi già ricevuti non sono stati ritentati né cancellati; nessun nuovo conteggio PostHog. Il budget precedente resta chiuso a700prudenziali/futuro0. Adozione, deduplicazione cloud, privacy complessiva e telefoni/consumi restano bloccati o non verificati. Prossimo passo: revisione del correttivo offline prima di un eventuale mandato separato per il cloud.
+
+## Checkpoint storico — run15: 20eventi ricevuti, prova cloud bloccata dalla conferma
+
+[Run15/job128176961434](https://github.com/Arduino89/convoy-mesh/actions/runs/42300571195/job/128176961434), tentativo1:FAILURE. Wrapper`340571da315d9f19e35ef3374902fcd2be8cfd62`, sorgente eseguibile esatto`809caf200f6232b162fee009fa2a7c2b484d7855`. [Evidenze, causa e riproduzione](telemetry-evidence/2026-11-06/run-42300571195/README.md). Il risultato cloud di quel tentativo resta invariato.
 
 | Confine verificato | Risultato |
 |---|---|
