@@ -1,0 +1,72 @@
+{
+  "schema_version": 2,
+  "status": "PASS",
+  "project_id": 330212,
+  "api_host": "https://eu.i.posthog.com",
+  "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "run_id": "synthetic-cloud-20261106-r15",
+  "execution_id": "Isolated Android telemetry laboratory:15",
+  "run_attempt": 1,
+  "quota_rows_available": 999838,
+  "total_ceiling": 700,
+  "remaining_budget": 200,
+  "prior_rows_conservative_consumed": 500,
+  "additional_rows_authorized": 200,
+  "expires_utc": "2026-11-07T03:49:52Z",
+  "privacy": {
+    "status": "VERIFIED",
+    "anonymize_ips": true,
+    "session_recording_opt_in": false,
+    "evidence_ref": "Live read-only browser project-privacy: Discard client IP data checked. project-replay: Record user sessions unchecked; Recording is disabled. Console/network capture flags remain configured but disabled by replay off; native LAB has no SDK, replay, console collector or device-property collector.",
+    "checked_at_utc": "2026-11-06T21:46:00Z",
+    "urls": [
+      "https://eu.posthog.com/project/330212/settings/project-privacy",
+      "https://eu.posthog.com/project/330212/settings/project-replay"
+    ],
+    "limits": [
+      "Project discard does not prove that IP never reaches vendor infrastructure.",
+      "Before-write native whitelist is the outbound privacy boundary; server-added metadata separately inspected.",
+      "Initial general settings navigation rendered a public ingestion token incidentally; it was not copied, stored, reused, compared or included in evidence. No secret rotation or new credential requested."
+    ]
+  },
+  "retention": {
+    "status": "VERIFIED",
+    "checked_at_utc": "2026-11-06T21:40:00Z",
+    "evidence_ref": "Live billing entitlement product_analytics_data_retention year1; current vendor events-retention docsFree1year. Query window is not physical erasure.",
+    "docs_url": "https://posthog.com/docs/data/events-retention",
+    "physical_erasure_verified": false
+  },
+  "deletion": {
+    "status": "VERIFIED",
+    "checked_at_utc": "2026-11-06T21:47:00Z",
+    "evidence_ref": "Existing support ticket80503 reread in authenticated browser on06Nov; ticket status pending; existing Chris response reviewed. Free support-run selective event deletion byrun_id/UUID, exactfilter/count and confirmation before submission. No new contact or deletion.",
+    "mode": "SUPPORTED_MANUAL_ASSISTED",
+    "performed": false,
+    "vendor_stated_schedule": "ConfirmedbyFriday\u2192weekendbatch; ticketcompletion and samecount0 ineventtables. Temporarycopy~8days,backup~2weeks later are declarations, not measured.",
+    "approval_still_needed": "Cama must separately approve exactproject/run/UUID set and preview; current authorization is ingestiononly."
+  },
+  "quota": {
+    "status": "VERIFIED",
+    "checked_at_utc": "2026-11-06T21:40:00Z",
+    "evidence_ref": "Live billing-overview-get: subscription_level free, billing_plan free, has_active_subscriptionfalse, free_trial_untilnull/trialnull; productanalytics162/1000000,999838remaining. Publicrepository rechecked; standardubuntu24.04 runner, noartifacts/cache.",
+    "free_plan": true,
+    "usage": 162,
+    "free_allocation": 1000000,
+    "quota_rows_available": 999838
+  },
+  "budget_authorization": {
+    "status": "VERIFIED",
+    "checked_at_utc": "2026-11-06T21:47:00Z",
+    "evidence_ref": "Cama's okprocedi explicitly accepted separate200additionalrows proposal, conservatively500prior+200=700. execution-design.json records decision. Singlelaunch/noauto rerun/refund/futureunusedallowance.",
+    "prior_rows_conservative_consumed": 500,
+    "additional_rows_authorized": 200,
+    "total_ceiling": 700
+  },
+  "local_regression": {
+    "status": "VERIFIED",
+    "checked_at_utc": "2026-11-06T21:49:52Z",
+    "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+    "original_execution_date": "2026-11-06",
+    "evidence_ref": "Exact-source run42299072769/number14/attempt1/job128171820455 SUCCESS. Androidcontrol+alllocaldirectcasesPASS;193host controlsPASS inCI. ExportSHA4e04af33698d083efa9a46b9bd6287ad99fbc81a41c49211bffb123388585390. Independent raw receipt review in run-42299072769/independent-runtime-review.json."
+  }
+}
