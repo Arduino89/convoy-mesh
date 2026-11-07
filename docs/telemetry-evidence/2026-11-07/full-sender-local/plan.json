@@ -1,0 +1,65 @@
+{
+  "schema_version": 4,
+  "status": "PREPARED_ANDROID_NOT_RUN",
+  "mandate": "Cama/scambioP(8).txt: approve d93 offline correction; full sender only local receiver, quota/malformed/interruption retention, revocation/new consent/sentinels, independent review; zero PostHog including old20; samePR5draft; propose new cloud ceiling only after PASS.",
+  "base_head": "87a146a44d40751a4061e91812ab7d2fe92397ed",
+  "reuse_first": {
+    "first_sufficient_levels": [
+      5,
+      6
+    ],
+    "decision": "Compose existing ci_direct suite, receiver/privacy auditor, runtime control, ADB loopback, public runner; minimal shared-reader guard plus safe queue fingerprints and receiver response hook. No newSDK, server service, dependency, endpoint or production integration."
+  },
+  "governance": {
+    "canonical_main": "Arduino89/Cama-Enterprise@904166a26891ee5aa94e347c6e93d41124595b6b",
+    "direct_consultation": "Partial project checkout, Enterprise resolver unavailable. Current AGENTS,index,principles,operating_model,continuity_protocol,patterns,Notebook QuickIndex/relevant003/007/009/010/011, advisory routing memory consulted.",
+    "profile_reused_from": "../../2026-11-06/ack-response-followup/plan.json",
+    "changed_signal": "Same isolated synthetic experiment; externalData=false; now native full sender/HTTP consumption boundary.",
+    "patterns": [
+      "EP-001",
+      "EP-003",
+      "EP-004",
+      "EP-005",
+      "EP-007",
+      "EP-009"
+    ]
+  },
+  "budget": {
+    "posthog_event_transmissions_authorized": 0,
+    "old20_retry": false,
+    "prior_closed_ceiling": 700,
+    "future_cloud_allowance": 0
+  },
+  "android_plan": {
+    "control_first": true,
+    "inherited_cases": 10,
+    "new_cases": [
+      "batch25_two_ack_barriers",
+      "quota",
+      "malformed",
+      "invalid_utf8",
+      "unknown",
+      "truncated_http200_body"
+    ],
+    "negative_boundary": "category observed, local route removed, in_flight0, same25serializedSQLite rows/counter0, offline restart samehash, thenOk recovery",
+    "partial_ack_boundary": "25queued beforefirstOk, exactly5originaltail rows afterfirstACKwhile secondheld; thenempty/2ACK",
+    "privacy": "Unchanged wire audit and synthetic fake token; reject violations independently of HTTP200.",
+    "safety": "Fresh emulator, no cloud config/secret, radio/defaultnetwork barrier before and after, fixedloopbackonly, stopLAB/removeADBroute before restore radio.",
+    "stop": "One guarded standard public run17attempt1. No blind rerun. Dependent steps stop if lifecycle/environment fails.",
+    "workflow_restore_sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5"
+  },
+  "learningSweep": {
+    "triggerDecisions": [
+      {
+        "trigger": "Expanded integration boundary requested by owner",
+        "classification": "NO_REUSABLE_LESSON",
+        "reason": "Ordinary project validation using existing lifecycle, source pinning and HTTP fixture pattern; no new infrastructure incident or general lesson yet."
+      }
+    ]
+  },
+  "limits": [
+    "LocalHTTP notTLS/cloud storage/deduplication",
+    "Synthetic rowhashes notGPS/traces of realusers",
+    "Radiooff/defaultnetwork absence does not certify physical battery/OEM/BLE behavior"
+  ]
+}

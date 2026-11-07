@@ -68,6 +68,7 @@ final class DirectQueue {
     private int retrySeconds = 1;
     private int inFlight;
     private JSONObject preflightResults;
+    private String lastResponseCategory = "NOT_OBSERVED";
 
     DirectQueue(Context context) throws Exception {
         this.context = context;
@@ -408,14 +409,14 @@ final class DirectQueue {
             // The dispatch gate is released: revocation need not wait for this ACK.
             responseCode = connection.getResponseCode();
             responseAccepted = responseCode == 200;
-            if (cloudMode && responseAccepted) {
+            if (responseAccepted) {
                 ResponseDecision response = readCloudResponse(connection);
                 quotaLimited = response.quotaLimited;
                 responseAccepted = response.accepted;
                 responseCategory = response.category;
                 if (!responseAccepted) {
                     synchronized (store) {
-                        blockCloud(responseCategory);
+                        if (cloudMode) blockCloud(responseCategory);
                         if (responseCategory.equals("MALFORMED_RESPONSE") || responseCategory.equals("RESPONSE_TOO_LARGE")
                                 || responseCategory.equals("RESPONSE_READ_FAILED")) add("transport_failures", 1);
                     }
@@ -424,6 +425,7 @@ final class DirectQueue {
                 responseCategory = "HTTP_REJECTED";
                 synchronized (store) { blockCloud("HTTP_REJECTED"); }
             }
+            synchronized (store) { lastResponseCategory = responseCategory; }
             acknowledged = responseAccepted;
             synchronized (store) {
                 if (cloudMode && responseAccepted && shouldDiscardAck(batch)) {
@@ -818,6 +820,19 @@ final class DirectQueue {
             for (String key : new String[]{"generation", "capacity", "dropped_count", "refused_count",
                     "revoked_count", "preflight_count", "preflight_rejected", "requests_started",
                     "requests_acked", "transport_failures", "dispatch_attempts"}) state.put(key, number(key));
+            state.put("last_response_category", lastResponseCategory);
+            JSONArray snapshot = new JSONArray(), remaining = new JSONArray();
+            try (Cursor c = db.rawQuery("SELECT id,generation,event_id,body,bytes FROM queue ORDER BY id", null)) {
+                int index = 0;
+                while (c.moveToNext()) {
+                    JSONArray row = new JSONArray();
+                    for (int n = 0; n < 5; n++) row.put(c.getString(n));
+                    snapshot.put(row);
+                    if (index++ >= 20) remaining.put(row);
+                }
+            }
+            state.put("queue_snapshot_sha256", hexDigest(snapshot.toString().getBytes(StandardCharsets.UTF_8)));
+            state.put("queue_after_batch_sha256", hexDigest(remaining.toString().getBytes(StandardCharsets.UTF_8)));
             state.put("queue_count", scalar("SELECT count(*) FROM queue"));
             state.put("queue_bytes", scalar("SELECT coalesce(sum(bytes),0) FROM queue"));
             state.put("queue_byte_limit", BYTE_LIMIT); state.put("database_max_bytes", db.getMaximumSize());

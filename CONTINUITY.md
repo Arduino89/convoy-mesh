@@ -60,7 +60,7 @@ Previous cloud authorization is closed:500 earlier uncertain rows +200 additiona
 
 ## NEXT GATE
 
-Review the offline ACK correction and its independent Android evidence. This closes the documented-format incompatibility gate only. Cloud revocation, new consent/new delivery, retry/deduplication and end-to-end privacy remain unverified; the new full sender was not rerun. Future cloud allowance is zero, including old20 retries, until a separate explicit mandate. Do not silently reuse the previous180 unused rows. Physical phones/battery and GNSS/BLE field work remain separate; no adoption, merge, release or integration authority.
+Cama accepted d93b309 offline review (7 November, scambioP(8).txt). Execute one full native sender trial against only the local receiver, sharing the actual HTTP response reader. Reuse existing lifecycle/privacy/revocation suites; add precise partialACK and negative-response retention/restart proofs. [Current contract](docs/telemetry-evidence/2026-11-07/full-sender-local/plan.json). New Android result pending. Zero PostHog transmissions, including old20; no merge/integration. If all passes, propose a new explicit cloud ceiling for later approval, without executing it.
 
 ## DO NOT
 

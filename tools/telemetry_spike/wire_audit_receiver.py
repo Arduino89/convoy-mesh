@@ -351,7 +351,7 @@ class AuditReceiver:
                     return
                 # Rejection concerns audit only. Fake-token violations never enter
                 # received.jsonl. HTTP success must never be interpreted as PASS.
-                response = b'{"status":1}' if status == 200 else b'{"status":0}'
+                response = owner._response_body(status)
                 self.send_response(status)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(response)))
@@ -364,6 +364,9 @@ class AuditReceiver:
             do_POST = do_GET = do_PUT = do_DELETE = do_PATCH = do_OPTIONS = do_HEAD = observe
 
         return Handler
+
+    def _response_body(self, status):
+        return b'{"status":1}' if status == 200 else b'{"status":0}'
 
     def close(self):
         self.server.server_close()
