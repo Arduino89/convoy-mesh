@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "status": "PASS_LOCAL_HTTP_INDEPENDENTLY_REVIEWED_CLOUD_NOT_AUTHORIZED",
+  "status": "CLOSED_PASS_LOCAL_HTTP_NO_CLOUD_AUTHORITY",
   "mandate": "Cama/scambioP(8).txt: approve d93 offline correction; full sender only local receiver, quota/malformed/interruption retention, revocation/new consent/sentinels, independent review; zero PostHog including old20; samePR5draft; propose new cloud ceiling only after PASS.",
   "base_head": "87a146a44d40751a4061e91812ab7d2fe92397ed",
   "reuse_first": {
@@ -88,5 +88,6 @@
     "passed": 205,
     "total": 205,
     "skipped": 0
-  }
+  },
+  "restoration_review": "independent-restoration-review.json"
 }

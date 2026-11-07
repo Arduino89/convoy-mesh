@@ -1,8 +1,9 @@
 {
+  "compiled_source": "50386a5c8ce5b0cf628073989a0eaf1549008e79",
   "files": {
     "docs/telemetry-evidence/2026-11-07/full-sender-local/README.md": {
-      "bytes": 5963,
-      "sha256": "a7e2ca81bee53cf5dddf0764ac49d660bee2201814ce2c95d0b9e92c627ed8d9"
+      "bytes": 6271,
+      "sha256": "cca464ce39d732929f69b624e47869a56d3e004f22208e6df8e3e9bd346ca53f"
     },
     "docs/telemetry-evidence/2026-11-07/full-sender-local/cloud-proposal.md": {
       "bytes": 2403,
@@ -19,6 +20,10 @@
     "docs/telemetry-evidence/2026-11-07/full-sender-local/full-result.json": {
       "bytes": 154942,
       "sha256": "94f69fa092d12f1b07f9b3d508d95e097588648254b0cd6ebcf15c007a8c0450"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/independent-restoration-review.json": {
+      "bytes": 4637,
+      "sha256": "d38288ca2ab1d8520227ed68714757eb29824016204b7f493508698bc31089ba"
     },
     "docs/telemetry-evidence/2026-11-07/full-sender-local/independent-runtime-review.json": {
       "bytes": 13932,
@@ -37,25 +42,24 @@
       "sha256": "aa2a55a7cad68c5e27c3e8ce270a3413c50c11372d535fc7c76379cf40be04ef"
     },
     "docs/telemetry-evidence/2026-11-07/full-sender-local/plan.json": {
-      "bytes": 4554,
-      "sha256": "043609cb1df8ae4872a8f7fc4d9738f15a891281631a53e76eb043e8fc0eb22e"
+      "bytes": 4599,
+      "sha256": "c4f4ca94e7545386147e43a96baae579c7d1f5386c6d80c85457341458b665ce"
     },
     "docs/telemetry-evidence/2026-11-07/full-sender-local/summary.json": {
-      "bytes": 4121,
-      "sha256": "9d45ff183a188e6d3f9219dab8630137fbaa925de845636506e1b27d52b2f59d"
+      "bytes": 4351,
+      "sha256": "bd44b9822e3f3137c4904bccd15e5224b5cc63b85db63ad34f457899f72e5a03"
     },
     "docs/telemetry-evidence/2026-11-07/full-sender-local/verify_runtime_evidence.py": {
       "bytes": 18998,
       "sha256": "1a0a591c2c7f0a0288c14f19b6b3e0b6f469f98fcbcec0a68bc0f64487b24723"
     },
     "CONTINUITY.md": {
-      "bytes": 10166,
-      "sha256": "55580c2cd72f1db99bd5e471e6b9dc8677f9910faca6e63f096e6d1032a1f8e8"
+      "bytes": 10282,
+      "sha256": "049a4fece2c6f92a1eeb92a79a8b103a1d6b83252d3b23236bd365fa80e8d62c"
     },
     ".github/workflows/telemetry-runtime-control.yml": {
       "bytes": 3391,
       "sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5"
     }
-  },
-  "compiled_source": "50386a5c8ce5b0cf628073989a0eaf1549008e79"
+  }
 }
