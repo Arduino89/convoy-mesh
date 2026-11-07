@@ -1,0 +1,11 @@
+{
+  "scope": "CONTROL_RECEIPT_SERIALIZATION_PROVENANCE",
+  "run_id": 41429419307,
+  "job_id": 125223965237,
+  "original_sha256": "e2bc3c4c8ecd6b56706c94a373546407b3d3fd96a47ba79f7bc1492595fa2e5b",
+  "canonical_export_sha256": "0508fb5806e829398ef78ab54745ac19b137fd58cdf59deb19170a518f7608eb",
+  "semantic_json_equal": true,
+  "original_reconstructed_from_ordered_job_log_json": true,
+  "original_serialization": "json.dumps(receipt, indent=2) + newline",
+  "reason": "Emitter validates and canonicalizes every exported JSON; runtime gate references pre-export bytes."
+}

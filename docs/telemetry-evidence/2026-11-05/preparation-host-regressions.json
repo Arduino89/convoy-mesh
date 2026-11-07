@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "scope": "HOST_ONLY_COMMAND_MOCK_AND_SQLITE_REGRESSIONS_NO_ANDROID_NO_CLOUD",
+  "status": "RED_THEN_GREEN",
+  "red": {
+    "tests": 1,
+    "failures": 1,
+    "observed": "COMMAND_NONZERO_EXIT",
+    "expected": "CLOUD_PRIVATE_MKDIR_NONZERO_EXIT"
+  },
+  "green": {
+    "tests": 26,
+    "failures": 0,
+    "errors": 0
+  },
+  "run8_budget_refund_authorized": false,
+  "run8_remaining_for_future_launches": 0,
+  "sha256": {
+    "tests": "4c1ab1ab644c21dd24dc233452d128b3e2cd98e18b761a8a9b170885e627db83",
+    "implementation": "93c0ae66f60d4aa1e8f62a6c883492f208e9344440e4f37ce485ded2ee8f5d78",
+    "red_log": "6887d690127991e1bf483eacd25491d6c5a75281729dbb24d1fde2977c97c148",
+    "green_log": "7f8882d877a60b2472c7542323e98479087e3cfa6d283920351141a237b5e186"
+  },
+  "emitter_counterexample_sha256": "3b7084b6a7923f62c261f815f39c8a1c24e571ec8989d34d1d6f1d5bdeb8cead",
+  "full_suite": {
+    "tests": 178,
+    "failures": 0,
+    "errors": 0,
+    "scope": "HOST_ONLY_NO_ANDROID_NO_CLOUD",
+    "executed_by": "root",
+    "final_assertions_included": true
+  },
+  "checked_at_utc": "2026-11-05T16:24:52.424499+00:00",
+  "wrapper_regressions": {
+    "tests": 3,
+    "failures": 0,
+    "legacy_sh_exit": 2,
+    "new_bash_entry": "PASS_ORDER_AND_ABORT"
+  },
+  "transport_fix_targeted": {
+    "preparation": 27,
+    "probe": 11,
+    "adb_contract": 3,
+    "independently_executed_total": 41,
+    "result": "PASS"
+  },
+  "file_confirmation_regression": {
+    "red": "exit0 incorrectly confirmed missing file",
+    "red_log_sha256": "1a0fdb459461fb6c8e104dc8ee92260ad045c01427817ddc0bc0adda9a184760",
+    "green": "write command completed is separate; file confirmed requires600and exact readback",
+    "green_log_sha256": "2e3a670f20276fa4587a2b3a4f82e04b911b9c45473acefc65a08cee5243c4cb"
+  },
+  "offline_observation_regressions": {
+    "tests": 2,
+    "result": "PASS",
+    "unchanged_predicate_and_45_seconds": true
+  },
+  "cli_feature_regression": {
+    "expected_format": "ONE_FEATURE_PER_LINE",
+    "before": "CLOUD_PRIVATE_SHELL_FEATURES_OUTPUT_REJECTED",
+    "after": "EXACT_ONE_SHELL_V2_LINE_REQUIRED",
+    "red_log_sha256": "17a8b252f85d13029fdd09df4359d100e367d5de19ca61df404447879011b4c9",
+    "green_log_sha256": "93909c44545057aa9d9c8f4cd6a7aef54c3ccb2b10fccc071f185e623a643dca",
+    "csv_prefix_duplicate_rejected": true
+  },
+  "post_restore_full_suite": {
+    "tests": 178,
+    "failures": 0,
+    "errors": 0,
+    "scope": "HOST_ONLY_AFTER_ORIGINAL_WORKFLOW_RESTORE_AND_ARCHIVE_GUARD_TEST"
+  }
+}

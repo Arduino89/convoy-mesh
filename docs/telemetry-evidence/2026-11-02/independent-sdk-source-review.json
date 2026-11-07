@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "scope": "INDEPENDENT_READ_ONLY_SOURCE_REVIEW_NOT_NEW_RUNTIME_EXECUTION",
+  "reviewed_utc": "2026-11-02T17:49:54.032198+00:00",
+  "sdk_versions": {
+    "android": "3.75.0",
+    "core": "6.48.0"
+  },
+  "vendor_commit": "8309f837ef92d3b05eae222c94294d79ce0c7dec",
+  "spec_commit_prefix": "c9dc4ce",
+  "actual_run": 41429419307,
+  "actual_source_commit": "764bc41080c7b85d25ea895ed16c4b94130c5822",
+  "app_sources_match_actual_build_receipt": {
+    "tools/telemetry_spike/posthog_trial/main.dart": true,
+    "tools/telemetry_spike/posthog_trial/MainActivity.kt": true,
+    "tools/telemetry_spike/posthog_trial/prepare_trial.py": true
+  },
+  "conclusion": "No supported queue-only purge with durable completion was found in the inspected pinned API surface. This is a bounded source/API review, not a proof that no workaround could ever be built.",
+  "cause_vs_binding": [
+    {
+      "claim": "Android setup and all used static methods reach the same shared core instance; no binding mismatch found.",
+      "kind": "STATIC_SOURCE",
+      "sites": [
+        "posthog-android/src/main/java/com/posthog/android/PostHogAndroid.kt:103-121",
+        "posthog/src/main/java/com/posthog/PostHog.kt:2625-2626,2702-2719,2833-2842"
+      ]
+    },
+    {
+      "claim": "Completed app chain persists deny, calls optOut, then optOut/reset/optOut/close; the APIs used do not perform outbound queue deletion.",
+      "kind": "STATIC_SOURCE_WITH_MEASURED_COMPLETED_CALLBACK",
+      "sites": [
+        "tools/telemetry_spike/posthog_trial/main.dart:196-214",
+        "tools/telemetry_spike/posthog_trial/MainActivity.kt:24-38",
+        "posthog/src/main/java/com/posthog/PostHog.kt:1396-1423,2202-2278"
+      ]
+    },
+    {
+      "claim": "optOut changes capture gating/integrations; reset changes identity/preferences and preserves queued outbound events.",
+      "kind": "STATIC_SOURCE_AND_SPEC",
+      "sites": [
+        "posthog/src/main/java/com/posthog/PostHog.kt:969-975,1067-1072,1396-1423,2202-2278",
+        "reset.md:69,91-93,116,128",
+        "consent-gating.md:32-38,56"
+      ]
+    },
+    {
+      "claim": "close schedules flush before disabling and stopping timers/network callbacks; queue flush and batch HTTP path have no optOut check. Existing queued work may therefore send while opted out if network permits.",
+      "kind": "STATIC_RISK_NOT_EXERCISED_ONLINE_IN_EXISTING_REVOKE_RUN",
+      "sites": [
+        "posthog/src/main/java/com/posthog/PostHog.kt:613-652,2137-2146",
+        "posthog/src/main/java/com/posthog/PostHogStateless.kt:621-632",
+        "posthog/src/main/java/com/posthog/internal/PostHogQueue.kt:317-348,477-483",
+        "posthog/src/main/java/com/posthog/internal/PostHogApi.kt:74-87,189-201"
+      ]
+    },
+    {
+      "claim": "beforeSend runs during capture before queue insertion. Disk reload decodes and submits the stored event without rerunning that hook; adding a consent check there alone cannot revoke already persisted events.",
+      "kind": "STATIC_SOURCE",
+      "sites": [
+        "posthog/src/main/java/com/posthog/PostHogStateless.kt:295-329",
+        "posthog/src/main/java/com/posthog/PostHog.kt:1044-1072",
+        "posthog/src/main/java/com/posthog/internal/PostHogQueue.kt:247-288",
+        "posthog/src/main/java/com/posthog/internal/EndpointSpec.kt:49-56",
+        "before-send-hook.md:59,79"
+      ]
+    }
+  ],
+  "supported_purge_challenge": {
+    "public_surface_inspected": [
+      "PostHogCoreInterface",
+      "PostHogInterface",
+      "PostHogConfig",
+      "PostHogAndroid.setup",
+      "posthog/api/posthog.api"
+    ],
+    "internal_clear": "PostHogQueueInterface.clear is explicitly not public supported API; the config queueProvider, storagePrefix, httpClient, networkStatus and persistOptOut are marked PostHogInternal. The queue field is protected.",
+    "internal_clear_limit": "Queue.clear only schedules dropAllRecords, exposes no completion result and does not first load cached files. It does not establish interrupted/durable purge or cancel already decoded/in-flight work.",
+    "internal_clear_sites": [
+      "posthog/src/main/java/com/posthog/internal/PostHogQueueInterface.kt:5-29",
+      "posthog/src/main/java/com/posthog/internal/PostHogQueue.kt:360-368,485-488",
+      "posthog/src/main/java/com/posthog/PostHogStateless.kt:47",
+      "posthog/src/main/java/com/posthog/PostHogConfig.kt:269-278,367-369,408-409,492-508"
+    ],
+    "public_encryption_counterargument": "Encryption is a real public hook. Decrypt failure can cause unreadable files to be deleted, but no supported key-revocation/cancellation/durable-purge contract is exposed. Already decoded records may still be sent. No custom crypto or workaround implemented.",
+    "encryption_sites": [
+      "posthog/src/main/java/com/posthog/PostHogConfig.kt:160-164",
+      "posthog/api/posthog.api:298-300",
+      "posthog/src/main/java/com/posthog/internal/PostHogQueue.kt:253-288"
+    ],
+    "other_non_solutions": [
+      "resetSharedInstance is testing-only and not deletion",
+      "maxQueueSize zero coerces to at least one",
+      "Changing SDK storage paths or directly deleting internal queue files would rely on internal behavior"
+    ]
+  },
+  "measured_existing_run": {
+    "revoked_ids_reappeared": 20,
+    "new_ids_delivered": 10,
+    "revoked_sequence_range": [
+      101,
+      120
+    ],
+    "new_sequence_range": [
+      121,
+      130
+    ],
+    "app_deny_survived_process_restart": true,
+    "old_pid": 4771,
+    "new_pid": 5307,
+    "ordering": "offline capture20 -> completed revoke callback -> completed refused capture10 -> force-stop/relaunch -> deny observed -> offline new consent -> capture10 -> reconnect -> old20 and new10 arrive",
+    "meaning": "Existing raw receipts demonstrate failed suppression after completed revocation; they do not show purge internals or an interruption during revocation.",
+    "independent_receipt_review": "telemetry-github-evidence/independent-review-41429419307.json"
+  },
+  "interrupted_revocation": {
+    "status": "NOT_RUN",
+    "app_gaps": [
+      "Memory deny is followed by awaited preference write before native optOut",
+      "No persisted revocation_pending or generation barrier blocks regrant until cleanup completes",
+      "If stopped before durable deny, startup can read the old true preference and auto setup/grant",
+      "After persisted deny but incomplete cleanup, startup remains denied but a later grant can reopen surviving events"
+    ],
+    "sdk_durability_limits": [
+      "Android SDK optOut/reset preferences use SharedPreferences.apply with no durable acknowledgement exposed",
+      "close catches Throwable internally; MethodChannel success and app sdk=false do not attest successful teardown or purge"
+    ],
+    "sdk_durability_sites": [
+      "posthog-android/src/main/java/com/posthog/android/internal/PostHogSharedPreferences.kt:119-171,175-206",
+      "posthog/src/main/java/com/posthog/PostHog.kt:613-652"
+    ],
+    "acceptance": "Define accepted revocation only after a durable deny/pending record. Deterministic crash points must cover before/after that record, between native operations and before completion acknowledgement. Restart online must remain fail-closed until cleanup is durably completed; then new events work, forbidden events never appear in any receiver window, and unrelated sentinels survive.",
+    "pre_acceptance_limit": "A process death before any durable record cannot truthfully be reported as an accepted revocation. Stronger immediate-from-request guarantees need an explicit recovery policy, not an optimistic PASS."
+  },
+  "decision": "Keep PostHog adoption blocked for the requested revocation guarantee; use the authorized fallback comparison rather than further speculative reset/close, internal-file, internal-API or crypto experiments.",
+  "limits": [
+    "Vendor extraction contains 18 selected files, including the full core API dump; not an exhaustive review of all platforms or future releases",
+    "Vendor/spec tag and blob provenance are supplied and verified by the parent; this review reads that exact local material",
+    "Online post-optOut send possibility is a code-derived risk, not a newly executed native result",
+    "No SDK/lab changes, no runtime experiments, no external actions performed"
+  ],
+  "source_sha256": {
+    "AGENTS.md": "34f39c378b2c7c261cb268aa2b6324793ee4bb9611e6e86af822d9da796f6656",
+    "gradle.properties": "97c63c172b3b0e01e9e8a4913a38b24a5cc56619c27c765ea2b51a96abaf8f6e",
+    "posthog/api/posthog.api": "1fe065140abbf8173109878bd56e87600533c352cac62df0e1e168cbf4abeddb",
+    "posthog/src/main/java/com/posthog/PostHog.kt": "9b6647cacf33526a73b1f8edab65cece192c52a3e2b8fbd79feaa943b3787ab8",
+    "posthog/src/main/java/com/posthog/PostHogConfig.kt": "b28edc1252d56c3b7d9dbd25dca5ad8d96f5f8691569619d418d8990ee5d53a9",
+    "posthog/src/main/java/com/posthog/PostHogCoreInterface.kt": "afecb3410d035befd11d22359359e63a29d1464ef4d2382839af87ae617452e5",
+    "posthog/src/main/java/com/posthog/PostHogInterface.kt": "54e99b0964e9661a753edca332782820f0a983e9b2d1baa2196ddcc1e148093e",
+    "posthog/src/main/java/com/posthog/PostHogInternal.kt": "3c7406fa97c3ce2f03499ade1e5cfb982c48afce230de3e2a8a1fe1095264de1",
+    "posthog/src/main/java/com/posthog/PostHogStateless.kt": "97243c3c27732654b0cc9db12ab83d31bcdf16eb1d706978a99830df7a44f341",
+    "posthog/src/main/java/com/posthog/internal/EndpointSpec.kt": "027de1126ce44cf5ec1963e924b373116f0377892f3cd591c05a6c58034cccc0",
+    "posthog/src/main/java/com/posthog/internal/PostHogApi.kt": "d5bd51695c31583f4097881de5f124f691f31f967fa54cf7e0797dc8d7329d22",
+    "posthog/src/main/java/com/posthog/internal/PostHogQueue.kt": "81f31385e42f6a35cc7d0a1d3194ff7d12e2ec1928d08414d0a7b0e86196e470",
+    "posthog/src/main/java/com/posthog/internal/PostHogQueueInterface.kt": "0de6095bdc61c085763150b3532479f8d19c7d758092af1b3e05104f513101e9",
+    "posthog/src/test/java/com/posthog/PostHogTest.kt": "7c4e1a038b23a77a59fcc7f29a0a95eeac12a929ac386186e638f7c2b2f98229",
+    "posthog/src/test/java/com/posthog/internal/PostHogQueueDurabilityTest.kt": "272edf0ddb80b984eabe95ca5a5fc061205fec746124d94e5166fb14899cf6b2",
+    "posthog/src/test/java/com/posthog/internal/PostHogQueueTest.kt": "c147775bd5e427f3e639d6cb2dac53a65846ddc78a373dd6b583ba79058d73dd",
+    "posthog-android/src/main/java/com/posthog/android/PostHogAndroid.kt": "71bb9ed8218f16245bb5008c8fc75ed2960570c17d27f33dee4d5ffc0887a410",
+    "posthog-android/src/main/java/com/posthog/android/internal/PostHogSharedPreferences.kt": "75251d5d8d4b1d041ceeb84d9249c67e8fe56c4670593006de662a7286056afd"
+  },
+  "spec_sha256": {
+    "before-send-hook.md": "f405f6c199dea1d5ee6708eadeb3322316dbb44f93edb9afd1df2c5f4750eee8",
+    "consent-gating.md": "0dd6528e986a929bc0e82cc659f6aef58b103737d4ba7f0f7a7bc7be5cbd6954",
+    "reset.md": "14fb7641bb8f74392cd4f578cbddd816e568eb288893e1e1f9bf433f37da44d6",
+    "shutdown.md": "41b664564bb0be72061c2e7e21cf915e7fb7f5e0e4a705fe34c365780cd6d761"
+  },
+  "spec_commit": "c9dc4ce6ce0888d0a5e6a7a8e488b4a8bd5e2e17"
+}

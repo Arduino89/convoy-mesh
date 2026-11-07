@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "status": "PASS_FULL_LOCAL_SENDER_INDEPENDENTLY_REVIEWED",
+  "source_commit": "50386a5c8ce5b0cf628073989a0eaf1549008e79",
+  "wrapper_commit": "21938337ca1ac00ecd35697d16f592a62fa7477e",
+  "run": {
+    "id": 42389745788,
+    "number": 17,
+    "attempt": 1,
+    "job_id": 128454627737,
+    "conclusion": "success",
+    "url": "https://github.com/Arduino89/convoy-mesh/actions/runs/42389745788/job/128454627737"
+  },
+  "host": {
+    "passed": 205,
+    "total": 205,
+    "skipped": 0
+  },
+  "native_control": {
+    "status": "PASS_NATIVE_RUNTIME_CONTROL",
+    "stages": 8
+  },
+  "inherited_phases": {
+    "before-intent": "BOUNDARY_OBSERVED",
+    "crash-after-intent": "PASSED",
+    "crash-after-purge": "PASSED",
+    "crash-during-purge": "PASSED",
+    "inflight": "PASSED",
+    "normal": "PASSED",
+    "overflow": "PASSED",
+    "refusal": "PASSED",
+    "retry": "PASSED",
+    "revoke": "PASSED"
+  },
+  "extra_cases": {
+    "batch": {
+      "status": "PASS",
+      "queue_before": 25,
+      "queue_retained": 5,
+      "ack_retained": 1,
+      "response_category": "ACKNOWLEDGED",
+      "queue_final": 0,
+      "ack_final": 2,
+      "receiver_rows": 25,
+      "receiver_requests": 2
+    },
+    "quota": {
+      "status": "PASS",
+      "queue_before": 25,
+      "queue_retained": 25,
+      "ack_retained": 0,
+      "response_category": "QUOTA_LIMITED",
+      "queue_final": 0,
+      "ack_final": 2,
+      "receiver_rows": 45,
+      "receiver_requests": 3
+    },
+    "malformed": {
+      "status": "PASS",
+      "queue_before": 25,
+      "queue_retained": 25,
+      "ack_retained": 0,
+      "response_category": "MALFORMED_RESPONSE",
+      "queue_final": 0,
+      "ack_final": 2,
+      "receiver_rows": 45,
+      "receiver_requests": 3
+    },
+    "utf8": {
+      "status": "PASS",
+      "queue_before": 25,
+      "queue_retained": 25,
+      "ack_retained": 0,
+      "response_category": "MALFORMED_RESPONSE",
+      "queue_final": 0,
+      "ack_final": 2,
+      "receiver_rows": 45,
+      "receiver_requests": 3
+    },
+    "unknown": {
+      "status": "PASS",
+      "queue_before": 25,
+      "queue_retained": 25,
+      "ack_retained": 0,
+      "response_category": "UNRECOGNIZED_RESPONSE",
+      "queue_final": 0,
+      "ack_final": 2,
+      "receiver_rows": 45,
+      "receiver_requests": 3
+    },
+    "truncated": {
+      "status": "PASS",
+      "queue_before": 25,
+      "queue_retained": 25,
+      "ack_retained": 0,
+      "response_category": "RESPONSE_READ_FAILED",
+      "queue_final": 0,
+      "ack_final": 2,
+      "receiver_rows": 45,
+      "receiver_requests": 3
+    }
+  },
+  "apk": {
+    "source_commit": "50386a5c8ce5b0cf628073989a0eaf1549008e79",
+    "apk_bytes": 49555,
+    "apk_sha256": "3a213b3f47204a0a780611cc38986bfbd57334d67e5386ae3be647507c79ac46",
+    "identity": {
+      "certificate_sha256": "c7b1dad8ee642d6e1942e0035ba98089095846144a85476371ffbadf0bf8968c",
+      "min_sdk": 24,
+      "package": "com.cama.telemetry.direct_lab",
+      "requested_permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
+      "target_sdk": 36,
+      "version_code": 1,
+      "version_name": "1.0"
+    }
+  },
+  "full_result_sha256": "94f69fa092d12f1b07f9b3d508d95e097588648254b0cd6ebcf15c007a8c0450",
+  "budget": {
+    "new_posthog_transmissions": 0,
+    "old20_retried": false,
+    "current_allowance": 0,
+    "prior_prudential_ceiling_closed": 700,
+    "proposed_new_ceiling_not_authorized": 160
+  },
+  "limits": [
+    "LOOPBACK_HTTP_NOT_TLS_OR_CLOUD_STORAGE",
+    "NO_OLD20_RETRY",
+    "NO_PHONE_OR_BATTERY_PROOF",
+    "Local duplicate attempts are visible and identity-stable; not cloud deduplication.",
+    "Before-intent boundary is deliberately not accepted revocation; already received bytes cannot be recalled.",
+    "APK identity/signature checked by runner tools; not independently downloaded.",
+    "Only synthetic fingerprints and wire items, no real traces or full diagnostic logs."
+  ],
+  "restoration": {
+    "status": "INDEPENDENTLY_VERIFIED",
+    "commit": "b3bfaf8fbc2c84e4ec7bbfe77093668be12c8f3e",
+    "review": "independent-restoration-review.json",
+    "workflow_sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5",
+    "last_run_observed": 17
+  },
+  "independent_runtime_review": "independent-runtime-review.json"
+}

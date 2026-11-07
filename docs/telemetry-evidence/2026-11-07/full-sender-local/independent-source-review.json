@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "reviewer": "/root/ack_independent_review",
+  "checked_at_utc": "2026-11-07T16:04:18.445956+00:00",
+  "scope": "INDEPENDENT_STATIC_REVIEW_AND_HOST_FIXTURE_CHECKS_BEFORE_FULL_ANDROID_SENDER_LOCAL_RUN",
+  "status": "GO_SOURCE_REVIEW_CONCRETE_WORKFLOW_AND_ANDROID_RUNTIME_PENDING",
+  "blockers": [],
+  "files_sha256": {
+    "tools/telemetry_spike/direct_trial/DirectQueue.java": "254b6758166111a9b5d90095eba2d7e52caa1d537fa44e4d8a77a120303a60cd",
+    "tools/telemetry_spike/wire_audit_receiver.py": "2bdb65f9aefcca17dcf99207c82b6010ba6f46c83f8770a8fc9e19a0d79af08c",
+    "tools/telemetry_spike/ci_full_sender.py": "e2d6bc447d3f03c69795f484865c818a27489036672c6c628cedaea5f0ee0b2d",
+    "tools/telemetry_spike/run_ci_full_sender.sh": "c56658cf5968b3761af55baf5a6c0a2326cbad008a33d2d2c8c608058f2bf8ad",
+    "tools/telemetry_spike/test_full_sender.py": "47c00e9d63822e060146bde936811ec5dd2a7ba00556cee46628cbdbf5a1c78d",
+    "tools/telemetry_spike/ci_provision_probe.py": "67622cd3e022e9a9805ba8fd55e67aff3ba709a572bf30b6c9f6e8c02e06f205",
+    "tools/telemetry_spike/ci_direct_trial.py": "9f1a5dcca866d209b4413926a1dccf2190fe3ddfba42cd743d1a81d74dfc1356"
+  },
+  "findings": {
+    "every_real_http200_reads_same_readCloudResponse_for_local_and_cloud": true,
+    "cloud_permanent_block_and_local_retry_scopes_preserved": true,
+    "queue_deletion_still_uses_selected_ids_in_shared_ack_transaction": true,
+    "queue_snapshot_digest_covers_ordered_id_generation_eventid_exact_body_and_bytes": true,
+    "two_held_ack_barriers_observe_25_then_exact_5_tail_before_full_drain": true,
+    "negative_fixtures_require_observed_category_zero_acks_exact_queue_digest_and_restart_preservation": true,
+    "quota_malformed_utf8_unknown_and_truncated_http200_are_finite_receiver_only_fixtures": true,
+    "interrupted_body_fixture_advertises_seven_missing_bytes_after_valid_Ok_body": true,
+    "wire_payload_header_privacy_validation_and_default_status1_response_preserved": true,
+    "canonical_transmitted_item_digest_uuid_timestamp_taken_from_actual_audited_payload": true,
+    "before_ack_restart_offline_and_compact_request_proofs_are_exported": true,
+    "full_prior_local_suite_reused_with_Ok_response_including_lost_ack_revocation_cutpoints_refusal_saturation_and_sentinels": true,
+    "radio_and_default_network_barriers_reused_before_and_after_sender_tests": true,
+    "lab_stop_and_reverse_removal_precede_radio_restoration": true,
+    "no_application_endpoint_hook_cloud_configuration_or_credentials_added": true,
+    "no_new_service_dependency_or_cloud_ingestion": true
+  },
+  "resolved_review_findings": [
+    "Normalized business rows did not contain UUID/timestamp; repeated-item comparisons now use the real auditor payload and exported canonical-item proofs.",
+    "Previously discarded first-ACK and offline-restart observations are now exported for independent recomputation.",
+    "Original close-before-headers regression was insufficient for read-body interruption; a finite truncated-HTTP200 fixture and host IncompleteRead control were added.",
+    "Full-sender runner now explicitly disables external radio/default networking and restores it only after LAB stop and reverse removal."
+  ],
+  "independently_executed_host_checks": [
+    {
+      "command": "python -m unittest test_ci_direct_trial test_wire_audit_receiver",
+      "total": 32,
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "python -m unittest test_full_sender",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "review_limits": [
+    "No Android build or execution performed by the reviewer in this phase; host IncompleteRead is not Android stream proof.",
+    "Concrete run17 workflow, immutable checkout, public standard runner/no-cost boundary, absence of secrets and final export/cleanup still require independent review before launch.",
+    "Snapshot digests prove serialized SQLite row preservation; canonical item digests prove equal transmitted values/UUID/timestamp, not identical HTTP body byte ordering.",
+    "Expected runtime includes six extra cases. A failed environment gate must block dependent tests; a failed transport fixture must remain visible and must not be relabeled as passed.",
+    "No PostHog/cloud query, ingestion, old20 retry, TLS/storage/deduplication, phone/battery, merge, release or app-integration approval."
+  ]
+}

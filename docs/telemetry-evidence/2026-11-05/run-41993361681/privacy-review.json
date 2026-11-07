@@ -1,0 +1,7 @@
+{
+  "files_scanned": 112,
+  "findings": [],
+  "loopback_ip_values": 16,
+  "redacted_fake_api_keys": 16,
+  "scope": "STRUCTURED_PATTERN_AND_FIELD_SCAN_PLUS_SYNTHETIC_PAYLOAD_REVIEW_NOT_UNIVERSAL_PII_DETECTOR"
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "status": "PASS_STATIC_HELPER_REVIEW_NO_LAUNCH",
+  "checked_at_utc": "2026-11-06T21:42:26.995008+00:00",
+  "scope": "INDEPENDENT_REVIEW_OF_LAUNCH_HELPER_AND_TESTS_ONLY",
+  "reviewer_relationship": {
+    "helper_author": "separate_review_launch_agent",
+    "reviewer": "budget_fix_agent",
+    "budget_validator_authored_by_reviewer": true,
+    "budget_validator_independent_review": "separately performed by review_launch agent; not claimed by this receipt"
+  },
+  "files": [
+    {
+      "path": "tools/telemetry_spike/review_cloud_launch.py",
+      "bytes": 6412,
+      "sha256": "ae3a7c61dcb91c94b39b484070ccc2daccb3855358d4fca03e30b7d00b3e9f43"
+    },
+    {
+      "path": "tools/telemetry_spike/test_cloud_launch_gate.py",
+      "bytes": 6935,
+      "sha256": "93c3eadc1b21b4f00ec38f393a262a5ca9bf5f082235274c2aff09a190d466d7"
+    },
+    {
+      "path": "docs/telemetry-evidence/2026-11-06/workflow-original.yml",
+      "bytes": 3391,
+      "sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5"
+    },
+    {
+      "path": "tools/telemetry_spike/run_ci_lab.sh",
+      "bytes": 1634,
+      "sha256": "9cfcca3f033ba800f93dd9e339cded95dcab156f5742c0773eebb9525f215b81"
+    },
+    {
+      "path": "tools/telemetry_spike/run_ci_cloud_lab.sh",
+      "bytes": 1535,
+      "sha256": "e3de9c4e34ebeccad50544c0868780a91a60af8637b37312c7f0e852111251a9"
+    }
+  ],
+  "checks": {
+    "pinned_original_workflow_hash": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5",
+    "exact_four_allowed_substitutions_only": true,
+    "repository_public_push_branch_run_attempt_message_guards_retained": true,
+    "checkout_full_immutable_sha_matches_gate_source": true,
+    "inline_gate_json_yaml_escaped_and_actions_expression_injection_rejected": true,
+    "schema2_allowance_exact_200_prior_500_total_700": true,
+    "host_control_local_suite_before_cloud_order_retained": true,
+    "secret_scope_read_permissions_timeout_and_cleanup_unchanged": true,
+    "helper_has_no_network_dispatch_or_ingest_operation": true,
+    "same_source_gate_rule_unchanged": true,
+    "approval_blocking_issue_found": false
+  },
+  "test_execution": {
+    "command": "python3 -m unittest discover -s tools/telemetry_spike -p 'test_cloud_launch_gate.py' -v",
+    "tests_run": 8,
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "limitations": [
+    "No concrete future source commit or live gate is approved by this helper-code review; separately review the rendered wrapper and gate after exact-source local Android evidence exists.",
+    "The guard matrix enumerates representative modeled contexts. It does not execute or certify GitHub Actions expression semantics, and is not Android or cloud evidence.",
+    "External control evidence references and user authorization are not independently fetched or proven by the helper.",
+    "Prepublication secret/privacy scanning remains a separate check.",
+    "No dispatch, cloud transmission, PostHog deletion, merge, release, integration, physical-phone or battery test was performed."
+  ]
+}

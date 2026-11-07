@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "status": "APPROVED_FOR_SINGLE_LAUNCH",
+  "scope": "INDEPENDENT_STATIC_WORKFLOW_REVIEW_AND_LOCAL_GATE_VALIDATION_ONLY",
+  "checked_at_utc": "2026-11-05T08:15:58.240576+00:00",
+  "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+  "workflow_sha256": "dfb77a333f0bc79f33acf9481cf26d6e49830c3bc2443b416ff47f11d9d19709",
+  "gate_sha256": "35b9191929ca83a5e796d294657cfdd3a4729c0b8ebbf4fd44a18912b016a54b",
+  "workflow_name": "Isolated Android telemetry laboratory",
+  "expected_run_number": 8,
+  "expected_attempt": 1,
+  "expected_branch": "experiment/telemetry-runtime-lab",
+  "expected_commit_message": "Execute authorized synthetic cloud laboratory once (budget 500)",
+  "run_id": "synthetic-cloud-20261105-r8",
+  "ceiling_rows_including_retries": 500,
+  "nominal_unique_received": 120,
+  "nominal_rows_reserved": 130,
+  "static_checks": [
+    "embedded_gate_exact",
+    "workflow_name_unchanged",
+    "triggers_unchanged",
+    "concurrency_no_cancel_unchanged",
+    "contents_read_only",
+    "runner_timeout_unchanged",
+    "only_expected_top_level_changes",
+    "only_four_expected_workflow_fields_changed",
+    "secret_only_prepare_step",
+    "private_prepare_step_unchanged",
+    "secret_never_job_environment",
+    "guard_matrix_pass",
+    "actual_gate_passes",
+    "negative_gate_cases_pass"
+  ],
+  "guard_matrix": [
+    {
+      "case": "authorized_push",
+      "job_enabled": true,
+      "cloud_enabled_effective": true,
+      "checkout_is_reviewed_source": true
+    },
+    {
+      "case": "previous_run",
+      "job_enabled": false,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "next_run",
+      "job_enabled": false,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "rerun_attempt_2",
+      "job_enabled": false,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "other_branch",
+      "job_enabled": false,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "other_repository",
+      "job_enabled": false,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": true
+    },
+    {
+      "case": "private_repository",
+      "job_enabled": false,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": true
+    },
+    {
+      "case": "wrong_message",
+      "job_enabled": true,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "trailing_newline_message",
+      "job_enabled": true,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "tag_ref",
+      "job_enabled": false,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "unsupported_event",
+      "job_enabled": true,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "manual_empty_default",
+      "job_enabled": true,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "manual_braces_default",
+      "job_enabled": true,
+      "cloud_enabled_effective": false,
+      "checkout_is_reviewed_source": false
+    },
+    {
+      "case": "manual_explicit_existing_path",
+      "job_enabled": true,
+      "cloud_enabled_effective": true,
+      "checkout_is_reviewed_source": false
+    }
+  ],
+  "negative_gate_cases": [
+    {
+      "case": "wrong_source",
+      "blocked_reason": "CLOUD_PRECHECK_NOT_VERIFIED_FOR_THIS_EXECUTION"
+    },
+    {
+      "case": "wrong_run_id",
+      "blocked_reason": "CLOUD_PRECHECK_NOT_VERIFIED_FOR_THIS_EXECUTION"
+    },
+    {
+      "case": "wrong_execution_id",
+      "blocked_reason": "CLOUD_PRECHECK_NOT_VERIFIED_FOR_THIS_EXECUTION"
+    },
+    {
+      "case": "rerun_attempt_2",
+      "blocked_reason": "CLOUD_PRECHECK_NOT_VERIFIED_FOR_THIS_EXECUTION"
+    },
+    {
+      "case": "budget_above_500",
+      "blocked_reason": "CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT"
+    },
+    {
+      "case": "budget_below_minimum",
+      "blocked_reason": "CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT"
+    },
+    {
+      "case": "budget_boolean",
+      "blocked_reason": "CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT"
+    },
+    {
+      "case": "quota_below_500",
+      "blocked_reason": "CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT"
+    },
+    {
+      "case": "expired",
+      "blocked_reason": "CLOUD_GATE_EXPIRED_OR_VALIDITY_TOO_LONG"
+    },
+    {
+      "case": "expiration_over_24h",
+      "blocked_reason": "CLOUD_GATE_EXPIRED_OR_VALIDITY_TOO_LONG"
+    },
+    {
+      "case": "stale_privacy",
+      "blocked_reason": "CLOUD_REQUIRED_CONTROL_NOT_VERIFIED"
+    },
+    {
+      "case": "future_privacy",
+      "blocked_reason": "CLOUD_REQUIRED_CONTROL_NOT_VERIFIED"
+    },
+    {
+      "case": "ip_not_anonymized",
+      "blocked_reason": "CLOUD_PRIVACY_OR_SAME_SOURCE_REGRESSION_NOT_ATTESTED"
+    },
+    {
+      "case": "recording_enabled",
+      "blocked_reason": "CLOUD_PRIVACY_OR_SAME_SOURCE_REGRESSION_NOT_ATTESTED"
+    },
+    {
+      "case": "nonfree_plan",
+      "blocked_reason": "CLOUD_PRIVACY_OR_SAME_SOURCE_REGRESSION_NOT_ATTESTED"
+    },
+    {
+      "case": "regression_other_source",
+      "blocked_reason": "CLOUD_PRIVACY_OR_SAME_SOURCE_REGRESSION_NOT_ATTESTED"
+    },
+    {
+      "case": "deletion_unverified",
+      "blocked_reason": "CLOUD_REQUIRED_CONTROL_NOT_VERIFIED"
+    },
+    {
+      "case": "ceiling_above_500",
+      "blocked_reason": "CLOUD_QUOTA_OR_GLOBAL_BUDGET_INSUFFICIENT"
+    }
+  ],
+  "cloud_executed": false,
+  "android_executed": false,
+  "limitations": [
+    "GitHub expression truth table evaluated locally for string run/attempt and boolean repository privacy; not a GitHub Actions execution.",
+    "Account privacy, quota, secret presence and support evidence are parent-agent attestations, not freshly queried by this independent review.",
+    "Exact wrapper commit SHA must be recorded after commit and before push; no self-referential SHA guard is claimed.",
+    "A concurrent workflow consuming run8 must block; do not automatically substitute a new run number or rerun attempt.",
+    "Prior local Android evidence covers exact executable source; HTTPS cloud flow is still NOT_RUN.",
+    "Transport success requires independent raw cloud readback; no deletion has been performed or authorized by this review.",
+    "Restore original workflow after launch using skip-ci; no main merge or app changes."
+  ]
+}

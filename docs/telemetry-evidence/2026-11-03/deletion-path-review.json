@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-11-03",
+  "scope": "READ_ONLY_PERSONLESS_EVENT_DELETION_PATH_REVIEW",
+  "project_id": 330212,
+  "cloud_status": "NOT_RUN",
+  "decision": "NO_SUPPORTED_SELECTIVE_PERSONLESS_DELETION_PATH_VERIFIED",
+  "summary_it": "Il percorso self-service selettivo non e verificato. L'API di cancellazione eventi e documentata ma il progetto rifiuta l'accesso alpha. L'alternativa persons/bulk_delete accetta distinct_ids, ma il sorgente corrente accoda eventi solo per persone realmente risolte: non basta per un run nuovo senza profilo.",
+  "observed_project_result": {
+    "provenance": "Reported by root from authenticated browser GET; not independently repeated in this review.",
+    "method": "GET",
+    "endpoint": "https://eu.posthog.com/api/projects/330212/data_deletion_requests/",
+    "response": {
+      "type": "authentication_error",
+      "code": "permission_denied",
+      "detail": "This endpoint is in alpha and is not yet publicly available.",
+      "attr": null
+    },
+    "http_status": "NOT_PROVIDED",
+    "mutation_performed": false
+  },
+  "findings": [
+    {
+      "id": "query_event_deletion",
+      "evidence_kind": "OFFICIAL_DOCUMENTATION_AND_REPORTED_PROJECT_ACCESS",
+      "claim_it": "data_deletion_requests documenta selezione degli UUID evento con query HogQL, quindi potrebbe esprimere run_id/distinct_id. La disponibilita documentale non supera il rifiuto reale del progetto.",
+      "reference": "https://posthog.com/docs/api/data-deletion-requests",
+      "status": "ACCESS_BLOCKED_ALPHA_NOT_PUBLIC"
+    },
+    {
+      "id": "bulk_person_delete",
+      "evidence_kind": "OFFICIAL_DOCUMENTATION_PLUS_PINNED_SOURCE_INFERENCE",
+      "claim_it": "persons/bulk_delete documenta distinct_ids, delete_events e person:write. Nel sorgente, entrambe le varianti sincronica/accodata risolvono prima persone esistenti; events_queued_for_deletion richiede una lista non vuota. Non seleziona direttamente le righe evento per run_id.",
+      "reference": "https://posthog.com/docs/api/persons#Create-persons-bulk-delete",
+      "source_lines": {
+        "posthog/api/person.py": [
+          1119,
+          1143,
+          1170,
+          1197,
+          1204,
+          1224,
+          1242
+        ],
+        "posthog/models/person/bulk_delete.py": [
+          150,
+          828
+        ],
+        "posthog/models/person/util.py": [
+          399
+        ]
+      },
+      "status": "NOT_A_VERIFIED_PERSONLESS_ALTERNATIVE"
+    },
+    {
+      "id": "unmatched_distinct_ids",
+      "evidence_kind": "PINNED_SOURCE",
+      "claim_it": "La risoluzione per distinct_ids restituisce [] senza persone corrispondenti; queue_person_event_deletion ritorna senza accodare cancellazioni se persons e vuoto. Gli ID unmatched del percorso accodato sono gestiti per training/replay; non diventano selettori per cancellare eventi.",
+      "source_lines": {
+        "posthog/models/person/util.py": [
+          399,
+          422
+        ],
+        "posthog/models/person/bulk_delete.py": [
+          360,
+          439,
+          828
+        ],
+        "posthog/api/person.py": [
+          1224,
+          1242
+        ]
+      },
+      "status": "SOURCE_LIMIT_NOT_LIVE_DELETION_TEST"
+    },
+    {
+      "id": "personless_contract",
+      "evidence_kind": "OFFICIAL_ENGINEERING_DOCUMENTATION",
+      "claim_it": "Con $process_person_profile:false gli eventi possono avere un UUID persona deterministico senza un record persona persistito. Tale UUID non prova che l'API persons trovi una persona eliminabile.",
+      "reference": "https://github.com/PostHog/posthog/blob/27db03406400b3d4ea1b8ff281fdc51448b2a849/docs/published/handbook/engineering/person-processing.md",
+      "status": "CONTRACT_UNCHANGED"
+    },
+    {
+      "id": "retention_not_scoped_deletion",
+      "evidence_kind": "OFFICIAL_DOCUMENTATION",
+      "claim_it": "La retention riguarda finestre temporali del progetto e pulizia asincrona; non dimostra cancellazione selettiva del solo run. La cancellazione del progetto e esclusa dal mandato.",
+      "reference": "https://posthog.com/docs/privacy/data-storage",
+      "status": "NOT_A_REPLACEMENT_FOR_RUN_SCOPED_DELETION"
+    }
+  ],
+  "source_snapshot": {
+    "repository": "PostHog/posthog",
+    "commit": "27db03406400b3d4ea1b8ff281fdc51448b2a849",
+    "commit_author_date": "2026-11-03T09:09:32Z",
+    "files": [
+      {
+        "path": "posthog/api/person.py",
+        "git_blob_sha1": "49e283016f40499e4a5a6c3e4f27e8fa933e02fa",
+        "url": "https://github.com/PostHog/posthog/blob/27db03406400b3d4ea1b8ff281fdc51448b2a849/posthog/api/person.py"
+      },
+      {
+        "path": "posthog/models/person/bulk_delete.py",
+        "git_blob_sha1": "9e291c21163a3371b504837e01a37be09570eb02",
+        "url": "https://github.com/PostHog/posthog/blob/27db03406400b3d4ea1b8ff281fdc51448b2a849/posthog/models/person/bulk_delete.py"
+      },
+      {
+        "path": "posthog/models/person/util.py",
+        "git_blob_sha1": "2bc249f1e8102f3782cff9c718611c0150ccd756",
+        "url": "https://github.com/PostHog/posthog/blob/27db03406400b3d4ea1b8ff281fdc51448b2a849/posthog/models/person/util.py"
+      }
+    ],
+    "cloud_deployment_commit": "UNKNOWN_NOT_ASSERTED_EQUAL_TO_PUBLIC_MASTER"
+  },
+  "limits": [
+    "Read-only documentation/source review; no POST, DELETE, preview submission or deletion executed.",
+    "No new event, person profile, account, service or project created.",
+    "Current public source does not establish the exact deployed EU server revision.",
+    "No absolute claim that vendor-assisted deletion is impossible; no supported and accessible path for this project's personless run was established.",
+    "An HTTP 202/example response would be queue acceptance, not proof that all requested events were removed; completion and raw-row absence would still need verification."
+  ],
+  "next_required_evidence": [
+    "Vendor-supported access or confirmation of selective deletion for project330212 without creating/identifying a person, altering the event contract or deleting the project.",
+    "Documented selector scope, authorization and observable completion for the exact synthetic run; no new ingestion before that gate is resolved."
+  ],
+  "external_contact_performed": false,
+  "files_modified": [
+    "docs/telemetry-evidence/2026-11-03/deletion-path-review.json"
+  ]
+}

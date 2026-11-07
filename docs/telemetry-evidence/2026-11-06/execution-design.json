@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "status": "CLOSED_BLOCKED_ACKNOWLEDGMENT_DIAGNOSTIC_NO_FURTHER_CLOUD_AUTHORITY",
+  "user_decision": {
+    "date": "2026-11-06",
+    "decision": "Cama answered ok procedi to the separate proposal for200additional synthetic cloud rows/cumulative700.",
+    "scope": "Existing LAB branch/PR5 and existing free public GitHub runner only; exactly one cloud launch after reviewed exact-source Android regression; no adoption."
+  },
+  "source_checkpoint": {
+    "branch": "experiment/telemetry-runtime-lab",
+    "pr": 5,
+    "base_head": "b1a80436a52a8adfc3d50bd4867e3ba9792feaa9",
+    "native_prior_source": "2d76100fda1df0637e953f4ad90f26073028880c",
+    "native_sources_changed": false
+  },
+  "budget": {
+    "prior_rows_conservative_consumed": 500,
+    "additional_rows_authorized": 200,
+    "cumulative_ceiling": 700,
+    "native_per_execution_limit": 200,
+    "nominal_transmissions": 130,
+    "nominal_unique_events": 120,
+    "automatic_refund": false,
+    "automatic_rerun": false,
+    "unused_rows_authorize_future_launch": false,
+    "native_observed_reserved_rows": 20,
+    "future_launch_allowance": 0,
+    "unused_native_rows_are_not_future_authority": 180
+  },
+  "reuse_first": {
+    "workflow_level": 5,
+    "budget_code_level": 6,
+    "decision": "Reuse restored workflow, native app, control, local cases, sender, existing PostHog LAB EU. Correct only Python cumulative accounting and its reconciler. No newSDK/server/service."
+  },
+  "governance": {
+    "mode": "DIRECT_CANONICAL_INPUT_CONSULTATION_PARTIAL_PROJECT_CHECKOUT_NO_ENTERPRISE_EXECUTABLE_CHECKOUT",
+    "repository": "Arduino89/Cama-Enterprise",
+    "ref": "main",
+    "checked_date": "2026-11-06",
+    "inputs": [
+      "AGENTS.md",
+      "00_company/source_of_truth_index.md",
+      "00_company/principles.md",
+      "00_company/operating_model.md",
+      "00_company/project_continuity_protocol.md",
+      "06_training/enterprise_pattern_registry.json",
+      "00_company/jarvis_operations_notebook.md",
+      "06_training/routing_memory.json"
+    ],
+    "patterns": [
+      "EP-001",
+      "EP-002",
+      "EP-003",
+      "EP-004",
+      "EP-005",
+      "EP-007",
+      "EP-009"
+    ],
+    "notebook_notes": [
+      "JON-2026-08-25-003",
+      "JON-2026-08-25-007",
+      "JON-2026-08-25-009",
+      "JON-2026-08-25-010",
+      "JON-2026-08-25-011",
+      "JON-2026-09-08-001"
+    ],
+    "routing_memory": "READ_CURRENT_ADVISORY_NO_RULE_EVIDENCE",
+    "profile_reused_from": "../2026-11-05/preparation-design.json",
+    "changed_signals": {
+      "externalData": true
+    },
+    "changed_scope": "User authorized one200row cloud trial after earlier offline correction; other risk signals and no-real-user boundary unchanged."
+  },
+  "execution_plan": [
+    {
+      "expected_number": 14,
+      "mode": "LOCAL_ONLY",
+      "source": "New immutable budget-fixed commit; original workflow unchanged, cloud false.",
+      "gate": "Host controls + Android control install/open/stop/reopen + all existing local synthetic cases must PASS."
+    },
+    {
+      "expected_number": 15,
+      "mode": "ONE_CLOUD_LAUNCH_CONDITIONAL",
+      "source": "Exact same immutable source as verified local14.",
+      "gate": "Fresh privacy/freequota/retention/deletion/budget receipts and independent exact wrapper review. Guard exact message/branch/run15/attempt1; no auto rerun. Current sourceSHA and number must be live-verified before push."
+    }
+  ],
+  "preflight": {
+    "posthog_project": 330212,
+    "region": "EU",
+    "billing": "Live free/noactive subscription/no trial;162of1000000 used on2026-11-06.",
+    "privacy": "VERIFIED read-only browser Privacy/Replays settings: discardIPtrue/replayfalse. No setting changed.",
+    "browser": "One reload recovered initial loading; only privacy flags and existing support procedure used in evidence. Generalpage incidentallyrendered publicingestiontoken, notstored/reused.",
+    "deletion": "VERIFIED existing ticket80503 reply reread06Nov, no new contact/deletion. Ticketpending; response available.",
+    "github": "Repository public; original standard ubuntu24.04 runner/no artifacts or caches."
+  },
+  "proof_boundary": "Host/static validation is not Android; local Android is not cloud delivery. Cloud HTTP success requires separate raw8column readback with matching count and finite window.",
+  "exclusions": [
+    "No Convoy app integration",
+    "No merge/release/real users",
+    "No spending/new credentials",
+    "No new external contact",
+    "No actual deletion without exact-set Cama approval"
+  ],
+  "next_gate": "Offline bounded ACKresponseclassification/fail-fast design and regressions; establish supported actualresponsecontract beforechangingpredicate. No furthercloudtrial,budget,adoptionordeleteauthorized.",
+  "local_result": {
+    "run_id": 42299072769,
+    "job_id": 128171820455,
+    "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+    "attempt": 1,
+    "status": "SUCCESS",
+    "host_tests": 193,
+    "cloud_preparation": "SKIPPED_DISABLED",
+    "export_sha256": "4e04af33698d083efa9a46b9bd6287ad99fbc81a41c49211bffb123388585390"
+  },
+  "cloud_result": {
+    "run_id": 42300571195,
+    "job_id": 128176961434,
+    "number": 15,
+    "attempt": 1,
+    "workflow_commit": "340571da315d9f19e35ef3374902fcd2be8cfd62",
+    "runtime_source": "809caf200f6232b162fee009fa2a7c2b484d7855",
+    "conclusion": "failure",
+    "first_batch20_received": true,
+    "revocation_retry": "NOT_RUN",
+    "summary_ref": "run-42300571195/summary.json"
+  },
+  "learningSweep": {
+    "triggerDecisions": [
+      {
+        "trigger": "INCOMPLETE_ACK_PROTOCOL_ASSUMPTION",
+        "decision": "PROJECT_SPECIFIC_DIAGNOSTIC_RETAINED",
+        "evidence": "run-42300571195/response-acceptance-cause.json",
+        "general_promotion": false
+      },
+      {
+        "trigger": "PARTIAL_RECEIPT_MISLEADING_RETRY_LABEL",
+        "decision": "PROJECT_HOST_ANALYZER_REGRESSION",
+        "evidence": "analysis-label-review.json",
+        "general_promotion": false
+      }
+    ],
+    "existing_context_reused": [
+      "EP-002",
+      "EP-003",
+      "EP-004",
+      "JON-2026-09-08-001"
+    ],
+    "central_governance_changed": false
+  }
+}

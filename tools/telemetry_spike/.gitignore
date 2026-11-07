@@ -1,0 +1,7 @@
+__pycache__/
+generated/
+results/
+*.db
+*.db-journal
+*.local.json
+*.private.json

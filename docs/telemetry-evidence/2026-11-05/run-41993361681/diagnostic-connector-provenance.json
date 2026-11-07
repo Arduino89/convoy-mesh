@@ -1,0 +1,13 @@
+{
+  "scope": "DIAGNOSTIC_IDENTITY_ONLY_NOT_DELIVERY_PASS",
+  "responses": {
+    "rows": {
+      "response_sha256": "33ce032b8b8e13302c1d6466e96bf5e66047fda4f4458e8e1ac3514e6ebd5bd4",
+      "ref": "Private connector response, retained for review."
+    },
+    "count": {
+      "response_sha256": "0df66125bd37a5fa7e620b2fde39a8c30fb28f00e79e3b259febcc33c0b6e659",
+      "ref": "Private connector response, retained for review."
+    }
+  }
+}

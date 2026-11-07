@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-02",
+  "scope": "PINNED_VENDOR_SOURCE_PREFLIGHT_NOT_ANDROID_EXECUTION",
+  "decision": "PRECHECK_BLOCKED_MINIMIZATION",
+  "candidate": {
+    "flutter_version": "3.1.0",
+    "flutter_tag": "v3.1.0",
+    "flutter_commit": "d8dbb35abde88c676748f179db922f9e0a20094f",
+    "android_declared_version": "8.11.1",
+    "android_tag": "v8.11.1",
+    "android_commit": "56b8a0b33cec9a08fb046bd3d1d75f9e9743de80",
+    "android_common_declared_version": "1.1.0",
+    "dart_common_constraint": "^1.0.0",
+    "dependency_resolution": "NOT_RUN",
+    "apk_build": "NOT_RUN"
+  },
+  "flutter_source_files": [
+    {
+      "path": "AGENTS.md",
+      "git_blob_sha1": "912cff058e96fcc07f2909b2f8c75cf3e62b99c7",
+      "sha256": "9d38d550851f13fd6813d5ff620d7ef0c83e0b75d96cc27c0b0f9bbc0c912840",
+      "bytes": 10187,
+      "url": "https://github.com/mixpanel/mixpanel-flutter/blob/d8dbb35abde88c676748f179db922f9e0a20094f/AGENTS.md"
+    },
+    {
+      "path": "packages/mixpanel_flutter/android/build.gradle",
+      "git_blob_sha1": "02adc0601a86404bd9633e68d098cecab7b7fe37",
+      "sha256": "a9c0af603609769785283d70895bcf56237cf10eb4e3d393785d905f926765a9",
+      "bytes": 3126,
+      "url": "https://github.com/mixpanel/mixpanel-flutter/blob/d8dbb35abde88c676748f179db922f9e0a20094f/packages/mixpanel_flutter/android/build.gradle"
+    },
+    {
+      "path": "packages/mixpanel_flutter/android/src/main/java/com/mixpanel/mixpanel_flutter/MixpanelFlutterPlugin.java",
+      "git_blob_sha1": "f7153332b4958cc0931e2418f9accff00185e16b",
+      "sha256": "8318c5190293c3fe3640349a8a0902cea64adf45a62c21a4473f267e4810a23e",
+      "bytes": 36230,
+      "url": "https://github.com/mixpanel/mixpanel-flutter/blob/d8dbb35abde88c676748f179db922f9e0a20094f/packages/mixpanel_flutter/android/src/main/java/com/mixpanel/mixpanel_flutter/MixpanelFlutterPlugin.java"
+    },
+    {
+      "path": "packages/mixpanel_flutter/android/src/main/kotlin/com/mixpanel/mixpanel_flutter/EventBridgeSubscriber.kt",
+      "git_blob_sha1": "7d2b594239593cdc08e6a54a66cc8b4b7e5be652",
+      "sha256": "94a8326ade9ee3cc98b0dd91b0a9eaed168b45744462c53ee5df2f7601857b8e",
+      "bytes": 2866,
+      "url": "https://github.com/mixpanel/mixpanel-flutter/blob/d8dbb35abde88c676748f179db922f9e0a20094f/packages/mixpanel_flutter/android/src/main/kotlin/com/mixpanel/mixpanel_flutter/EventBridgeSubscriber.kt"
+    },
+    {
+      "path": "packages/mixpanel_flutter/lib/mixpanel_flutter.dart",
+      "git_blob_sha1": "5c2760cd1ce8cc22b3671b3b0c94b9cd3113fed6",
+      "sha256": "3e4f47b04362a2c7f89e2d86002331e60de6979f34b58ccfb399cbf3aafb701b",
+      "bytes": 65249,
+      "url": "https://github.com/mixpanel/mixpanel-flutter/blob/d8dbb35abde88c676748f179db922f9e0a20094f/packages/mixpanel_flutter/lib/mixpanel_flutter.dart"
+    },
+    {
+      "path": "packages/mixpanel_flutter/pubspec.yaml",
+      "git_blob_sha1": "6aeddfe0fc724118731e7a5ed90d9f5ff1f0a329",
+      "sha256": "b3cd8a99491d0384b8dbee44d0319b44ecae2c063b8d4cdda74575e4ea444157",
+      "bytes": 1034,
+      "url": "https://github.com/mixpanel/mixpanel-flutter/blob/d8dbb35abde88c676748f179db922f9e0a20094f/packages/mixpanel_flutter/pubspec.yaml"
+    },
+    {
+      "path": "packages/mixpanel_flutter_common/lib/src/event_bridge.dart",
+      "git_blob_sha1": "034fc1c1bf7f541525eef688bf06d736a2a9fe88",
+      "sha256": "acf6ca16c5e84584390550de0ea7a942b6016a507a33d557ebc8e33c9952b449",
+      "bytes": 4571,
+      "url": "https://github.com/mixpanel/mixpanel-flutter/blob/d8dbb35abde88c676748f179db922f9e0a20094f/packages/mixpanel_flutter_common/lib/src/event_bridge.dart"
+    }
+  ],
+  "android_source_review": {
+    "file": "independent-mixpanel-source-review.json",
+    "sha256": "27d642c53e6ec197c6a038bde684a0e128386f8ac9282eec6d21236e9a2d8c70",
+    "source_files_verified_against_git_tree": 12,
+    "root_verified_each_source_blob": true
+  },
+  "positive_capabilities": [
+    {
+      "id": "endpoint_at_initialization",
+      "finding": "Flutter passes serverURL to Android options before getInstance; native constructor applies it before worker creation. Supported local receiver path, not measured zero-egress isolation.",
+      "sites": [
+        "packages/mixpanel_flutter/lib/mixpanel_flutter.dart:482-508",
+        "packages/mixpanel_flutter/android/src/main/java/com/mixpanel/mixpanel_flutter/MixpanelFlutterPlugin.java:301-325",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:208-239"
+      ]
+    },
+    {
+      "id": "supported_deletion",
+      "finding": "optOutTracking requests token-scoped queue deletion, unlike the inspected PostHog reset contract. Async worker and preference apply do not attest durable completion or interrupted revocation.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:1511-1536",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java:155-160,539-545",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/PersistentIdentity.java:642-651,698-699"
+      ]
+    },
+    {
+      "id": "partial_native_minimization",
+      "finding": "Native excludeProperties exists, applies after default property merge, and is not exposed by Flutter 3.1.0. Public deviceIdProvider could supply synthetic identity; wrapper omissions alone do not reject a native binding.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelOptions.java:290-313,373-415",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java:789-805"
+      ]
+    }
+  ],
+  "contract_blockers": [
+    {
+      "id": "unconditional_opt_in_event",
+      "finding": "All public optInTracking overloads reach track($opt_in,...), through the non-automatic track path. trackAutomaticEvents=false does not suppress it; no public enable-without-event path found.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:1547-1581,1029-1031,3068-3070"
+      ]
+    },
+    {
+      "id": "session_envelope_outside_exclusion",
+      "finding": "Worker adds top-level $mp_metadata after filtering properties. Event ID is a possible protocol equivalent, but extra session identity/sequence/start are outside current contract. No public replacement/disable found in selected API/options/config.",
+      "fields": [
+        "$mp_event_id",
+        "$mp_session_id",
+        "$mp_session_seq_id",
+        "$mp_session_start_sec"
+      ],
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java:789-805",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/SessionMetadata.java:22-26,37-43",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:236,3154,3316"
+      ]
+    }
+  ],
+  "flutter_binding_limits": {
+    "opt_in_opt_out_return": "void; does not expose MethodChannel Future to Dart caller",
+    "config_map": "Web only, not applied to Android native exclusion or identity provider",
+    "event_bridge": "Asynchronous observation, not a final-envelope mutation/veto hook"
+  },
+  "contract_policy": "Same six business fields, exact synthetic run identity, necessary protocol/time/event identity semantics. Different vendor wire encoding is not itself a violation. No extra consent event/session fields silently admitted; no server filtering.",
+  "not_claimed": [
+    "No actual privacy leak or legal violation established",
+    "Technical event/session IDs are not automatically personal or hardware identities",
+    "No Mixpanel purge/crash/sentinel PASS or FAIL inferred from source",
+    "No claim about all future SDK versions",
+    "Public asynchronous deletion alone is not the rejection reason"
+  ],
+  "runtime_status": {
+    "decisive_20_old_10_new": "NOT_RUN_PRECHECK_BLOCKED",
+    "interrupted_revocation": "NOT_RUN_PRECHECK_BLOCKED",
+    "sentinel_preservation": "NOT_RUN_PRECHECK_BLOCKED",
+    "refusal": "NOT_RUN_PRECHECK_BLOCKED",
+    "normal_delivery": "NOT_RUN_PRECHECK_BLOCKED",
+    "lost_ack_retry": "NOT_RUN_PRECHECK_BLOCKED",
+    "duplicates": "NOT_RUN_PRECHECK_BLOCKED",
+    "saturation": "NOT_RUN_PRECHECK_BLOCKED",
+    "memory_traffic_battery": "NOT_RUN_PRECHECK_BLOCKED",
+    "final_wire_audit": "NOT_RUN_PRECHECK_BLOCKED"
+  },
+  "new_android_runs": 0,
+  "new_host_tests": 0,
+  "new_cloud_ingestion": 0,
+  "new_accounts_or_paid_services": 0,
+  "implementation_tests_workflow_changed": false,
+  "current_minimum_contract_changed": false,
+  "historical_posthog": {
+    "executable_commit": "764bc41080c7b85d25ea895ed16c4b94130c5822",
+    "run_id": 41429419307,
+    "job_id": 125223965237,
+    "revoked_reappeared": 20,
+    "new_received": 10,
+    "evidence": "UNCHANGED_NOT_A_MIXPANEL_RESULT"
+  },
+  "reproduction": "Read the immutable source URLs, verify Git blob SHA1 and SHA256, follow init/optOut/optIn/buildEvent/prepareEventObject paths listed. Source review only; no build or SDK test is claimed.",
+  "next_step": "Review scoped incompatibility; any future local experiment first needs a supported path under the unchanged content contract. No account required to inspect this result. Firebase stays on hold."
+}

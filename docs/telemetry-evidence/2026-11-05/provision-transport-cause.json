@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "scope": "HOST_SHELL_EXECUTION_AOSP_ARGUMENT_MODEL_NOT_ANDROID",
+  "source_commit": "1bacec0a271e494d149d5e46f745b04a3c5c7a19",
+  "sources": [
+    "https://android.googlesource.com/platform/packages/modules/adb/+/1bacec0a271e494d149d5e46f745b04a3c5c7a19/client/commandline.cpp",
+    "https://android.googlesource.com/platform/packages/modules/adb/+/1bacec0a271e494d149d5e46f745b04a3c5c7a19/adb_utils.cpp",
+    "https://android.googlesource.com/platform/packages/modules/adb/+/1bacec0a271e494d149d5e46f745b04a3c5c7a19/docs/user/adb.1.md"
+  ],
+  "legacy_exec_in": {
+    "remote_shell_exit_observed": 127,
+    "file_exists": false,
+    "stderr_present": true,
+    "source_model_client_exit": 0,
+    "adb_binary_executed": false
+  },
+  "corrected_shell_T": {
+    "remote_shell_exit_observed": 0,
+    "file_exists": true,
+    "file_mode": "600",
+    "stdin_bytes_match": true,
+    "stdout_present": false,
+    "stderr_present": false,
+    "source_model_client_exit": 0,
+    "adb_binary_executed": false
+  },
+  "remote_error": {
+    "remote_shell_exit_observed": 37,
+    "source_model_client_exit": 37,
+    "adb_binary_executed": false
+  },
+  "limits": [
+    "ADB_CLIENT_VERSION_IN_RUN10_NOT_RECORDED",
+    "HOST_RUN_AS_STAND_IN_DOES_NOT_TEST_ANDROID_UID_OR_SELINUX",
+    "SOURCE_MODEL_EXIT_PROPAGATION_REQUIRES_ANDROID_SHELL_V2_RUNTIME_VALIDATION",
+    "NO_STDIN_CONTENT_OR_CREDENTIAL_EXPORTED",
+    "NO_CLOUD_SEND_OR_NEW_ALLOWANCE"
+  ],
+  "observed_android_run": {
+    "run_id": 42065607773,
+    "job_id": 127378742920,
+    "attempt": 1,
+    "independent_control": "PASS_NATIVE_RUNTIME_CONTROL",
+    "offline_before_install": true,
+    "install_confirmed": true,
+    "private_mkdir_returncode": 0,
+    "private_write_client_returncode": 0,
+    "private_write_stdout_present": false,
+    "private_write_stderr_present": false,
+    "private_stat_returncode": 1,
+    "private_stat_error_category": "FILE_NOT_FOUND",
+    "cleanup_verified": true,
+    "adb_client_exact_version": "NOT_RECORDED"
+  },
+  "diagnosis": {
+    "identified_code_defect": "PREQUOTED_SCRIPT_PASSED_TO_EXEC_IN_ARGUMENT_ESCAPER",
+    "client_evidence_defect": "EXEC_IN_RETURN_ZERO_DOES_NOT_ATTEST_REMOTE_COMMAND_OR_FILE_WRITE",
+    "race_required_to_explain_failure": false,
+    "historical_remote_stderr": "NOT_CAPTURED_BY_EXEC_IN",
+    "exact_run10_adb_source_correspondence": "NOT_ATTESTED",
+    "supported_correction": "ADB_SHELL_T_WITH_SHELL_V2_REQUIRED_AND_SAME_FIXED_QUOTED_SCRIPT",
+    "android_correction_validation": "NOT_RUN"
+  },
+  "feature_format_defect": {
+    "source": "https://android.googlesource.com/platform/packages/modules/adb/+/1bacec0a271e494d149d5e46f745b04a3c5c7a19/client/commandline.cpp",
+    "source_location": "features CLI branch, lines 2177-2186",
+    "official_cli_format": "ONE_FEATURE_NAME_PER_LINE",
+    "incorrect_lab_parser": "SPLIT_STDOUT_ON_COMMAS",
+    "identified_defect": "NEWLINE_FEATURE_LIST_NOT_PARSED_AS_SEPARATE_NAMES",
+    "correction": "REQUIRE_EXACTLY_ONE_SHELL_V2_LINE_AFTER_SPLITTING_NEWLINES",
+    "run12": {
+      "run_id": 42070151906,
+      "attempt": 1,
+      "source_commit": "da4e05f413035e83fc1046f638992893a13a6095",
+      "offline_before_install": true,
+      "install_confirmed": true,
+      "private_mkdir_returncode": 0,
+      "features_command_returncode": 0,
+      "features_output_present": true,
+      "blocked_reason": "CLOUD_PRIVATE_SHELL_FEATURES_OUTPUT_REJECTED",
+      "private_write_attempted": false,
+      "cleanup_verified": true,
+      "adb_client": {
+        "protocol_version": "1.0.41",
+        "platform_tools_version": "37.0.1",
+        "build_number": "15733141"
+      },
+      "raw_features_output_retained": false,
+      "shell_v2_presence": "UNVERIFIED_FROM_RETAINED_RECEIPT"
+    },
+    "limits": [
+      "CODE_FORMAT_MISMATCH_CONFIRMED_BY_PRIMARY_SOURCE",
+      "RUN12_RAW_OUTPUT_NOT_RETAINED_CANNOT_RECONSTRUCT_FEATURE_NAMES",
+      "SHELL_V2_PRESENCE_AND_CORRECTED_PROVISION_AWAIT_ANDROID_VALIDATION",
+      "NO_NETWORK_BARRIER_RELAXATION_NO_TRANSPORT_OR_APP_CHANGE_NO_NEW_CLOUD_ALLOWANCE"
+    ]
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "scope": "INDEPENDENT_RECOMPUTATION_OF_EXPORTED_RUN11_RECEIPTS_NO_NEW_DEVICE_OR_CLOUD_ACTIONS",
+  "status": "RUN11_OFFLINE_BARRIER_BLOCK_BEFORE_INSTALL_INDEPENDENTLY_CONFIRMED",
+  "run_id": 42068243243,
+  "run_number": 11,
+  "attempt": 1,
+  "source_commit": "015d943f2083dd00be107f5a3d972615ac0bbdf4",
+  "application_source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+  "export": {
+    "bytes": 54036,
+    "chunks": 13,
+    "sha256": "fc593e0b8a94bee04e53b4187767e0ce4b48434dfe6018bc7ed262c74545b0b4"
+  },
+  "receipt_sha256": {
+    "result.json": "fc593e0b8a94bee04e53b4187767e0ce4b48434dfe6018bc7ed262c74545b0b4",
+    "original-control-receipt.json": "8050e5522eab86e59c810b84ea1923239de1cff756e862fcfe2c5031317db400",
+    "export-manifest.json": "cc9e0a9c39aaab13b9178af4f9635a629b302be3a773143bbb47ab01f0e0e0d5",
+    "original-build-receipt.json": "d5608002ce3edd826e5174adad93755b975bf710890d47ed6fbae49ded7d9e98"
+  },
+  "source_hashes_match_reviewed_fix": true,
+  "application_source_hashes_unchanged": true,
+  "control": {
+    "status": "PASS_NATIVE_RUNTIME_CONTROL",
+    "boot_id": "b97f2f64-9bb0-47fa-bc68-3a1895b42e59",
+    "first_pid": 2274,
+    "second_pid": 2499,
+    "first_launches": 2,
+    "second_launches": 3,
+    "ordered_eight_stages_all_pass": true,
+    "control_completed_before_lab_build_and_probe": true
+  },
+  "apk": {
+    "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+    "apk_sha256": "e693279b3751f36aa417a39d923e1b252beeb1ed60d1d6aaa11b8a78a4833bdd",
+    "apk_bytes": 45459,
+    "identity": {
+      "package": "com.cama.telemetry.direct_lab",
+      "version_code": 1,
+      "version_name": "1.0",
+      "min_sdk": 24,
+      "target_sdk": 36,
+      "requested_permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
+      "certificate_sha256": "17723f5cea7e4be781a1ceeb770d0de999669e9afcc67d3b8b2daa84230eb180"
+    },
+    "source_sha256": {
+      "tools/telemetry_spike/direct_trial/AndroidManifest.xml": "dff2a8c38aab22edb716312e1f47f6368cbfece96dc01c054722cc070d084345",
+      "tools/telemetry_spike/direct_trial/MainActivity.java": "e520e97c6639643eb37a95aa60b85241b3d6b82a18824e3943aa1b4c0ff308f4",
+      "tools/telemetry_spike/direct_trial/DirectQueue.java": "81222e42f65f27d5524ad80b5b66eb5f685b6f3091e5d467a564636ecaa31312",
+      "tools/telemetry_spike/direct_trial/build.py": "c51cbe3989c6ff21b0acdaab68c5e4c372b041e90c99dc2d1bd615a42fcd81d6",
+      "tools/telemetry_spike/runtime_control/build.py": "0965a5ae2f41015ecca8b8c70236f6f074be57388dcc95d6de3f0e32af08c743"
+    },
+    "build_receipt_sha256": "d5608002ce3edd826e5174adad93755b975bf710890d47ed6fbae49ded7d9e98"
+  },
+  "adb_client": {
+    "protocol_version": "1.0.41",
+    "platform_tools_version": "37.0.1",
+    "build_number": "15733141",
+    "raw_output_published": false
+  },
+  "observed": {
+    "started_utc": "2026-11-05T16:50:54.832586+00:00",
+    "finished_utc": "2026-11-05T16:51:40.943376+00:00",
+    "status": "BLOCKED",
+    "blocked_reason": "PROBE_OFFLINE_BARRIER_UNATTESTED",
+    "command_count": 302,
+    "command_stage_counts": {
+      "ADB_VERSION": 1,
+      "FRESH_PACKAGE_CHECK": 1,
+      "READ_AIRPLANE_MODE_ON": 74,
+      "READ_WIFI_ON": 74,
+      "READ_MOBILE_DATA": 74,
+      "AIRPLANE_ENABLE": 1,
+      "WIFI_DISABLE": 1,
+      "DATA_DISABLE": 1,
+      "CONNECTIVITY_OFFLINE_READ": 72,
+      "RESTORE_AIRPLANE": 1,
+      "RESTORE_WIFI": 1,
+      "RESTORE_DATA": 1
+    },
+    "nonzero_commands": [
+      {
+        "stage": "FRESH_PACKAGE_CHECK",
+        "returncode": 1,
+        "error_category": "OUTPUT_WITHHELD",
+        "stdout_present": false,
+        "stderr_present": false
+      }
+    ],
+    "preparation_stage_count": 0,
+    "install_attempted": false,
+    "install_confirmed": false,
+    "shell_v2_check_reached": false,
+    "corrected_transfer": "NOT_RUN",
+    "private_file_mode_or_readback": "NOT_RUN",
+    "post_provision_barrier": "NOT_RUN",
+    "lab_activity_or_grant_or_capture": "NOT_INVOKED_IN_REVIEWED_PATH",
+    "cleanup": {
+      "required": false,
+      "install_confirmed": false,
+      "lab_stopped": false,
+      "fake_config_removed": false,
+      "initial_radios_restored": true
+    }
+  },
+  "barrier_diagnosis": {
+    "observed_iterations": 72,
+    "commands_returned_zero": true,
+    "radio_boolean_values_saved": false,
+    "default_network_observation_saved": false,
+    "failed_subcondition": "UNDETERMINED_FROM_SAVED_EVIDENCE",
+    "new_device_failure_not_evidence_against_transfer_fix": true
+  },
+  "budget": {
+    "schema_version": 1,
+    "observed_utc": "2026-11-05T16:50:54.832607+00:00",
+    "run_id": "synthetic-provision-diagnostic",
+    "source_commit": "015d943f2083dd00be107f5a3d972615ac0bbdf4",
+    "status": "UNKNOWN_BLOCK_FUTURE_SENDS",
+    "authorized_total_ceiling": 500,
+    "current_attempt_limit": null,
+    "reserved_rows": null,
+    "reserved_attempts": null,
+    "body_written_rows": null,
+    "body_written_requests": null,
+    "acknowledged_requests": null,
+    "cloud_received_rows": null,
+    "conservative_consumed_for_future_launches": 500,
+    "remaining_for_future_launches": 0,
+    "automatic_refund_allowed": false
+  },
+  "privacy": {
+    "result_and_original_control_build_scanned": true,
+    "credential_email_nonloopback_ip_coordinate_field_findings": 0,
+    "raw_connectivity_diagnostic_exported": false,
+    "scan_not_claimed_complete_for_arbitrary_unknown_pii": true
+  },
+  "next_diagnostic_judgment": {
+    "bounded_additional_observation_justified": true,
+    "reason": "Current evidence drops the exact typed radio flags and parsed default-network state, so it cannot identify which existing offline predicate failed.",
+    "source_approval": "PENDING_EXACT_DELTA_REVIEW",
+    "maximum_additional_android_run": 1,
+    "target_run_number": 12,
+    "attempt": 1,
+    "requirements": [
+      "Only safe last typed radio/default-network observation and sample count added.",
+      "Offline acceptance predicate and timeout unchanged.",
+      "No app/core or native source modifications.",
+      "No raw connectivity identifiers or dump; fake config only and no cloud secret.",
+      "If the same barrier fails again, stop further Android and cloud attempts and report the observed condition."
+    ],
+    "cloud_or_budget_authorization": false
+  },
+  "limits": [
+    "This run does not validate the corrected shell-T transfer because it stopped before install and provisioning.",
+    "Exit0 from network commands alone does not prove offline state.",
+    "Saved records cannot distinguish radio settings not converging from an active, missing, ambiguous or unrecognized default-network observation.",
+    "Run8 reservations remain unknown and the whole500 ceiling remains conservatively consumed; fresh dummy diagnostics cannot refund it.",
+    "Control observations prove the separate native control lifecycle, not LAB telemetry runtime."
+  ]
+}

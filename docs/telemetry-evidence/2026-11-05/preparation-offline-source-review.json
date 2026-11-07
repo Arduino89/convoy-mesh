@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "status": "APPROVED_FOR_ONE_OFFLINE_DIAGNOSTIC_ATTEMPT",
+  "scope": "INDEPENDENT_STATIC_REVIEW_AND_HOST_REGRESSIONS_NOT_ANDROID_RUNTIME",
+  "checked_at_utc": "2026-11-05T16:24:14.918576+00:00",
+  "remote_baseline_confirmed": "219261375c1179cb2ee21e10efb36c6fc7c74b3d",
+  "pr": 5,
+  "branch": "experiment/telemetry-runtime-lab",
+  "expected_run_number": 9,
+  "expected_attempt": 1,
+  "exact_marker": "Diagnose isolated LAB provisioning offline (no cloud)",
+  "source_sha256": {
+    "tools/telemetry_spike/ci_cloud_trial.py": "82ea83e5eb205261b6f94781435ef2d0cd8bac3a9dca1f6074ab0fdba4570821",
+    "tools/telemetry_spike/ci_provision_probe.py": "e88c45ee4313ee7e28f4b66fd1ace9cb3fa3d8d313cfb94acaefad0438da1a6c",
+    "tools/telemetry_spike/test_cloud_preparation.py": "ddde5277fca8d970d989c46ab57a4a4d4371e3f2b6254c698e26541e5eb41833",
+    "tools/telemetry_spike/test_ci_provision_probe.py": "214aefe123cbde57326e0622d7ee04c21676e34afe711f509aafe523bd7a1532",
+    ".github/workflows/telemetry-runtime-control.yml": "d0b5e6ee90588b2866d28d7cdb574a48cda29493d39c8a65b980ef0fb5338c0a"
+  },
+  "pinned_app_source": "2d76100fda1df0637e953f4ad90f26073028880c",
+  "unchanged_native_build_sources_verified": 5,
+  "guard_cases": [
+    {
+      "case": "authorized_push",
+      "diagnostic_job": true,
+      "original_job": false,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "previous_number",
+      "diagnostic_job": false,
+      "original_job": false,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "next_number",
+      "diagnostic_job": false,
+      "original_job": false,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "attempt2",
+      "diagnostic_job": false,
+      "original_job": false,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "other_branch",
+      "diagnostic_job": false,
+      "original_job": false,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "other_repository",
+      "diagnostic_job": false,
+      "original_job": false,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "private_repository",
+      "diagnostic_job": false,
+      "original_job": false,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "wrong_commit_message",
+      "diagnostic_job": false,
+      "original_job": true,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "trailing_newline_message",
+      "diagnostic_job": false,
+      "original_job": true,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "manual_default",
+      "diagnostic_job": false,
+      "original_job": true,
+      "original_cloud_enabled": false
+    },
+    {
+      "case": "wrong_event_with_marker",
+      "diagnostic_job": false,
+      "original_job": false,
+      "original_cloud_enabled": false
+    }
+  ],
+  "host_tests": {
+    "independently_executed_preparation_tests": 26,
+    "independently_executed_probe_tests": 6,
+    "independently_observed_failures": 0,
+    "full_suite_parent_reported_tests": 165,
+    "full_suite_parent_reported_pass": true
+  },
+  "reviewed_properties": [
+    "Only marker/run9/attempt1 on exact LAB branch enables the diagnostic job; original job is excluded.",
+    "Diagnostic job has no secret binding, no cloud gate and no cloud harness call; contents read permission only.",
+    "Actual native control precedes the pinned-source LAB build and probe; previous ten valid sender scenarios are not unnecessarily repeated.",
+    "One install/provision path with fixed dummy invalid profile, row limit0 and example.invalid endpoint; no Activity launch, grant or capture.",
+    "Radio flags and exactly one absent Active default network observation are required before install and checked again after provision.",
+    "Installation confirmation is distinct from cleanup requirement; zero-exit output validation failures get explicit stage records.",
+    "Public stage diagnostics contain only time, phase, returncode, finite category and output-presence flags.",
+    "Cleanup failure preserves primary failure, keeps budget receipt and blocks restoration of network settings.",
+    "Unknown budget receipt is persisted before ADB; fresh no-launch probe cannot recover historical run8 ledger.",
+    "Core recovery reads only the force-stopped LAB database, rejects journal ambiguity and checks private run/binding/counters without publishing binding.",
+    "Prepared emitter rejects duplicate JSON keys/nonfinite numbers and serializes only the validated object; no original byte bypass.",
+    "Successful offline repetition explicitly does not establish the historical failed command or root cause."
+  ],
+  "prepublication_fixes_verified": [
+    "Emitter duplicate-field hidden dummy credential counterexample closed by strict parsing and validated reserialization.",
+    "Offline parser rejects any second Active default network label, including unknown text.",
+    "Network restoration requires both stop and private-config removal attested."
+  ],
+  "run8_budget": {
+    "conservative_consumed": 500,
+    "remaining_authorized": 0,
+    "actual_rows_transmitted": "UNKNOWN",
+    "refund_authorized": false,
+    "new_cloud_allowance": 0
+  },
+  "runtime_status": "NOT_RUN_BY_REVIEWER",
+  "limitations": [
+    "GitHub guard expressions evaluated locally, including documented string/number equality coercion; no Actions execution by reviewer.",
+    "No actual Android reproduction or correction of the historical installation/provisioning failure is yet established.",
+    "The dummy file intentionally cannot configure cloud sending and does not validate a real ingestion token or native cloud initialization.",
+    "Radio/default-route observations are finite snapshots, not packet capture or physical-device proof; the no-launch dummy-only design supplies an additional boundary.",
+    "Recovered committed reservation counters can be informative; body-write markers can undercount interruptions and neither proves cloud receipt.",
+    "Run8 remains conservatively exhausted regardless of this probe outcome; no PostHog calls, deletion or cloud retry authorized here.",
+    "Record exact diagnostic commit after commit and recheck next run number before the single push; do not adjust or rerun automatically."
+  ]
+}

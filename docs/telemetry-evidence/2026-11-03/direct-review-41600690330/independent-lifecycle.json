@@ -1,0 +1,307 @@
+{
+  "scope": "INDEPENDENT_RAW_STATE_CHECKPOINT_LIFECYCLE_REVIEW_NOT_NEW_RUNTIME",
+  "workflow_run": 41600690330,
+  "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+  "calculation_method": "STDLIB_ONLY_NO_CLASSIFIER_OR_PASS_SUMMARY_ORACLE",
+  "cases": {
+    "before-intent": {
+      "state_rows": 30,
+      "pids": [
+        6539,
+        6628
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-2dea3f66-698e-4220-a240-10c0b4c601bc",
+      "trace_sha256": "001e00126864c856c533313b5d019b2654b7712aa7994ab279023f80e7713ea3",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    },
+    "crash-after-intent": {
+      "state_rows": 50,
+      "pids": [
+        4348,
+        4474
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-c6ac14b3-1a9c-4dfc-8c88-fcafb6479419",
+      "trace_sha256": "43d05327fd47546ef06603706686e9f664bde9fab3bdd55761de595f3e844605",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    },
+    "crash-after-purge": {
+      "state_rows": 55,
+      "pids": [
+        5909,
+        5997
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-3dd668c2-aed9-4778-b54d-cd1507786a1d",
+      "trace_sha256": "6f9091b6a5e0971e4bc97524344eff93733006ee3e9eae90f47c919bfa8f8dbc",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    },
+    "crash-during-purge": {
+      "state_rows": 54,
+      "pids": [
+        5140,
+        5238
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-395ecf24-3033-4bdf-bae4-0eb60aad3cd9",
+      "trace_sha256": "a76011ef7fe88a7f70c36d92f57c460f5cc74081275da0effd8a27cae56bd64a",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    },
+    "inflight": {
+      "state_rows": 32,
+      "pids": [
+        8713,
+        8816
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-3473294d-2858-4d19-82ba-4b746a0a4ffb",
+      "trace_sha256": "6a44e13f5e95ca7e853ca4821fb192cfcd94b674d215c2c6a35c295c1ee04951",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    },
+    "normal": {
+      "state_rows": 31,
+      "pids": [
+        6965,
+        7043
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-7a78144f-eea2-4585-98bb-1a137e5cb737",
+      "trace_sha256": "c8d001ad9ba760a97610c95b5accb048ec0aa9f2b812e1662bef0986294dfae0",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    },
+    "overflow": {
+      "state_rows": 30,
+      "pids": [
+        8355
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-9d9e054b-259a-41aa-a3f4-797004f4f652",
+      "trace_sha256": "f618193d8848146c8cb3a9fda1b45e297584fede162694b5517a35682343e8bb",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    },
+    "refusal": {
+      "state_rows": 55,
+      "pids": [
+        7380,
+        7444
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-407afba1-873d-498c-abaa-0e9e28760df8",
+      "trace_sha256": "f271e937f00c0e497ef975cbb78ec7cd8772318c3e4e5ababfee4f7afb83c767",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    },
+    "retry": {
+      "state_rows": 30,
+      "pids": [
+        8002
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-19b3d751-8fd5-466e-8c9d-aac3b2a9a7cf",
+      "trace_sha256": "09db56deecddba43b7366edd9ff7d9b5d50f6fbf92118ab6d040db8f5c794da2",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    },
+    "revoke": {
+      "state_rows": 32,
+      "pids": [
+        3346,
+        3638
+      ],
+      "local_transport_only_in_all_states": true,
+      "cloud_reserved_state_fields": [],
+      "preflight_action_count": 1,
+      "preflight_boolean_fields": 14,
+      "preflight_individual_checks": 13,
+      "preflight_all_true": true,
+      "sentinel_distinct_pairs": 1,
+      "setting_value": "synthetic-setting-e8b02331-4fc1-4d7f-b695-5858109f9e93",
+      "trace_sha256": "e1e472c38aad6b528718315323f5ee3349136bd193a511303a09cc94c2435636",
+      "trace_hash_recomputed_from_expected_synthetic_content": true
+    }
+  },
+  "cutpoints": {
+    "crash-after-intent": {
+      "checkpoint": {
+        "action_nonce": "1da3d15ba1ef4d2b983087da63732c44",
+        "consent": false,
+        "generation": 1,
+        "pid": 4348,
+        "revocation_durable": true,
+        "stage": "after_intent"
+      },
+      "before_pid": 4348,
+      "after_pid": 4474,
+      "denied_empty_observations_before_regrant": 20,
+      "generation": 1,
+      "revoked_count": 20,
+      "requests_started_before_regrant": 0,
+      "local_route_enabled_after_stop": true,
+      "online_before_bootstrap_evidence": "LIFECYCLE_FILE_ORDER_PLUS_REVIEWED_HARNESS_CONTROL_FLOW",
+      "successful_revoke_response_before_kill": false
+    },
+    "crash-during-purge": {
+      "checkpoint": {
+        "action_nonce": "104a9fea891946d79a78aeeecce1b125",
+        "consent": false,
+        "generation": 1,
+        "pid": 5140,
+        "revocation_durable": true,
+        "stage": "during_purge"
+      },
+      "before_pid": 5140,
+      "after_pid": 5238,
+      "denied_empty_observations_before_regrant": 23,
+      "generation": 1,
+      "revoked_count": 20,
+      "requests_started_before_regrant": 0,
+      "local_route_enabled_after_stop": true,
+      "online_before_bootstrap_evidence": "LIFECYCLE_FILE_ORDER_PLUS_REVIEWED_HARNESS_CONTROL_FLOW",
+      "successful_revoke_response_before_kill": false
+    },
+    "crash-after-purge": {
+      "checkpoint": {
+        "action_nonce": "6390595d7752412eb7ca614adf5716b9",
+        "consent": false,
+        "generation": 1,
+        "pid": 5909,
+        "revocation_durable": true,
+        "stage": "after_purge"
+      },
+      "before_pid": 5909,
+      "after_pid": 5997,
+      "denied_empty_observations_before_regrant": 24,
+      "generation": 1,
+      "revoked_count": 20,
+      "requests_started_before_regrant": 0,
+      "local_route_enabled_after_stop": true,
+      "online_before_bootstrap_evidence": "LIFECYCLE_FILE_ORDER_PLUS_REVIEWED_HARNESS_CONTROL_FLOW",
+      "successful_revoke_response_before_kill": false
+    }
+  },
+  "limits": [
+    "Existing run receipts recomputed, not new Android or cloud execution.",
+    "14 preflight boolean fields mean13 individual checks plus the aggregate all_passed field; cloud response/budget fixture checks do not attest a cloud request.",
+    "All exported states are local_loopback and omit reserved cloud counters; absence of private cloud filenames in exported bundle is not a forensic inventory of the emulator filesystem or global traffic.",
+    "One observed run per deterministic cutpoint; Android process force-stop, not physical power loss or OS reboot.",
+    "Offline/online denotes the local adb reverse route, not real radios or airplane mode.",
+    "States/checkpoints/lifecycle have within-file order without shared cross-file timestamps; online-before-bootstrap and fsync-before-revoke additionally rely on reviewed harness control flow.",
+    "The interrupted before-intent transaction rolls back;20 old events remain eligible because revocation was not durably accepted.",
+    "Ten inflight rows had already reached the local receiver under the held-response protocol; already received bytes cannot be recalled.",
+    "One generated preference and one generated trace per isolated case, not exhaustive preservation of all app data.",
+    "Wire sets, source provenance and runtime gate are reviewed separately by parent."
+  ],
+  "current_native_sources_match_build_receipt": {
+    "tools/telemetry_spike/direct_trial/AndroidManifest.xml": true,
+    "tools/telemetry_spike/direct_trial/DirectQueue.java": true,
+    "tools/telemetry_spike/direct_trial/MainActivity.java": true,
+    "tools/telemetry_spike/direct_trial/build.py": true,
+    "tools/telemetry_spike/runtime_control/build.py": true
+  },
+  "before_intent": {
+    "checkpoint": {
+      "action_nonce": "57db5c21e20441c4bff69f3624b8f7e7",
+      "consent": false,
+      "generation": 1,
+      "pid": 6539,
+      "revocation_durable": false,
+      "stage": "before_intent_commit"
+    },
+    "before_pid": 6539,
+    "after_pid": 6628,
+    "prior_consent_recovered": true,
+    "recovered_generation": 0,
+    "recovered_queue_count": 20,
+    "revoked_count": 0,
+    "must_not_count_as_accepted_revocation": true
+  },
+  "inflight": {
+    "before_pid": 8713,
+    "after_restart_pid": 8816,
+    "inflight_before_and_at_revoke": 1,
+    "request_rows": 10,
+    "wire_request_count": 1,
+    "request_mode": "close_without_response_after_fsync",
+    "requests_started_final": 1,
+    "acknowledged_final": 0,
+    "queue_final": 0,
+    "denied_after_restart": true,
+    "already_received_before_revoke_order": "SUPPORTED_BY_HELD_RECEIVER_HARNESS_CONTROL_FLOW_NOT_INDEPENDENT_SHARED_TIMESTAMP"
+  },
+  "total_state_rows": 399,
+  "unique_state_checkpoint_nonces": 403,
+  "selfcheck_action_count": 10,
+  "states_containing_selfchecks": 86,
+  "selfcheck_names": [
+    "all_passed",
+    "cloud_budget_490_plus_10_allowed",
+    "cloud_budget_490_plus_20_rejected",
+    "cloud_budget_500_plus_1_rejected",
+    "cloud_budget_limit_over_500_rejected",
+    "cloud_response_fractional_status_rejected",
+    "cloud_response_quota_limited_rejected",
+    "cloud_response_status_1_accepted",
+    "extra_property_rejected",
+    "foreign_distinct_id_rejected",
+    "invalid_timestamp_rejected",
+    "non_fake_token_rejected",
+    "valid_fixture_accepted",
+    "wrong_privacy_flag_rejected"
+  ],
+  "exported_private_cloud_paths": [],
+  "postcommit_denied_empty_observations": 67,
+  "anomalies": []
+}
