@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "status": "PREPARED_ANDROID_NOT_RUN",
+  "status": "PASS_LOCAL_HTTP_INDEPENDENTLY_REVIEWED_CLOUD_NOT_AUTHORIZED",
   "mandate": "Cama/scambioP(8).txt: approve d93 offline correction; full sender only local receiver, quota/malformed/interruption retention, revocation/new consent/sentinels, independent review; zero PostHog including old20; samePR5draft; propose new cloud ceiling only after PASS.",
   "base_head": "87a146a44d40751a4061e91812ab7d2fe92397ed",
   "reuse_first": {
@@ -54,6 +54,11 @@
         "trigger": "Expanded integration boundary requested by owner",
         "classification": "NO_REUSABLE_LESSON",
         "reason": "Ordinary project validation using existing lifecycle, source pinning and HTTP fixture pattern; no new infrastructure incident or general lesson yet."
+      },
+      {
+        "trigger": "Missing transient template during workflow preparation",
+        "classification": "NO_REUSABLE_LESSON",
+        "reason": "Existing JON010/011 actual-state/schema-before-mutation guidance suffices; local preparation corrected before branch launch. No new central note or rule justified."
       }
     ]
   },
@@ -61,5 +66,27 @@
     "LocalHTTP notTLS/cloud storage/deduplication",
     "Synthetic rowhashes notGPS/traces of realusers",
     "Radiooff/defaultnetwork absence does not certify physical battery/OEM/BLE behavior"
-  ]
+  ],
+  "preparation_correction": {
+    "status": "CORRECTED_BEFORE_LAUNCH",
+    "observed": "Prior-session /tmp workflow template was absent; first prepared YAML object was invalid and never advanced the branch.",
+    "correction": "Explicit workflow text, successful YAML parse, immutable hash and independent review required before CAS launch.",
+    "abandoned_unreferenced_commit": "e6ac0486e7e58b55c8d2b0549bf3fe31b1bfcfb6",
+    "scope": "No Android execution or PostHog request from this preparation failure."
+  },
+  "execution": {
+    "source_commit": "50386a5c8ce5b0cf628073989a0eaf1549008e79",
+    "wrapper_commit": "21938337ca1ac00ecd35697d16f592a62fa7477e",
+    "id": 42389745788,
+    "number": 17,
+    "attempt": 1,
+    "job_id": 128454627737,
+    "conclusion": "success",
+    "url": "https://github.com/Arduino89/convoy-mesh/actions/runs/42389745788/job/128454627737"
+  },
+  "host_result": {
+    "passed": 205,
+    "total": 205,
+    "skipped": 0
+  }
 }

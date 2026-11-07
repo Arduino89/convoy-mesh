@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "reviewer": "/root/ack_independent_review",
+  "checked_at_utc": "2026-11-07T16:07:47.659645+00:00",
+  "scope": "INDEPENDENT_IMMUTABLE_SOURCE_AND_CONCRETE_ONE_USE_RUN17_WORKFLOW_REVIEW",
+  "status": "GO_FOR_ONE_FULL_ANDROID_SENDER_LOOPBACK_RUN_NOT_RUNTIME_OR_CLOUD_APPROVAL",
+  "blockers": [],
+  "source_commit": "50386a5c8ce5b0cf628073989a0eaf1549008e79",
+  "wrapper_commit": "21938337ca1ac00ecd35697d16f592a62fa7477e",
+  "wrapper_parent_commit": "50386a5c8ce5b0cf628073989a0eaf1549008e79",
+  "wrapper_message": "Verify full Android sender on loopback only (zero PostHog)",
+  "wrapper_changed_files": [
+    ".github/workflows/telemetry-runtime-control.yml"
+  ],
+  "workflow_sha256": "a02b26cd37edf1ada744030585216d98675cd1dc96fd77d4c57f8e0782822941",
+  "remote_workflow_bytes_match_reviewed_local": true,
+  "pr_before_launch": {
+    "draft": true,
+    "state": "open",
+    "head": "50386a5c8ce5b0cf628073989a0eaf1549008e79",
+    "branch": "experiment/telemetry-runtime-lab",
+    "repo_private": false
+  },
+  "latest_run_before_launch": {
+    "id": 42310498585,
+    "workflow_id": 404372675,
+    "number": 16,
+    "attempt": 1,
+    "sha": "8d6c7c023eb404098d77392ef7ed0504d86572f6",
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "remote_five_source_sha256": {
+    "tools/telemetry_spike/direct_trial/DirectQueue.java": "254b6758166111a9b5d90095eba2d7e52caa1d537fa44e4d8a77a120303a60cd",
+    "tools/telemetry_spike/wire_audit_receiver.py": "2bdb65f9aefcca17dcf99207c82b6010ba6f46c83f8770a8fc9e19a0d79af08c",
+    "tools/telemetry_spike/ci_full_sender.py": "e2d6bc447d3f03c69795f484865c818a27489036672c6c628cedaea5f0ee0b2d",
+    "tools/telemetry_spike/run_ci_full_sender.sh": "c56658cf5968b3761af55baf5a6c0a2326cbad008a33d2d2c8c608058f2bf8ad",
+    "tools/telemetry_spike/test_full_sender.py": "47c00e9d63822e060146bde936811ec5dd2a7ba00556cee46628cbdbf5a1c78d"
+  },
+  "all_five_match_independent_source_review": true,
+  "remote_transitive_entrypoint_sha256": {
+    "tools/telemetry_spike/ci_direct_trial.py": "9f1a5dcca866d209b4413926a1dccf2190fe3ddfba42cd743d1a81d74dfc1356",
+    "tools/telemetry_spike/ci_provision_probe.py": "67622cd3e022e9a9805ba8fd55e67aff3ba709a572bf30b6c9f6e8c02e06f205",
+    "tools/telemetry_spike/emit_ci_evidence.py": "d1b205965e3c5101f849bbefd33372aa8b4dd71fc9590904b7b8a23c46f51d77"
+  },
+  "findings": {
+    "exact_repository_public_push_branch_run17_attempt1_message_guards": true,
+    "only_one_job_on_standard_public_ubuntu_24_04_runner": true,
+    "timeout_minutes": 25,
+    "contents_permission": "read",
+    "checkout_immutable_reviewed_source_and_persist_credentials_false": true,
+    "no_cloud_config_secrets_inputs_ingestion_or_old20_route": true,
+    "explicit_bash_entrypoint_control_smoke_precedes_lab_build_and_launch": true,
+    "inherited_suite_and_six_extra_cases_use_loopback_receiver_and_shared_native_http_reader": true,
+    "external_network_barriers_and_cleanup_are_in_reviewed_source": true,
+    "emitter_exports_enumerated_sanitized_json_archive_and_finite_extra_json_only": true,
+    "no_apk_private_logs_configs_artifacts_or_cache_export": true,
+    "standard_public_hosted_runner_public_repository_no_paid_service_added": true
+  },
+  "review_limits": [
+    "GO applies only to wrapper 21938337ca1ac00ecd35697d16f592a62fa7477e and its immutable source checkout. No runtime success is inferred before the actual job.",
+    "Host bootstrap downloads and historical host-test loopback networking are separate from the zero-PostHog constraint.",
+    "The prior run16 classifier-only proof remains historical. New complete-sender Android evidence and read-body interruption are pending run17.",
+    "A failed independent Android control must stop dependent LAB work; any skipped or failed fixture remains unverified.",
+    "Restore original workflow SHA256 5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5 after the terminal run, using a skip-ci closure.",
+    "No PostHog ingestion/readback, old20 retry, TLS/cloud storage/deduplication, phone/battery, integration, merge, release or real-user approval."
+  ]
+}
