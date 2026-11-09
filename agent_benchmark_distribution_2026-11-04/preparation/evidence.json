@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "observed_utc": "2026-11-04T10:38:37.880101+00:00",
+  "observed_utc": "2026-11-09T20:35:42.222227+00:00",
   "harness_version": "0.2.1-rc.5",
   "node_version": "v24.22.1",
   "benchmark_state": "NOT_RUN",
@@ -9,8 +9,8 @@
   "deepseek_api_authentication": "NOT_TESTED",
   "github_mcp_live": "NOT_CONFIGURED",
   "source_hashes": {
-    "probe.py": "7684dd140ec4e2053c52147f095ea8e2e43d626c151926eb20eeef53a1625f5f",
-    "runtime_probe.mjs": "dac106ae3fbbf00dc29b427264f963ee04a4fbcfb05c4b245628422c7a27319f",
+    "probe.py": "f286f4da2888ead6618852c6eecf2bdbeb81ea98fe55242fa3cfb7c36307c719",
+    "runtime_probe.mjs": "383bab0f5e9b248fa3560fc9d6d885e510127d58aad355d96d6a3c7759da1a1b",
     "mcp_fixture.py": "b92c6a9e40ebf31358ccf2ccfb3c7a047d6da060f0b8441863d6feb4986e5abe",
     "read-only.patch.yml": "7546498911d926ff707b5283645afb8faa3d11eaccf55f5432b6addf8719e459"
   },
@@ -46,7 +46,7 @@
         "<RUNTIME>/node_modules/.bin/dsh",
         "headless",
         "--patch",
-        "/workspace/scratch/ef999178ff7d/convoy-mesh/agent_benchmark_distribution_2026-11-04/preparation/read-only.patch.yml",
+        "<PREPARATION>/read-only.patch.yml",
         "--dump-config"
       ],
       "cwd": "<TEMP>",
@@ -54,7 +54,7 @@
       "stdout": "Composed tree omitted; rerun --dump-config to inspect.",
       "stderr": "",
       "pass": true,
-      "stdout_sha256": "c4e6fe7aace2e239348547d4ac9b9655ee249034d9ac202c0aea345d506ba538"
+      "stdout_sha256": "9e354b64b02167cc41469295dd5cacf6934d6e1fab7fa1768f5942503e9d391a"
     },
     {
       "name": "missing_key_fails_closed",
@@ -62,13 +62,13 @@
         "<RUNTIME>/node_modules/.bin/dsh",
         "headless",
         "--patch",
-        "/workspace/scratch/ef999178ff7d/convoy-mesh/agent_benchmark_distribution_2026-11-04/preparation/read-only.patch.yml",
+        "<PREPARATION>/read-only.patch.yml",
         "--json",
         "Preparation smoke only. Reply READY. Do not use tools."
       ],
       "cwd": "<TEMP>",
       "exit_code": 1,
-      "stdout": "{\"type\":\"session\",\"sessionId\":\"session-9db5d4df-05f1-4074-ad93-0c269bb60761\",\"cwd\":\"<TEMP>\"}\n{\"type\":\"status\",\"phase\":\"turn_start\",\"turn\":1}\n{\"type\":\"status\",\"phase\":\"step_start\",\"turn\":1,\"step\":1}\n{\"type\":\"status\",\"phase\":\"step_end\",\"turn\":1,\"step\":1}\n{\"type\":\"status\",\"phase\":\"turn_end\",\"turn\":1,\"reason\":{\"kind\":\"error\",\"error\":{\"message\":\"llm-deepseek: no API key for provider route \\\"deepseek-official\\\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment\",\"code\":\"MISSING_CREDENTIAL\"}}}\n{\"type\":\"final\",\"text\":\"\"}\n",
+      "stdout": "{\"type\":\"session\",\"sessionId\":\"session-b1c2a651-65b3-4a43-9360-2aea699a0240\",\"cwd\":\"<TEMP>\"}\n{\"type\":\"status\",\"phase\":\"turn_start\",\"turn\":1}\n{\"type\":\"status\",\"phase\":\"step_start\",\"turn\":1,\"step\":1}\n{\"type\":\"status\",\"phase\":\"step_end\",\"turn\":1,\"step\":1}\n{\"type\":\"status\",\"phase\":\"turn_end\",\"turn\":1,\"reason\":{\"kind\":\"error\",\"error\":{\"message\":\"llm-deepseek: no API key for provider route \\\"deepseek-official\\\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment\",\"code\":\"MISSING_CREDENTIAL\"}}}\n{\"type\":\"final\",\"text\":\"\"}\n",
       "stderr": "dsh: MISSING_CREDENTIAL: llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment\n",
       "pass": true
     },
@@ -76,13 +76,13 @@
       "name": "local_harness_services",
       "argv": [
         "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
-        "/workspace/scratch/ef999178ff7d/convoy-mesh/agent_benchmark_distribution_2026-11-04/preparation/runtime_probe.mjs",
+        "<PREPARATION>/runtime_probe.mjs",
         "<RUNTIME>",
         "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3"
       ],
       "cwd": "<TEMP>",
       "exit_code": 0,
-      "stdout": "{\n  \"landlock\": \"unusable\",\n  \"sandbox\": {\n    \"state\": \"UNAVAILABLE\",\n    \"code\": \"SANDBOX_UNAVAILABLE\",\n    \"message\": \"sandbox mode \\\"read-only\\\" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined. Install bubblewrap or run a Landlock-enforcing kernel (Linux), ensure sandbox-exec is usable (macOS), or ensure the ACL restricted-token runner can start (Windows) \u2014 otherwise switch the consumer to danger-full-access.\"\n  },\n  \"mcp\": {\n    \"state\": \"PASS\",\n    \"tools\": [\n      \"mcp__preparation__read_sentinel\"\n    ],\n    \"result\": {\n      \"isError\": false,\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"CONVOY_PREPARATION_MCP_OK\"\n        }\n      ],\n      \"value\": {\n        \"content\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"CONVOY_PREPARATION_MCP_OK\"\n          }\n        ]\n      }\n    }\n  }\n}\n",
+      "stdout": "{\n  \"landlock\": \"unusable\",\n  \"sandbox\": {\n    \"state\": \"AVAILABLE\",\n    \"enforcement\": \"full\",\n    \"exit_code\": 0,\n    \"stderr\": \"\",\n    \"external_write\": {\n      \"rejected\": true,\n      \"exit_code\": 2,\n      \"stderr\": \"probe: 1: cannot create <READ_ONLY_SOURCE>: Read-only file system\\n\"\n    }\n  },\n  \"mcp\": {\n    \"state\": \"PASS\",\n    \"tools\": [\n      \"mcp__preparation__read_sentinel\"\n    ],\n    \"result\": {\n      \"isError\": false,\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"CONVOY_PREPARATION_MCP_OK\"\n        }\n      ],\n      \"value\": {\n        \"content\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"CONVOY_PREPARATION_MCP_OK\"\n          }\n        ]\n      }\n    }\n  }\n}\n",
       "stderr": "",
       "pass": true
     }
@@ -90,9 +90,15 @@
   "services": {
     "landlock": "unusable",
     "sandbox": {
-      "state": "UNAVAILABLE",
-      "code": "SANDBOX_UNAVAILABLE",
-      "message": "sandbox mode \"read-only\" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined. Install bubblewrap or run a Landlock-enforcing kernel (Linux), ensure sandbox-exec is usable (macOS), or ensure the ACL restricted-token runner can start (Windows) \u2014 otherwise switch the consumer to danger-full-access."
+      "state": "AVAILABLE",
+      "enforcement": "full",
+      "exit_code": 0,
+      "stderr": "",
+      "external_write": {
+        "rejected": true,
+        "exit_code": 2,
+        "stderr": "probe: 1: cannot create <READ_ONLY_SOURCE>: Read-only file system\n"
+      }
     },
     "mcp": {
       "state": "PASS",

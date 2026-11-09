@@ -1,13 +1,14 @@
-# Harness — preparazione del 4 novembre 2026
+# Harness — preparazione del 4 novembre e ripresa del 9 novembre 2026
 
-**HOLD_ENVIRONMENT: preparazione verificata in parte, agente non operativo.**
+**HOLD_API_AND_BUDGET: confinamento verificato nel runner del 9 novembre,
+agente non ancora operativo.**
 Il [protocollo originale](README.md) è immutato. Nessun incarico A–D eseguito,
 nessun risultato competitivo, chiamata API pagante o spesa.
 
 | Area | Stato | Evidenza / limite |
 |---|---|---|
 | GitHub | VERDE per Jarvis | Clone e letture riusciti; ramo base riusato e consegna in draft PR. Nessuna credenziale GitHub trasferita a Harness. |
-| Harness | GIALLO | Installazione, avvio headless, patch e chiamata MCP locale provati; shell confinata bloccata. |
+| Harness | VERDE nel runner corrente | Installazione, avvio headless, patch, MCP locale e shell confinata provati. Non si assume che altre istanze conservino la sandbox. |
 | API DeepSeek | GIALLO | Configurazione pronta, rifiuto senza chiave provato. Autenticazione, rete al provider e inferenza non provate. |
 | Confronto | GIALLO | Entrambi NOT_RUN; rami concorrenti non creati, nessun punteggio. |
 
@@ -41,8 +42,8 @@ negozia stdio con una fixture Python e chiama
 Nessun modello invocato: prova il collegamento strumento, non l'abilità di
 DeepSeek o l'autenticazione GitHub MCP.
 
-Il provider sandbox reale trova bubblewrap inutilizzabile (namespace negato,
-`Operation not permitted`) e Landlock `unusable`; restituisce
+Nel Work del 4 novembre il provider sandbox reale trovava bubblewrap inutilizzabile (namespace negato,
+`Operation not permitted`) e Landlock `unusable`; restituiva
 `SANDBOX_UNAVAILABLE`, senza eseguire `true` fuori sandbox. Nessun ripiego su
 `danger-full-access`. Docker assente. `/etc/codex/network-policy.json` e la
 capability `environment_status` non sono disponibili: nessuna readiness di
@@ -132,9 +133,37 @@ includendo retry e chiamate ausiliarie, con arresto al limite e ricevuta usage.
 Un allarme o `maxTokens` non sostituisce un limite globale. Nessun launcher
 pagante consegnato. Spesa API effettiva di preparazione **0 USD**.
 
+## Ripresa controllata del 9 novembre 2026
+
+Sullo stesso ramo `experiment/agent-bench-20261104-base`, HEAD iniziale
+`7f2ea363940d58c4f94b5f49694d2b59f014dcbc`, un nuovo runner Linux
+ha consentito il clone Git e l'installazione dal lock **senza eseguire script npm**.
+Node `v24.22.1`, npm `11.9.0`, Python `3.12.14`; Codex CLI
+`0.167.0-alpha.4` risponde a `--version`, **non** è stato avviato come modello.
+
+Il probe della stessa release Harness `0.2.1-rc.5` passa ora **5/5** controlli.
+In particolare la sandbox reale di Harness conferma `AVAILABLE`,
+`enforcement: full`, esegue `true` con exit 0 e respinge una scrittura
+verso la directory dei sorgenti **esterna al workspace temporaneo** con exit 2
+e `Read-only file system`. Il file-sentinella non viene lasciato sul disco.
+Il MCP sintetico continua a restituire `CONVOY_PREPARATION_MCP_OK`.
+La controprova della scrittura è ora obbligatoria per la riuscita dello script;
+non basta trovare bubblewrap installato. L'evidenza in
+[`preparation/evidence.json`](preparation/evidence.json) sostituisce la diagnosi
+del vecchio runner e conserva gli hash degli script aggiornati.
+
+**Conseguenza:** `HOLD_ENVIRONMENT` è risolto **solo per questa istanza**.
+Il runner è temporaneo: future esecuzioni devono ripetere il controllo,
+senza presumere che confinamento e dipendenze siano persistenti.
+Rimangono non verificati: chiave privata DeepSeek, autorizzazione e limite
+economico effettivamente applicato, autenticazione/inferenza API, connessione
+GitHub MCP live (non necessaria alla snapshot locale) e prova Codex comparabile.
+Nessun token è stato letto o trasferito; **0 richieste API a pagamento, $0 spesi**.
+
 ## Collaborazione e prossimo gate
 
-1. Conservare il ramo preparazione; risolvere isolamento e tetto economico.
+1. Conservare il ramo preparazione; riprovare il confinamento sul runner definitivo
+   e risolvere il tetto economico.
    Predisporre anche il runner Codex: Work/Codex disponibile in questa sessione
    non dimostra una prova comparativa separata già configurata.
 2. Fissare commit comune, hash del prompt identico, versioni runner/modelli e
@@ -147,12 +176,11 @@ pagante consegnato. Spesa API effettiva di preparazione **0 USD**.
    interventi umani. Nessuna correzione silenziosa dell'output valutato.
 5. Review indipendente e punteggio successivi; nessun merge, release o autoapprovazione.
 
-**Prossimo gate unico: runner usa e getta con sandbox funzionante**, verificando
-comando consentito e tentativo di scrittura esterna negato. Alternativa sicura:
-VM Linux dedicata o container non privilegiato su host che consenta il backend;
-nessuna VM/spesa/servizio attivata. Dopo il gate restano secret privato, consenso
-al budget e entrambi i runner con prompt comune. La chiave da sola non sblocca
-questo Work. Non avviare agenti o build Android per aggirare il limite.
+**Prossimo gate: credenziale privata e consenso al budget, con tetto di spesa
+realmente applicato; poi due runner con prompt congelato.** Il confinamento
+è stato dimostrato nel runner temporaneo del 9 novembre, ma va riprovato
+nell'ambiente di esecuzione effettivo. Nessuna VM/spesa/servizio è stata attivata.
+Non avviare agenti o build Android per aggirare il limite.
 
 ## Contesto consultato e decisione di riuso
 

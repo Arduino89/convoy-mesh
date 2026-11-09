@@ -37,11 +37,15 @@ with tempfile.TemporaryDirectory(prefix="convoy-harness-preparation-") as temp:
     def run(name, command, expected):
         result = subprocess.run(command, cwd=temp, env=env, text=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=45)
-        stdout = result.stdout.replace(temp, "<TEMP>").replace(str(runtime), "<RUNTIME>")
-        stderr = result.stderr.replace(temp, "<TEMP>").replace(str(runtime), "<RUNTIME>")
+        def sanitize(value):
+            return (value.replace(temp, "<TEMP>")
+                    .replace(str(runtime), "<RUNTIME>")
+                    .replace(str(HERE), "<PREPARATION>"))
+
+        stdout = sanitize(result.stdout)
+        stderr = sanitize(result.stderr)
         check = {"name": name,
-                 "argv": [str(part).replace(temp, "<TEMP>").replace(str(runtime), "<RUNTIME>")
-                          for part in command],
+                 "argv": [sanitize(str(part)) for part in command],
                  "cwd": "<TEMP>", "exit_code": result.returncode,
                  "stdout": stdout, "stderr": stderr,
                  "pass": expected(result.returncode, result.stdout, result.stderr)}
@@ -59,7 +63,10 @@ with tempfile.TemporaryDirectory(prefix="convoy-harness-preparation-") as temp:
                                      "--json", "Preparation smoke only. Reply READY. Do not use tools."],
         lambda rc, out, err: rc == 1 and '"code":"MISSING_CREDENTIAL"' in out and "did not activate" not in err)
     services = run("local_harness_services", [node, str(HERE / "runtime_probe.mjs"), str(runtime), shutil.which("python3")],
-                   lambda rc, out, err: rc == 0 and json.loads(out)["mcp"]["state"] == "PASS")
+                   lambda rc, out, err: rc == 0 and json.loads(out)["mcp"]["state"] == "PASS"
+                   and json.loads(out)["sandbox"]["state"] == "AVAILABLE"
+                   and json.loads(out)["sandbox"]["enforcement"] == "full"
+                   and json.loads(out)["sandbox"]["external_write"]["rejected"] is True)
 
 report = {
     "schema": 1, "observed_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),

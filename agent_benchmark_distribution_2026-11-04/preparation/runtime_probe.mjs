@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { existsSync, unlinkSync } from 'node:fs';
 
 const runtime = resolve(process.argv[2]);
 const python = process.argv[3];
@@ -25,6 +26,26 @@ try {
   const check = spawnSync(wrapped.argv[0], wrapped.argv.slice(1), { timeout: 5000, encoding: 'utf8' });
   output.sandbox = { state: check.status === 0 ? 'AVAILABLE' : 'FAILED',
     enforcement: wrapped.enforcement, exit_code: check.status, stderr: check.stderr };
+  // The source tree is outside the temporary working directory supplied by probe.py.
+  // A successful sandbox must reject this exact, otherwise harmless write.
+  const deniedPath = resolve(dirname(fileURLToPath(import.meta.url)), '.sandbox-escape-probe');
+  try {
+    const denied = await sandboxContext.sandbox.confine(
+      ['/bin/sh', '-c', 'printf ESCAPED > "$1"', 'probe', deniedPath],
+      { mode: 'read-only', workspaceRoot: process.cwd() });
+    const attempt = spawnSync(denied.argv[0], denied.argv.slice(1),
+      { timeout: 5000, encoding: 'utf8' });
+    const explicitDenial = /read-only file system|permission denied|operation not permitted/i
+      .test(attempt.stderr ?? '');
+    output.sandbox.external_write = {
+      rejected: attempt.status !== 0 && !attempt.error && explicitDenial && !existsSync(deniedPath),
+      exit_code: attempt.status,
+      stderr: attempt.stderr.replaceAll(deniedPath, '<READ_ONLY_SOURCE>'),
+    };
+  } finally {
+    // Only our dedicated sentinel may be removed, if the sandbox unexpectedly fails.
+    if (existsSync(deniedPath)) unlinkSync(deniedPath);
+  }
 } catch (error) {
   output.sandbox = { state: 'UNAVAILABLE', code: error.code, message: error.message };
 } finally {
@@ -58,4 +79,7 @@ try {
   await ctx.fiber.dispose();
 }
 console.log(JSON.stringify(output, null, 2));
-process.exitCode = output.mcp?.state === 'PASS' ? 0 : 1;
+process.exitCode = output.mcp?.state === 'PASS' &&
+  output.sandbox?.state === 'AVAILABLE' &&
+  output.sandbox?.enforcement === 'full' &&
+  output.sandbox?.external_write?.rejected ? 0 : 1;
