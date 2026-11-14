@@ -138,6 +138,40 @@ class CloudGates(unittest.TestCase):
         self.assertEqual(receipt["remaining_for_future_launches"], 0)
         self.assertIs(receipt["automatic_refund_allowed"], False)
 
+    def test_next_160_transmission_gate_requires_explicit_860_cumulative_receipt(self):
+        # Host-only contract for Cama's 2026-11-14 single synthetic trial.
+        # This cannot dispatch a cloud run or authorize a paid subscription.
+        value = self.additional_gate()
+        value.update(prior_rows_conservative_consumed=700,
+                     additional_rows_authorized=160, total_ceiling=860, remaining_budget=160)
+        value["budget_authorization"].update(
+            prior_rows_conservative_consumed=700,
+            additional_rows_authorized=160, total_ceiling=860)
+        self.assertEqual(self.validate(value), 160)
+        accounting = budget_accounting(value)
+        self.assertEqual(accounting["prior_rows_conservative_consumed"], 700)
+        self.assertEqual(accounting["additional_rows_authorized"], 160)
+        self.assertEqual(accounting["total_ceiling"], 860)
+        receipt = unknown_budget_receipt(self.run_id, self.source, 160, accounting)
+        self.assertEqual(receipt["conservative_consumed_for_future_launches"], 860)
+        self.assertEqual(receipt["remaining_for_future_launches"], 0)
+        self.assertIs(receipt["automatic_refund_allowed"], False)
+
+        # A stale old gate, mismatched copy, extra row or reuse must not pass.
+        for change in (
+            {"total_ceiling": 700},
+            {"additional_rows_authorized": 161},
+            {"remaining_budget": 161},
+            {"prior_rows_conservative_consumed": 500},
+            {"run_attempt": 2},
+        ):
+            with self.subTest(change=change), self.assertRaises(TrialBlocked):
+                self.validate(dict(value, **change))
+        stale = deepcopy(value)
+        stale["budget_authorization"]["total_ceiling"] = 700
+        with self.assertRaises(TrialBlocked):
+            self.validate(stale)
+
     def test_additional_authorization_requires_consistent_explicit_fresh_receipt(self):
         changes = ({"total_ceiling": 500}, {"total_ceiling": 701},
                    {"prior_rows_conservative_consumed": 300}, {"prior_rows_conservative_consumed": -1},
