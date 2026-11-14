@@ -62,6 +62,10 @@ Experiment installs beside it as `com.example.convoy_mesh.pedestrianexp1` / **Co
 
 ## NEXT GATE
 
+**Authorization update — 2026-11-14 (Cama):** exactly one synthetic PostHog EU laboratory trial is authorized, at most **160 event-transmissions inclusive of retries**, with **no activation of paid services**, no real personal data, no old-20 replay, no app integration/release. Conservative previous ceiling 700 + new allowance 160 = 860. A user approval of the cap is not a passing execution gate: same-source/CI, fresh project/privacy/retention/deletion/free-quota checks and one-use run/attempt binding remain mandatory. No cloud execution was performed when this entry was recorded. Reuse the existing laboratory and the restored workflow; avoid unreviewed remote dispatch or blind rerun.
+
+**Identity note:** application BLE `my_id` is a random positive 31-bit value saved in `SharedPreferences`, displayed as "Il mio ID" and regenerable by the user. It identifies a current BLE participant, not an authenticated human; it is broadcast alongside location protocol packets and must not be used as the persistent cloud `distinct_id` or uploaded automatically. Future beta telemetry should use a separate, consent-scoped random installation identity and optionally allow the tester to provide a *voluntary test label* when correlating private field results. Never upload real names or coordinates.
+
 Review full local evidence and the [non-executing cloud proposal](docs/telemetry-evidence/2026-11-07/full-sender-local/cloud-proposal.md):160new event-transmissions maximum (130nominal+30margin), only after separate Cama approval and reviewed new gate700+160=860. Oldunused180 and old20 retries remain excluded. No cloud execution from this closure. Phones/battery/GNSS/BLE remain separate subsequent gates.
 
 ## DO NOT
