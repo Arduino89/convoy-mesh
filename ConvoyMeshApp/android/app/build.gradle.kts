@@ -9,6 +9,7 @@ plugins {
 // CI verifies this ID on the actual APK; the radio protocol is unchanged.
 val convoyExperimental = providers.gradleProperty("convoyExperimental").orNull == "true"
 val convoyPingLab = providers.gradleProperty("convoyPingLab").orNull == "true"
+val convoyDiagnosticLab = providers.gradleProperty("convoyDiagnosticLab").orNull == "true"
 
 android {
     namespace = "com.example.convoy_mesh"
@@ -26,7 +27,9 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = if (convoyPingLab) {
+        applicationId = if (convoyDiagnosticLab) {
+            "com.example.convoy_mesh.diaglab"
+        } else if (convoyPingLab) {
             "com.example.convoy_mesh.pinglab2"
         } else if (convoyExperimental) {
             "com.example.convoy_mesh.pedestrianexp1"
@@ -34,7 +37,8 @@ android {
             "com.example.convoy_mesh"
         }
         manifestPlaceholders["convoyAppLabel"] =
-            if (convoyPingLab) "Convoy Ping LAB 2"
+            if (convoyDiagnosticLab) "Convoy Diagnostics LAB"
+            else if (convoyPingLab) "Convoy Ping LAB 2"
             else if (convoyExperimental) "Convoy Mesh Exp" else "Convoy Mesh"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.

@@ -18,6 +18,7 @@ class DiagnosticRecorder extends ChangeNotifier {
   static const maxDuration = Duration(minutes: 4);
   static const maxEvents = 20000;
   static const buildCommit = String.fromEnvironment('BUILD_COMMIT', defaultValue: 'local-unverified');
+  static const appVersion = String.fromEnvironment('CONVOY_APP_VERSION', defaultValue: '0.7.7-exp1+9');
   final List<String> _lines = [], _pending = [];
   Directory? _directory;
   File? _file;
@@ -89,7 +90,7 @@ class DiagnosticRecorder extends ChangeNotifier {
     _stopwatch = Stopwatch()..start();
     _active = true;
     _append('session', 'start', {
-      'schema_version': 2, 'app_version': '0.7.7-exp1+9', 'build_commit': buildCommit,
+      'schema_version': 2, 'app_version': appVersion, 'build_commit': buildCommit,
       'max_duration_ms': maxDuration.inMilliseconds, 'disk_buffer_max_ms': 1000,
       'persistent_storage': isPersistent,
       'timezone_offset_minutes': DateTime.now().timeZoneOffset.inMinutes,
