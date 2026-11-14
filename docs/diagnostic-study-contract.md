@@ -1,39 +1,49 @@
-# Contratto di studio diagnostico indipendente dall'uscita — bozza
+# Convoy Mesh — diagnostica beta dettagliata (decisione e confini)
 
-**Decisione Cama, 14 novembre 2026:** lo studio tecnico deve poter partire, terminare e (in una fase successiva) inviare risultati senza dipendere da `Avvia uscita` / `Termina uscita`. Scopo: individuare e correggere difetti riproducibili; non raccogliere dati indiscriminatamente.
+**Direzione approvata da Cama il 15 novembre 2026:** nella beta chiusa con persone conosciute, conservare nei log e **prevedere per PostHog anche** ID dispositivo/partecipante, nickname e dati GPS precisi, oltre alla sequenza degli scambi BLE. L'obiettivo è il debugging di problemi verificabili fra telefoni; il divieto precedente di questi campi nel riepilogo cloud **non è più la direzione di prodotto per la beta**. Questa decisione NON dimostra il consenso specifico di tutti i partecipanti, non autorizza invii di dati di terzi prima di informarli e non certifica l'implementazione dell'upload.
 
-## Prima riusare, poi costruire
-Primo livello sufficiente: **riuso del registratore locale esistente** `DiagnosticRecorder` e del ponte `DiagnosticCaptureBridge`, con modifica minima all'interfaccia. Il codice registra già indipendentemente dalla durata dell'uscita e salva su file privato JSONL, massimo **4 minuti**; il bridge crea snapshot ogni 5 secondi soltanto quando la registrazione è attiva. Nessun nuovo server, SDK, costo, servizio Android o dipendenza introdotti in questa fase.
+## Interfaccia e separazione dall'uscita
 
-**Flusso UI scelto da Cama:** non aggiungere un secondo registratore o un nuovo pulsante di registrazione. Riutilizzare l'unico controllo già presente in `Test log`, che mostra `Avvia registrazione diagnostica` quando è inattivo e `Termina registrazione diagnostica` quando è attivo. Al termine la sessione resta sul telefono, senza trasmissioni; poi offrire due azioni **facoltative e distinte**:
-- **Condividi file diagnostico**: il JSONL originale viene consegnato solo al destinatario che Cama seleziona nel pannello Android; può contenere dati personali e non deve essere inviato a PostHog come log grezzo. La condivisione Android non garantisce che il destinatario sia offline o che i dati restino solo sul dispositivo.
-- **Invia riepilogo a PostHog** (futuro, NON attivo): mostrare prima un'anteprima precisa dei campi ammessi, poi inviare esclusivamente un evento riassuntivo tecnico su consenso esplicito per ogni invio; niente upload continuo o implicito allo stop, e niente coordinate, tracce, nomi, ID Bluetooth o note libere.
+Riutilizzare l'unico controllo già presente nella pagina `Test log`:
+- **Avvia registrazione diagnostica** — cattura localmente, senza avviare un'uscita.
+- **Termina registrazione diagnostica** — ferma e conserva il log; limite attuale 4 minuti; nessun invio.
+- **Condividi file (manuale)** — utilizza il pannello Android e invia il JSONL completo solo al destinatario scelto (che potrebbe essere un'app online).
+- **Invia a PostHog** — **futuro pulsante separato**, con anteprima dettagliata e conferma per singola sessione; non è ancora implementato.
 
-**Vincoli correnti:** il registratore ha un limite di 4 minuti e la sua partenza richiede lo stato `Nearby` pronto nella UI; non viene avviata una uscita. Un eventuale aumento della durata non va anticipato senza misurare dimensioni, batteria e robustezza con schermo spento. L'indipendenza da `Avvia uscita` non equivale a background garantito.
+La schermata dà precedenza visiva al pulsante di registrazione rispetto alle spiegazioni, dopo che l'emulatore con risoluzione ridotta non riusciva a raggiungerlo. In Nearby non viene attivato GNSS/foreground service per la sola diagnostica; i fix GPS sono presenti se un componente proprietario li ha effettivamente ottenuti (per esempio l'uscita). Nessuna promessa di campionamento continuo con schermo spento o app terminata.
 
-`Invia ping di prova` (PR #7) è un test di connettività separato, non controlla né abilita la registrazione.
+## Riuso e dati oggi disponibili
 
-## Misure che devono orientare una modifica di Convoy
-Selezionare poche metriche collegate a difetti reali:
-1. **Tempo con BLE visibile e posizione peer non fresca**: frazioni di intervalli osservati in cui `online` e `fix_fresh=false`. Se mancano campioni, indicare `gap` e ridurre la copertura; non confondere visibilità con freschezza.
-2. **Riaggancio dopo perdita radio**: durata osservata localmente tra perdita e nuova ricezione valida; insieme a contatori sequenza/ACK. Non usare orologi di due telefoni come se fossero sincronizzati, e non convertire RSSI in metri.
-3. **Disponibilità runtime**: intervalli realmente osservati con Nearby/uscita, servizio in primo piano, pause e schermo spento; un processo ucciso non produce campioni e non può diventare un falso 100% di attività.
-4. **GPS subordinato**: fix recente/vecchio, accettato/scartato, tempo di riacquisizione, accuratezza dichiarata. Non scambiare accuratezza dichiarata per errore reale; servono prove di percorso con riferimento per concludere sulla precisione.
-**Guardrail:** eventi persi, coda/duplicati, deviazioni di consumo energetico, quota e privacy.
+**Primo livello sufficiente:** riuso di `DiagnosticRecorder` e `DiagnosticCaptureBridge`, oltre alla strumentazione in `ConvoyMeshService` e `LocationFusionService`. Il JSONL locale già contiene nickname/ID di telefoni e peer, posizioni raw/display dove disponibili, accuratezza GPS dichiarata, tempi di misura/ricezione, RSSI e sequenze BLE, esiti RX/TX, HISTORY/ACK e stato del runtime. Snapshot ogni 5 s quando la registrazione è attiva; eventi BLE/GPS acquisiti alla sorgente; stop massimo a 4 minuti. Il log locale è **privato** e non deve entrare in commit, PR, artefatti pubblici o log cloud.
 
-Ogni risultato deve indicare versione/build, prova, modalità, durata osservata, campioni e condizioni (fermo, passo lento, curve, perdita/ripresa, schermo spento). Per confronti fra due telefoni usare un codice sessione sintetico opzionale e condiviso volontariamente: mai nomi, ID radio o coordinate nei riepiloghi cloud. I dati dettagliati di campo rimangono privati; in CI usare solo esempi sintetici.
+`DiagnosticSummary.fromJsonl` resta un **riepilogo locale aggregato**, con allowlist di numeri/booleani, utile per lettura rapida. Non sostituisce il log dettagliato e, in questa fase, non viene trasmesso. Il ping `cm_lab_ping` di PR #7 è una prova separata, riuscita su un singolo dispositivo.
 
-## Riepilogo locale — implementazione candidata (PR #8)
-`DiagnosticSummary.fromJsonl` legge **soltanto localmente** il JSONL e ricava un allowlist fisso di conteggi e flag, presentato in `Test log` dopo lo stop: durata osservata, campioni runtime, campioni di peer visibili e con fix non fresco, intervalli superiori a 9 s fra snapshot nominalmente a 5 s, BLE RX accettati/scartati, TX error, fix GPS/fix freschi, record invalidi/scartati e flag di completamento. La logica utilizza solo `elapsed_ms` locale, non confronta orologi fra telefoni. Non presume di conoscere la perdita reale di pacchetti, la disponibilità continua fra campioni o la precisione GPS effettiva. Un campo zero significa *non osservato nel test*, non prova che un problema non esista.
+## Contratto previsto per un upload beta dettagliato — non operativo
 
-Il riepilogo visualizza esattamente le chiavi numeriche/booleane che saranno candidate per la trasmissione futura; **non copia mai proprietà libere** dal log. Sono esclusi: coordinate, nomi, ID telefono/BLE/peer, sequenze, note, testo di errore, UTC individuale, tracciati o il JSONL originale. Test sintetici includono apposta campi privati, contenuti malformati e sessioni incomplete.
+Una **singola sessione esplicitamente selezionata** potrà produrre un flusso limitato di eventi diagnostici in PostHog EU, non un upload indiscriminato di tutto il JSONL. Conservare solo i campi necessari alla ricostruzione:
+- **Identità di test:** codice sessione, dispositivo mittente, ID del peer e *nickname* quando il partecipante è consenziente. Non inferire che un nickname identifichi univocamente una persona.
+- **GPS:** latitudine, longitudine, timestamp della misura e della ricezione, coordinate mostrate se presenti, accuratezza dichiarata, decisione del filtro, freschezza e buchi espliciti. Nessuna correzione alla strada; niente segmenti inventati durante perdita/riacquisizione.
+- **BLE e storia:** tipo messaggio, contatore/sequence, lato TX/RX, esito, tempi di osservazione/consegna, intensità RSSI, HISTORY/ACK, cause di rifiuto predefinite. `RSSI` non è una distanza metrica.
+- **Runtime:** stato app/permessi/schermo/servizio, pause, riprese e buchi di campionamento, versione dell'app/commit. Durate locali basate su monotonic clock; UTC dei dispositivi non va trattato come sincronizzato.
+- **Qualità del trasferimento:** sessione incompleta, limiti e campioni scartati, conteggi di invio/consegna, ritentativi e verifica del ricevimento a server per sessione.
 
-**Invio non implementato:** la UI informa che `Invia riepilogo a PostHog` non è disponibile; non mostra un pulsante fittizio e non invia nulla. Non eseguire upload o deduzioni privacy sul solo fatto che un ping manuale sia arrivato. Il progetto resta senza invio continuo per il momento.
+I dati GPS dettagliati e i nickname sono **personali o potenzialmente identificanti** anche con codici pseudonimi. Prima di ogni upload i partecipanti coinvolti devono essere chiaramente informati della destinazione PostHog EU, finalità di debug, campi raccolti, durata di conservazione, accesso e procedura di revoca/cancellazione, ed esprimere una scelta positiva. Non caricare le osservazioni di peer non consenzienti. Definire esplicitamente una procedura per identificare quali peer hanno optato in (non basta la presenza BLE). I log locali possono contenere anche osservazioni di altri peer, perciò **non usare un upload automatico del JSONL**.
 
-Prima di inviare dati di studio servono, con test reali: consenso disattivato di default, revoca che ferma nuove trasmissioni e purga la coda non inviata, offline/riavvio, deduplica, limite retry, prove zero eventi revocati e politica di conservazione/cancellazione compatibile. **PR #5 è ancora HOLD** per questi gate: non bypassarli usando il ping riuscito come autorizzazione generale. Distinguere revoca del consenso futuro e cancellazione dei dati già conservati.
+**Protezione contro invii accidentali:** default OFF, anteprima di esatto contenuto/campo/peer e conferma a ogni sessione; no auto-upload al termine della registrazione; niente accodamento persistente finché il gate PR #5 non è risolto; non usare chiavi API personali nell'APK. Non includere per default testo di errori arbitrario, note libere, payload hex, token, segreti o registrazioni di terzi senza consenso. Limiti dimensionali e di frequenza prima di implementare il batching; log sintetici per i test.
 
-## Limite background Android
-Indipendenza logica dalla camminata NON significa acquisizione continua garantita a schermo spento. In Nearby la scansione BLE è foreground; lo studio non diventa proprietario del servizio in primo piano né accende il GPS. Un timer Dart può fermarsi quando Android sospende/termina il processo. Non inventare parti mancanti. Solo prove reali potranno giustificare un distinto foreground service diagnostico con notifica e gestione permessi/OEM; evitare nuova complessità prima delle evidenze.
+**Gate PostHog:** verificare conservazione e cancellazione degli eventi nel progetto EU prima dell'invio reale di posizioni, oltre a permessi di accesso al progetto e limiti di ingestione. Una revoca impedisce nuovi invii; la cancellazione di dati già consegnati è una procedura distinta e può essere asincrona. **PR #5 è tuttora HOLD** per revoca/riavvio/coda/eventi revocati: non trasformare il ping manuale riuscito in certificazione dell'uploader. Fino a prova completata, non caricare dati personali reali su PostHog.
 
-## Stato e gate
-In `experiment/diagnostic-control-20261114`: interfaccia Start/Stop separata dalla condivisione file; generazione e visualizzazione di un riepilogo locale allowlisted, test sintetici su privacy e incompletezza, test emulatore aggiornato alla dicitura reale. La candidata del laboratorio ha un package separato `com.example.convoy_mesh.diaglab` e versione `0.7.7-diaglab+12`, senza sostituire Ping LAB 2. Commit sorgente app `8c9bd16ac4c6bc43fa760d25b4b5b12133d80471`, CI Android run #43652863949, risultato da confermare prima di consegna. Nessun APK ancora distribuito, nessun nuovo evento PostHog. Prossimo gate: test/build/emulatore verdi e ricevuta artefatto reale, poi prova volontaria su telefono; upload resta subordinato ai gate privacy PR #5.
+## Come valutare l'utilità dello studio
+
+Risultati che devono supportare una modifica:
+1. Peer BLE visibile ma coordinate non fresche: quanti campioni/quanto tempo *osservato* e quale sequenza RX, distinguendo storia e live.
+2. Perdite/riagganci: intervallo monotono locale per ciascun telefono, seq mancate, ACK e buchi; gli orologi fra telefoni non sono automaticamente comparabili.
+3. GNSS: differenze fra raw e display, scarti, età e accuratezza dichiarata, con percorso di riferimento indipendente per stimare l'errore reale.
+4. Servizio Android: tempi osservati con schermo attivo/spento, permessi, background, arresti e riprese; assenza di campioni non equivale a perfetto funzionamento.
+5. Guardrail: batteria/overhead, eventi persi, duplicati, consenso e revoca.
+
+Confrontare prove ripetibili da fermi, a passo lento, in curva e in perdita/ripresa radio fra due telefoni che hanno acconsentito. Riporre i log originali in storage privato. Dati sintetici per repository/CI.
+
+## Stato eseguibile e gate successivo
+
+La PR #8 contiene già registrazione locale indipendente e il riepilogo tecnico. L'invio di dati dettagliati a PostHog **non è implementato e non è stato eseguito**. La run #43652863949 ha passato build/test/analyzer e fallito l'emulatore per controlli UI fuori viewport. La run #43653873668 ha fallito lo stesso controllo anche dopo una singola swipe; lo screenshot reale dimostra che il testo informativo spinge il pulsante sotto l'area visibile. La modifica corrente riporta il pulsante in alto, preserva le asserzioni e richiede nuovo test build/emulatore sul commit effettivo. Dopo il gate Android, prossimo lavoro: verificare il consenso e la cancellazione PostHog e progettare una preview di upload dettagliato, con nessun dato reale prima delle prove.

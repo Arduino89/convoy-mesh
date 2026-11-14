@@ -35,9 +35,6 @@ class DiagnosticPage extends StatelessWidget {
               Text(recorder.isPersistent ? 'Log salvato progressivamente sul telefono.' :
                   'Salvataggio su disco non disponibile: il log in memoria può andare perso.'),
               if (recorder.storageError != null) Text(recorder.storageError!, style: const TextStyle(color: Colors.red)),
-              const Text('Registrazione indipendente dall’uscita: non inizia o termina con Avvia/Termina uscita.'),
-              const Text('Avvia e Termina registrazione non inviano nulla a PostHog. Condividere il file è separato e facoltativo.'),
-              const Text('Il file può contenere coordinate, nomi e identificativi: condividilo solo se necessario.'),
               if (recorder.isActive) ...[
                 Text('Durata ${DiagnosticRecorder.formatDuration(recorder.elapsed)} • restante ${DiagnosticRecorder.formatDuration(recorder.remaining)}'),
                 Text('Eventi ${recorder.eventCount} • scartati per limite ${recorder.droppedEvents}'),
@@ -55,6 +52,9 @@ class DiagnosticPage extends StatelessWidget {
                 } : null, icon: const Icon(Icons.fiber_manual_record),
                   label: Text(ready ? 'Avvia registrazione diagnostica • max 4 min' : 'Attendo modalità Vicini')),
               ],
+              const SizedBox(height: 8),
+              const Text('Registrazione indipendente dall’uscita; non attiva GPS o servizi extra.'),
+              const Text('Start/Stop non inviano dati. Il file locale può contenere nomi, ID e coordinate: condividilo solo con destinatari scelti.'),
             ]),
             if (!recorder.isActive && recorder.hasExport) _card([
               const Text('File pronto', style: TextStyle(fontWeight: FontWeight.bold)),
