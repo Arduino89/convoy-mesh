@@ -14,9 +14,10 @@ void main() {
     expect(data['distinct_id'], 'cm-ping-$pingId');
     final properties = data['properties'] as Map<String, Object>;
     expect(properties.keys.toSet(), {
-      r'$process_person_profile', 'ping_id', 'schema_version', 'kind'
+      r'$process_person_profile', r'$geoip_disable', 'ping_id', 'schema_version', 'kind'
     });
     expect(properties[r'$process_person_profile'], false);
+    expect(properties[r'$geoip_disable'], true);
     expect(properties['ping_id'], pingId);
   });
 

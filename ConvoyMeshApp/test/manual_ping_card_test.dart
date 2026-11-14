@@ -3,22 +3,42 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:convoy_mesh/pages/manual_ping_card.dart';
 
 void main() {
-  testWidgets('no ping can start without explicit consent and a valid token',
+  testWidgets('no credential field; a missing build config blocks ping',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: SingleChildScrollView(child: ManualPingCard())),
+      home: Scaffold(body: SingleChildScrollView(child: ManualPingCard(
+        configuredOverride: false,
+      ))),
     ));
-    final button = find.widgetWithText(FilledButton, 'Invia ping di prova (una sola volta)');
+    expect(find.byType(TextField), findsNothing);
+    expect(find.byType(CheckboxListTile), findsNothing);
+    final button = find.widgetWithText(FilledButton, 'Invia ping di prova');
     expect(tester.widget<FilledButton>(button).onPressed, isNull);
-    final consent = find.byType(CheckboxListTile);
-    expect(tester.widget<CheckboxListTile>(consent).value, false);
-    await tester.tap(consent);
-    await tester.pump();
-    expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
-    // Invalid token: state is rejected before any network request is created.
-    await tester.tap(button);
-    await tester.pump();
-    expect(find.textContaining('Inserisci soltanto il token di progetto'), findsOneWidget);
+    expect(find.textContaining('Invio non configurato'), findsOneWidget);
     expect(find.textContaining('ping_id:'), findsNothing);
+  });
+
+  testWidgets('one press triggers one attempt, then the button is disabled',
+      (tester) async {
+    final ids = <String>[];
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: SingleChildScrollView(child: ManualPingCard(
+        configuredOverride: true,
+        pingSenderOverride: (id) async {
+          ids.add(id);
+          return 200;
+        },
+      ))),
+    ));
+    final button = find.widgetWithText(FilledButton, 'Invia ping di prova');
+    expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+    expect(ids, isEmpty);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(ids, hasLength(1));
+    expect(RegExp(r'^[a-f0-9]{32}$').hasMatch(ids.single), isTrue);
+    expect(find.textContaining('HTTP 200: richiesta accettata'), findsOneWidget);
+    expect(find.textContaining('ping_id:'), findsOneWidget);
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
   });
 }
