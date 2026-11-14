@@ -21,9 +21,9 @@ class CloudLaunchReview(unittest.TestCase):
         gate = {"schema_version": 2, "status": "PASS", "project_id": 330212,
                 "api_host": "https://eu.i.posthog.com", "source_commit": self.source,
                 "run_id": "synthetic-cloud-host-wrapper", "execution_id": WORKFLOW + ":15", "run_attempt": 1,
-                "quota_rows_available": 999838, "total_ceiling": 700, "prior_rows_conservative_consumed": 500,
-                "additional_rows_authorized": 200,
-                "remaining_budget": 200, "expires_utc": (self.clock + timedelta(hours=1)).isoformat()}
+                "quota_rows_available": 999838, "total_ceiling": 860, "prior_rows_conservative_consumed": 700,
+                "additional_rows_authorized": 160,
+                "remaining_budget": 160, "expires_utc": (self.clock + timedelta(hours=1)).isoformat()}
         for name in ("privacy", "retention", "deletion", "quota", "local_regression"):
             gate[name] = {"status": "VERIFIED", "checked_at_utc": self.clock.isoformat(),
                           "evidence_ref": "synthetic-host-fixture"}
@@ -31,8 +31,8 @@ class CloudLaunchReview(unittest.TestCase):
         gate["quota"]["free_plan"] = True
         gate["local_regression"]["source_commit"] = self.source
         gate["budget_authorization"] = {"status": "VERIFIED", "checked_at_utc": self.clock.isoformat(),
-            "evidence_ref": "synthetic-host-fixture", "prior_rows_conservative_consumed": 500,
-            "additional_rows_authorized": 200, "total_ceiling": 700}
+            "evidence_ref": "synthetic-host-fixture", "prior_rows_conservative_consumed": 700,
+            "additional_rows_authorized": 160, "total_ceiling": 860}
         return gate
 
     def review(self, wrapper=None, gate=None, original=None):
@@ -45,11 +45,29 @@ class CloudLaunchReview(unittest.TestCase):
         result = self.review()
         self.assertEqual(result["status"], "APPROVED_FOR_SINGLE_LAUNCH")
         self.assertEqual([item["case"] for item in result["guard_matrix"] if item["job_enabled"]], ["authorized_push"])
-        self.assertEqual(result["historical_conservative_consumption"], 500)
-        self.assertEqual(result["new_allowance_rows_including_retries"], 200)
-        self.assertEqual(result["cumulative_ceiling"], 700)
+        self.assertEqual(result["historical_conservative_consumption"], 700)
+        self.assertEqual(result["new_allowance_rows_including_retries"], 160)
+        self.assertEqual(result["cumulative_ceiling"], 860)
         self.assertIs(result["android_executed"], False)
         self.assertIs(result["cloud_executed"], False)
+
+    def test_old_200_row_gate_is_not_reusable_as_new_160_row_authorization(self):
+        gate = self.gate()
+        gate.update(prior_rows_conservative_consumed=500,
+                    additional_rows_authorized=200, remaining_budget=200, total_ceiling=700)
+        gate["budget_authorization"].update(
+            prior_rows_conservative_consumed=500,
+            additional_rows_authorized=200, total_ceiling=700)
+        with self.assertRaisesRegex(TrialBlocked, "WRAPPER_NOT_THE_AUTHORIZED_ADDITIONAL_ALLOWANCE"):
+            self.review(gate=gate)
+
+    def test_new_budget_is_one_use_and_requires_exact_receipt(self):
+        for change in ({"remaining_budget": 161},
+                       {"additional_rows_authorized": 161},
+                       {"total_ceiling": 861},
+                       {"prior_rows_conservative_consumed": 500}):
+            with self.subTest(change=change), self.assertRaises(TrialBlocked):
+                self.review(gate=dict(self.gate(), **change))
 
     def test_every_removed_guard_and_source_change_is_rejected(self):
         gate = self.gate()

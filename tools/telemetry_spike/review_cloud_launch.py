@@ -16,7 +16,7 @@ from ci_cloud_trial import TrialBlocked, validate_cloud_gate
 ORIGINAL_SHA256 = "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5"
 WORKFLOW = "Isolated Android telemetry laboratory"
 BRANCH = "experiment/telemetry-runtime-lab"
-MARKER = "Execute authorized synthetic cloud laboratory once (additional budget 200)"
+MARKER = "Execute authorized synthetic cloud laboratory once (additional budget 160)"
 
 
 def digest(text):
@@ -57,8 +57,8 @@ def review_wrapper(original, wrapper, source, gate, number, clock=None):
     if wrapper != expected_wrapper(original, source, gate, number):
         raise TrialBlocked("WRAPPER_HAS_UNREVIEWED_FIELDS_OR_GUARDS")
     remaining = validate_cloud_gate(gate, source, gate.get("run_id"), WORKFLOW + ":" + str(number), 1, clock)
-    if (gate.get("schema_version") != 2 or remaining != 200 or gate.get("total_ceiling") != 700 or
-            gate.get("prior_rows_conservative_consumed") != 500 or gate.get("additional_rows_authorized") != 200):
+    if (gate.get("schema_version") != 2 or remaining != 160 or gate.get("total_ceiling") != 860 or
+            gate.get("prior_rows_conservative_consumed") != 700 or gate.get("additional_rows_authorized") != 160):
         raise TrialBlocked("WRAPPER_NOT_THE_AUTHORIZED_ADDITIONAL_ALLOWANCE")
     allowed = dict(repository="Arduino89/convoy-mesh", private=False, event="push",
                    ref="refs/heads/" + BRANCH, number=number, attempt=1, message=MARKER)
@@ -77,8 +77,8 @@ def review_wrapper(original, wrapper, source, gate, number, clock=None):
             "gate_json_sha256": digest(json.dumps(gate, separators=(",", ":"), ensure_ascii=True, allow_nan=False)),
             "expected_run_number": number, "expected_attempt": 1, "expected_branch": BRANCH,
             "expected_commit_message": MARKER, "run_id": gate["run_id"],
-            "new_allowance_rows_including_retries": remaining, "historical_conservative_consumption": 500,
-            "cumulative_ceiling": 700, "nominal_rows_reserved": 130, "nominal_unique_received": 120,
+            "new_allowance_rows_including_retries": remaining, "historical_conservative_consumption": 700,
+            "cumulative_ceiling": 860, "nominal_rows_reserved": 130, "nominal_unique_received": 120,
             "guard_matrix": matrix, "cloud_executed": False, "android_executed": False,
             "limitations": ["Static expression truth table is not a GitHub Actions execution.",
                 "Live account controls and local Android receipts are reviewed references, not executed by this verifier.",
