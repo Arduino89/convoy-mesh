@@ -45,14 +45,14 @@ class DiagnosticPage extends StatelessWidget {
                 FilledButton.icon(onPressed: () async {
                   recorder.stop(reason: 'manual_stop');
                   await recorder.flush();
-                }, icon: const Icon(Icons.stop_circle_outlined), label: const Text('Termina registrazione')),
+                }, icon: const Icon(Icons.stop_circle_outlined), label: const Text('Termina registrazione diagnostica')),
               ] else ...[
                 FilledButton.icon(onPressed: ready ? () async {
                   recorder.start(deviceId: id, deviceName: name);
                   if (captureNowOverride != null) { captureNowOverride!(); }
                   else { await runtime.refreshCapabilities(); DiagnosticCaptureBridge.instance.captureNow(); }
                 } : null, icon: const Icon(Icons.fiber_manual_record),
-                  label: Text(ready ? 'Avvia registrazione • max 4 min' : 'Attendo modalità Vicini')),
+                  label: Text(ready ? 'Avvia registrazione diagnostica • max 4 min' : 'Attendo modalità Vicini')),
               ],
             ]),
             if (!recorder.isActive && recorder.hasExport) _card([
@@ -61,7 +61,17 @@ class DiagnosticPage extends StatelessWidget {
               Text('Chiusura: ${recorder.lastStopReason ?? '-'}'),
               if (recorder.lastStopReason == 'recovered_file_check_session_stop')
                 const Text('File recuperato: può essere parziale se il processo è stato interrotto.'),
-              const Text('Condividi solo tramite la scelta esplicita di Android; non è PostHog.'),
+              const Text('Condividi solo tramite la scelta esplicita di Android; il file può contenere coordinate e nomi.'),
+              if (recorder.lastSummary != null) ...[
+                const SizedBox(height: 8),
+                const Text('Riepilogo tecnico locale',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Conteggi dei campioni osservati, non tempi di disponibilità né errore GPS reale.'),
+                for (final field in recorder.lastSummary!.toReviewFields().entries)
+                  Text(field.key + ': ' + field.value.toString()),
+                const SizedBox(height: 8),
+                const Text('Invio a PostHog non ancora abilitato: consenso, revoca e dati da inviare devono superare le verifiche.'),
+              ],
               FilledButton.icon(onPressed: () => _share(context, recorder),
                   icon: const Icon(Icons.share), label: const Text('Condividi file (manuale)')),
             ]),

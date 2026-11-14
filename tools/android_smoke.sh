@@ -234,7 +234,7 @@ timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 
 # A diagnostic session may begin BEFORE an outing and must span the transition.
 wait_and_tap_text 'Test log' open-test-log
-wait_and_tap_text 'Avvia test • max 4 min' start-diagnostic
+wait_and_tap_text 'Avvia registrazione diagnostica • max 4 min' start-diagnostic
 sleep 2
 capture_diag nearby-test
 grep -q '"category":"session","event":"start"' "$OUT/diag-nearby-test.jsonl"

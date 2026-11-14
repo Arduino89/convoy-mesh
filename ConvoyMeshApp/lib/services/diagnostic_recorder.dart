@@ -6,6 +6,7 @@ import 'package:cross_file/cross_file.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'diagnostic_summary.dart';
 
 /// Four-minute opt-in capture. One-second disk buffer; no automatic uploading.
 /// A killed process may lose the last unflushed second, not the entire session.
@@ -30,6 +31,12 @@ class DiagnosticRecorder extends ChangeNotifier {
   String? _sessionId, _deviceName, _lastContent, _lastFileName, _lastStopReason;
   int? _deviceId;
   int _droppedEvents = 0;
+  DiagnosticSummary? _cachedSummary;
+  DiagnosticSummary? get lastSummary {
+    final content = _lastContent;
+    if (content == null) return null;
+    return _cachedSummary ??= DiagnosticSummary.fromJsonl(content);
+  }
   bool get isActive => _active;
   DateTime? get startedAtUtc => _startedAtUtc;
   String? get sessionId => _sessionId;
@@ -57,6 +64,7 @@ class DiagnosticRecorder extends ChangeNotifier {
       if (files.isNotEmpty && !hasExport) {
         final f = files.last;
         if (await f.length() <= 16 * 1024 * 1024) {
+          _cachedSummary = null;
           _lastContent = await f.readAsString();
           _lastFileName = f.path.split(Platform.pathSeparator).last;
           _lastStopReason = 'recovered_file_check_session_stop';
@@ -68,7 +76,7 @@ class DiagnosticRecorder extends ChangeNotifier {
   }
   void start({required int deviceId, required String deviceName}) {
     if (_active || deviceId <= 0) return;
-    _lines.clear(); _pending.clear(); _droppedEvents = 0;
+    _lines.clear(); _pending.clear(); _droppedEvents = 0; _cachedSummary = null;
     _lastContent = null; _lastFinishedAtUtc = null; _lastStopReason = null;
     _deviceId = deviceId;
     _deviceName = deviceName.trim().isEmpty ? 'device' : deviceName.trim();
@@ -102,6 +110,7 @@ class DiagnosticRecorder extends ChangeNotifier {
     _active = false; _stopwatch?.stop();
     _limitTimer?.cancel(); _uiTimer?.cancel(); _limitTimer = null; _uiTimer = null;
     _lastFinishedAtUtc = DateTime.now().toUtc(); _lastStopReason = reason;
+    _cachedSummary = null;
     _lastContent = '${_lines.join('\n')}\n';
     unawaited(flush());
     notifyListeners();

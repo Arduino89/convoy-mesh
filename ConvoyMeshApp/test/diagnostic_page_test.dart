@@ -21,7 +21,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Avvia registrazione • max 4 min'));
+    await tester.tap(find.text('Avvia registrazione diagnostica • max 4 min'));
     await tester.pump();
 
     expect(recorder.isActive, isTrue);
@@ -43,12 +43,14 @@ void main() {
     expect(recorder.isActive, isTrue);
 
     // Stopping the recording must not implicitly open Android's share sheet.
-    await tester.tap(find.text('Termina registrazione'));
+    await tester.tap(find.text('Termina registrazione diagnostica'));
     await tester.pumpAndSettle();
     expect(recorder.isActive, isFalse);
     expect(recorder.hasExport, isTrue);
     expect(recorder.lastStopReason, 'manual_stop');
     expect(find.text('Condividi file (manuale)'), findsOneWidget);
+    expect(find.text('Riepilogo tecnico locale'), findsOneWidget);
+    expect(find.textContaining('Invio a PostHog non ancora abilitato'), findsOneWidget);
     expect(tester.takeException(), isNull);
     expect(recorder.lastContent, contains('"event":"marker"'));
     expect(recorder.lastContent, contains('Francesca non vede più Cama'));
