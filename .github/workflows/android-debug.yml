@@ -11,7 +11,7 @@ on:
   push:
     # The experimental PR targets fix/v0.4-stability, so only this push event
     # builds it. Avoid duplicate push + pull_request candidate artifacts.
-    branches: [ main, experiment/pedestrian-acquisition-v1, experiment/manual-ping-20261114 ]
+    branches: [ main, experiment/pedestrian-acquisition-v1, experiment/manual-ping-20261114, experiment/diagnostic-control-20261114 ]
     paths:
       - 'ConvoyMeshApp/**'
       - 'tools/android_smoke.sh'
@@ -116,11 +116,11 @@ jobs:
         working-directory: ConvoyMeshApp
         env:
           ORG_GRADLE_PROJECT_convoyExperimental: 'true'
-          ORG_GRADLE_PROJECT_convoyPingLab: ${{ github.ref_name == 'experiment/manual-ping-20261114' && 'true' || 'false' }}
+          ORG_GRADLE_PROJECT_convoyPingLab: ${{ (github.ref_name == 'experiment/manual-ping-20261114' || github.ref_name == 'experiment/diagnostic-control-20261114') && 'true' || 'false' }}
           # Existing repo-level LAB project ingestion token; never a personal API key.
           CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
         run: |
-          if [[ "$GITHUB_REF_NAME" == "experiment/manual-ping-20261114" ]]; then
+          if [[ "$GITHUB_REF_NAME" == "experiment/manual-ping-20261114" || "$GITHUB_REF_NAME" == "experiment/diagnostic-control-20261114" ]]; then
             if [[ ! "$CONVOY_LAB_POSTHOG_TOKEN" =~ ^phc_[A-Za-z0-9_-]{16,200}$ || "$CONVOY_LAB_POSTHOG_TOKEN" == "phc_synthetic_local_only" ]]; then
               echo "::error::Existing LAB ingestion secret missing or invalid; refusing unconfigured ping APK"
               exit 1
@@ -155,7 +155,7 @@ jobs:
           import re
           from pathlib import Path
           info = Path('build-evidence/apk-badging.txt').read_text()
-          ping_lab = os.environ.get('GITHUB_REF_NAME') == 'experiment/manual-ping-20261114'
+          ping_lab = os.environ.get('GITHUB_REF_NAME') in ('experiment/manual-ping-20261114', 'experiment/diagnostic-control-20261114')
           app_id = 'com.example.convoy_mesh.pinglab2' if ping_lab else 'com.example.convoy_mesh.pedestrianexp1'
           version_code = '11' if ping_lab else '9'
           version_name = '0.7.7-pinglab' if ping_lab else '0.7.7-exp1'
@@ -355,7 +355,7 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1' }}
+          script: EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ (github.ref_name == 'experiment/manual-ping-20261114' || github.ref_name == 'experiment/diagnostic-control-20261114') && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1' }}
 
       - name: Remove duplicate APK from diagnostics
         if: always()
