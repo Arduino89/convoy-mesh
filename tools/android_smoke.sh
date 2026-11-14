@@ -234,6 +234,11 @@ timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 
 # A diagnostic session may begin BEFORE an outing and must span the transition.
 wait_and_tap_text 'Test log' open-test-log
+# The diagnostics explanation can push the start button below the fold on
+# a 320x640 emulator. Scroll the real ListView; keep the exact control
+# requirement and all runtime assertions unchanged.
+timeout 15 adb shell input swipe 160 441 160 170 400
+sleep 1
 wait_and_tap_text 'Avvia registrazione diagnostica • max 4 min' start-diagnostic
 sleep 2
 capture_diag nearby-test
