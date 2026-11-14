@@ -5,10 +5,11 @@
 ## Prima riusare, poi costruire
 Primo livello sufficiente: **riuso del registratore locale esistente** `DiagnosticRecorder` e del ponte `DiagnosticCaptureBridge`, con modifica minima all'interfaccia. Il codice registra già indipendentemente dalla durata dell'uscita e salva su file privato JSONL, massimo **4 minuti**; il bridge crea snapshot ogni 5 secondi soltanto quando la registrazione è attiva. Nessun nuovo server, SDK, costo, servizio Android o dipendenza introdotti in questa fase.
 
-Tre comandi distinti:
-- **Avvia registrazione**: cattura dati già disponibili localmente; non avvia GPS/uscita, non spedisce eventi PostHog
-- **Termina registrazione**: ferma, conserva il file; anche limite automatico a 4 minuti; non condivide o carica
-- **Condividi file**: operazione manuale Android successiva; contiene potenzialmente nomi, coordinate, identificativi e note libere, quindi **non deve essere spedito automaticamente a PostHog**
+**Flusso UI scelto da Cama:** non aggiungere un secondo registratore o un nuovo pulsante di registrazione. Riutilizzare l'unico controllo già presente in `Test log`, che mostra `Avvia registrazione diagnostica` quando è inattivo e `Termina registrazione diagnostica` quando è attivo. Al termine la sessione resta sul telefono, senza trasmissioni; poi offrire due azioni **facoltative e distinte**:
+- **Condividi file diagnostico**: il JSONL originale viene consegnato solo al destinatario che Cama seleziona nel pannello Android; può contenere dati personali e non deve essere inviato a PostHog come log grezzo. La condivisione Android non garantisce che il destinatario sia offline o che i dati restino solo sul dispositivo.
+- **Invia riepilogo a PostHog** (futuro, NON attivo): mostrare prima un'anteprima precisa dei campi ammessi, poi inviare esclusivamente un evento riassuntivo tecnico su consenso esplicito per ogni invio; niente upload continuo o implicito allo stop, e niente coordinate, tracce, nomi, ID Bluetooth o note libere.
+
+**Vincoli correnti:** il registratore ha un limite di 4 minuti e la sua partenza richiede lo stato `Nearby` pronto nella UI; non viene avviata una uscita. Un eventuale aumento della durata non va anticipato senza misurare dimensioni, batteria e robustezza con schermo spento. L'indipendenza da `Avvia uscita` non equivale a background garantito.
 
 `Invia ping di prova` (PR #7) è un test di connettività separato, non controlla né abilita la registrazione.
 
