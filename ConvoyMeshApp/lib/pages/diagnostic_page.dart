@@ -3,6 +3,7 @@ import '../services/background_runtime_service.dart';
 import '../services/convoy_mesh_service.dart';
 import '../services/diagnostic_capture_bridge.dart';
 import '../services/diagnostic_recorder.dart';
+import 'manual_ping_card.dart';
 
 class DiagnosticPage extends StatelessWidget {
   const DiagnosticPage({super.key, this.deviceIdOverride, this.deviceNameOverride, this.captureNowOverride});
@@ -61,6 +62,7 @@ class DiagnosticPage extends StatelessWidget {
               FilledButton.icon(onPressed: () => _share(context, recorder),
                   icon: const Icon(Icons.share), label: const Text('Condividi file')),
             ]),
+            const ManualPingCard(),
             _card([
               const Text('Runtime e capacità hardware', style: TextStyle(fontWeight: FontWeight.bold)),
               Text('Servizio foreground: ${runtime.isRunning ? 'ATTIVO (uscita)' : 'NON ATTIVO'}'),
