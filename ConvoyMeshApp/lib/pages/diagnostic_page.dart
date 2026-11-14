@@ -24,7 +24,7 @@ class DiagnosticPage extends StatelessWidget {
         return Scaffold(appBar: AppBar(title: const Text('Test diagnostico')),
           body: ListView(padding: const EdgeInsets.all(16), children: [
             _card([
-              Text(recorder.isActive ? 'Registrazione in corso' : 'Registra un test breve',
+              Text(recorder.isActive ? 'Registrazione locale in corso' : 'Registrazione diagnostica locale',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Text('Telefono: $name • ID $id'),
@@ -34,23 +34,25 @@ class DiagnosticPage extends StatelessWidget {
               Text(recorder.isPersistent ? 'Log salvato progressivamente sul telefono.' :
                   'Salvataggio su disco non disponibile: il log in memoria può andare perso.'),
               if (recorder.storageError != null) Text(recorder.storageError!, style: const TextStyle(color: Colors.red)),
-              const Text('Il test è indipendente dall’uscita: può iniziare prima o dopo e non si chiude con Termina uscita.'),
-              const Text('Il file contiene coordinate: condividilo solo per analizzare il test.'),
+              const Text('Registrazione indipendente dall’uscita: non inizia o termina con Avvia/Termina uscita.'),
+              const Text('Avvia e Termina registrazione non inviano nulla a PostHog. Condividere il file è separato e facoltativo.'),
+              const Text('Il file può contenere coordinate, nomi e identificativi: condividilo solo se necessario.'),
               if (recorder.isActive) ...[
                 Text('Durata ${DiagnosticRecorder.formatDuration(recorder.elapsed)} • restante ${DiagnosticRecorder.formatDuration(recorder.remaining)}'),
                 Text('Eventi ${recorder.eventCount} • scartati per limite ${recorder.droppedEvents}'),
                 OutlinedButton.icon(onPressed: () => _addMarker(context, recorder),
                     icon: const Icon(Icons.flag_outlined), label: const Text('Segna qui un problema')),
                 FilledButton.icon(onPressed: () async {
-                  recorder.stop(reason: 'manual_share'); await _share(context, recorder);
-                }, icon: const Icon(Icons.stop_circle_outlined), label: const Text('Termina e condividi')),
+                  recorder.stop(reason: 'manual_stop');
+                  await recorder.flush();
+                }, icon: const Icon(Icons.stop_circle_outlined), label: const Text('Termina registrazione')),
               ] else ...[
                 FilledButton.icon(onPressed: ready ? () async {
                   recorder.start(deviceId: id, deviceName: name);
                   if (captureNowOverride != null) { captureNowOverride!(); }
                   else { await runtime.refreshCapabilities(); DiagnosticCaptureBridge.instance.captureNow(); }
                 } : null, icon: const Icon(Icons.fiber_manual_record),
-                  label: Text(ready ? 'Avvia test • max 4 min' : 'Attendo modalità Vicini')),
+                  label: Text(ready ? 'Avvia registrazione • max 4 min' : 'Attendo modalità Vicini')),
               ],
             ]),
             if (!recorder.isActive && recorder.hasExport) _card([
@@ -59,8 +61,9 @@ class DiagnosticPage extends StatelessWidget {
               Text('Chiusura: ${recorder.lastStopReason ?? '-'}'),
               if (recorder.lastStopReason == 'recovered_file_check_session_stop')
                 const Text('File recuperato: può essere parziale se il processo è stato interrotto.'),
+              const Text('Condividi solo tramite la scelta esplicita di Android; non è PostHog.'),
               FilledButton.icon(onPressed: () => _share(context, recorder),
-                  icon: const Icon(Icons.share), label: const Text('Condividi file')),
+                  icon: const Icon(Icons.share), label: const Text('Condividi file (manuale)')),
             ]),
             const ManualPingCard(),
             _card([
