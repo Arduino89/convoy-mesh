@@ -11,7 +11,7 @@ on:
   push:
     # The experimental PR targets fix/v0.4-stability, so only this push event
     # builds it. Avoid duplicate push + pull_request candidate artifacts.
-    branches: [ main, experiment/pedestrian-acquisition-v1 ]
+    branches: [ main, experiment/pedestrian-acquisition-v1, experiment/manual-ping-20261114 ]
     paths:
       - 'ConvoyMeshApp/**'
       - 'tools/android_smoke.sh'
@@ -116,6 +116,7 @@ jobs:
         working-directory: ConvoyMeshApp
         env:
           ORG_GRADLE_PROJECT_convoyExperimental: 'true'
+          ORG_GRADLE_PROJECT_convoyPingLab: ${{ github.ref_name == 'experiment/manual-ping-20261114' && 'true' || 'false' }}
         run: flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Verify APK identity, signature and compatibility
@@ -127,12 +128,18 @@ jobs:
           "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee build-evidence/apk-signature.txt
           "$BUILD_TOOLS/aapt" dump badging "$APK" | tee build-evidence/apk-badging.txt
           python3 - <<'PY'
+          import os
           import re
           from pathlib import Path
           info = Path('build-evidence/apk-badging.txt').read_text()
-          assert "package: name='com.example.convoy_mesh.pedestrianexp1'" in info
-          assert "versionCode='9'" in info and "versionName='0.7.7-exp1'" in info
-          assert "application-label:'Convoy Mesh Exp'" in info
+          ping_lab = os.environ.get('GITHUB_REF_NAME') == 'experiment/manual-ping-20261114'
+          app_id = 'com.example.convoy_mesh.pinglab' if ping_lab else 'com.example.convoy_mesh.pedestrianexp1'
+          version_code = '10' if ping_lab else '9'
+          version_name = '0.7.7-pinglab' if ping_lab else '0.7.7-exp1'
+          app_label = 'Convoy Ping LAB' if ping_lab else 'Convoy Mesh Exp'
+          assert f"package: name='{app_id}'" in info
+          assert f"versionCode='{version_code}'" in info and f"versionName='{version_name}'" in info
+          assert f"application-label:'{app_label}'" in info
           minimum = int(re.search(r"^sdkVersion:'(\d+)'", info, re.M).group(1))
           assert minimum <= 29, f'Unsupported on the API 29 field phone: {minimum}'
           assert "'arm64-v8a'" in info and "'x86_64'" in info
@@ -325,7 +332,7 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk com.example.convoy_mesh.pedestrianexp1
+          script: EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab' || 'com.example.convoy_mesh.pedestrianexp1' }}
 
       - name: Remove duplicate APK from diagnostics
         if: always()

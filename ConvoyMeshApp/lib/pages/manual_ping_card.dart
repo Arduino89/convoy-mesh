@@ -55,7 +55,7 @@ class _ManualPingCardState extends State<ManualPingCard> {
         _consent = false;
       });
       // Do not retain the ingestion token in the widget after the attempt.
-      _token.clear();
+      if (mounted) _token.clear();
     }
   }
 
