@@ -1,0 +1,3850 @@
+{
+  "schema_version": 1,
+  "scope": "FULL_ANDROID_SENDER_LOOPBACK_SHARED_HTTP_READER_NO_POSTHOG",
+  "source_commit": "50386a5c8ce5b0cf628073989a0eaf1549008e79",
+  "new_posthog_rows_authorized": 0,
+  "project_credentials_loaded": false,
+  "status": "PASS_FULL_ANDROID_SENDER_LOCAL",
+  "cases": {
+    "batch": {
+      "status": "PASS",
+      "fixture": "batch",
+      "before": {
+        "schema_version": 1,
+        "action_nonce": "2f579ae634a74e5182e63b5a71a67c83",
+        "action": "capture",
+        "action_ok": true,
+        "error": "",
+        "pid": 9010,
+        "run_id": "synthetic-http-42389745788-batch",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 1,
+        "preflight_rejected": 0,
+        "requests_started": 0,
+        "requests_acked": 0,
+        "transport_failures": 0,
+        "dispatch_attempts": 1,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "9711d02695daeb0b9208a58bd2281b5ec46ad934a305276c95f2f9cef8270f8e",
+        "queue_after_batch_sha256": "50ae486fa2838af0e622eb5f35fb22de12b0ccfc979a73d4f90d24a033cdb194",
+        "queue_count": 25,
+        "queue_bytes": 10041,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "a408d574909e531b3c262ccad1de840fae11b6c0ffe1c26a9cf062d022a5bd57",
+        "setting_value": "synthetic-setting-2d947449-3c26-4808-869d-83cbed1c545e",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "retained": {
+        "schema_version": 1,
+        "action_nonce": "25de0c25cd2d426b9eabee98bdd18172",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9010,
+        "run_id": "synthetic-http-42389745788-batch",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 3,
+        "preflight_rejected": 0,
+        "requests_started": 2,
+        "requests_acked": 1,
+        "transport_failures": 1,
+        "dispatch_attempts": 3,
+        "last_response_category": "ACKNOWLEDGED",
+        "queue_snapshot_sha256": "50ae486fa2838af0e622eb5f35fb22de12b0ccfc979a73d4f90d24a033cdb194",
+        "queue_after_batch_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_count": 5,
+        "queue_bytes": 2010,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 1,
+        "trace_sha256": "a408d574909e531b3c262ccad1de840fae11b6c0ffe1c26a9cf062d022a5bd57",
+        "setting_value": "synthetic-setting-2d947449-3c26-4808-869d-83cbed1c545e",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "final": {
+        "schema_version": 1,
+        "action_nonce": "a717a068f5cc4cec86e3af696414df58",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9010,
+        "run_id": "synthetic-http-42389745788-batch",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 3,
+        "preflight_rejected": 0,
+        "requests_started": 2,
+        "requests_acked": 2,
+        "transport_failures": 1,
+        "dispatch_attempts": 3,
+        "last_response_category": "ACKNOWLEDGED",
+        "queue_snapshot_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_after_batch_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_count": 0,
+        "queue_bytes": 0,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "a408d574909e531b3c262ccad1de840fae11b6c0ffe1c26a9cf062d022a5bd57",
+        "setting_value": "synthetic-setting-2d947449-3c26-4808-869d-83cbed1c545e",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "state_before_ack": {
+        "schema_version": 1,
+        "action_nonce": "31da8937bb9c43d9aee1cf3545047f12",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9010,
+        "run_id": "synthetic-http-42389745788-batch",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 1,
+        "dispatch_attempts": 2,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "9711d02695daeb0b9208a58bd2281b5ec46ad934a305276c95f2f9cef8270f8e",
+        "queue_after_batch_sha256": "50ae486fa2838af0e622eb5f35fb22de12b0ccfc979a73d4f90d24a033cdb194",
+        "queue_count": 25,
+        "queue_bytes": 10041,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 1,
+        "trace_sha256": "a408d574909e531b3c262ccad1de840fae11b6c0ffe1c26a9cf062d022a5bd57",
+        "setting_value": "synthetic-setting-2d947449-3c26-4808-869d-83cbed1c545e",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "state_restart_offline": null,
+      "receiver": {
+        "expected_unique": 25,
+        "received_rows": 25,
+        "received_unique": 25,
+        "missing_ids": [],
+        "unexpected_ids": [],
+        "duplicate_rows": 0,
+        "conflicting_ids": [],
+        "delivery_ratio": 1.0
+      },
+      "requests_proof": [
+        {
+          "request_index": 1,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-batch-000001",
+              "uuid": "ce86dd23-1331-45ea-922d-69c4a6668c9c",
+              "timestamp": "2026-11-07T16:13:28.187Z",
+              "canonical_item_sha256": "d12f06244ffc73da26a71d212a11c8b7130ba16d99b075acc25ede854c28ad79"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000002",
+              "uuid": "22aef178-c44d-4f19-843c-138cfdf75e99",
+              "timestamp": "2026-11-07T16:13:28.189Z",
+              "canonical_item_sha256": "0e7cf09a94b16509478e2df5945fa1407c7423f4702d7a5786cb760e878807f2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000003",
+              "uuid": "ad061d98-bd42-4454-90a9-d74f57a0f72e",
+              "timestamp": "2026-11-07T16:13:28.190Z",
+              "canonical_item_sha256": "7a27d0e5eba199489913a4cf6e2da9043404a17dccebf4a75cca926f95fbcbbf"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000004",
+              "uuid": "29a1e309-fa11-4791-9287-56ad7fa972fb",
+              "timestamp": "2026-11-07T16:13:28.191Z",
+              "canonical_item_sha256": "4671ec0520b75ac823a753e4a728594499abb3c86778f676d6d149f76f34a0c3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000005",
+              "uuid": "036dfdf9-c2e0-429f-afb0-6dffeb6c85b7",
+              "timestamp": "2026-11-07T16:13:28.207Z",
+              "canonical_item_sha256": "8ea1f8031c32289b9a814d1d044e181f8560646a08cdbf1156011fb4d16c3963"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000006",
+              "uuid": "b7c0228b-bd29-4a5a-aeb8-957f2b396e97",
+              "timestamp": "2026-11-07T16:13:28.208Z",
+              "canonical_item_sha256": "d751088518e95ec0e9fc20e34b08e8d493546b073ea30a06856652767a4c3dcd"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000007",
+              "uuid": "cbb914fe-b944-4159-b72c-c927b0e1d8cb",
+              "timestamp": "2026-11-07T16:13:28.209Z",
+              "canonical_item_sha256": "6fda38935e5c5d5d4d3bfe807097cec1f379d5ce098878887b32fc2de2b301c6"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000008",
+              "uuid": "996ca169-5897-4d0b-b86d-321bd7516652",
+              "timestamp": "2026-11-07T16:13:28.211Z",
+              "canonical_item_sha256": "eecd363a5a1256105b406a43f02730ad367c50f38792125a300e28d779878890"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000009",
+              "uuid": "4ae41a3d-39a5-47ef-b6a3-50a318273698",
+              "timestamp": "2026-11-07T16:13:28.212Z",
+              "canonical_item_sha256": "1e4081e7d2227b30ceb271fa3b68f09fbe183a0dc65da490741353c1fc26c1ee"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000010",
+              "uuid": "7ee54c58-3f60-46ff-9480-da66ceba56e8",
+              "timestamp": "2026-11-07T16:13:28.215Z",
+              "canonical_item_sha256": "85e100aa3e35649927cbbffb87ca8bdb112a3915ba4a46aeda70a486c468ce53"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000011",
+              "uuid": "2ff4c697-6652-495e-a30d-5923a4e15a9a",
+              "timestamp": "2026-11-07T16:13:28.221Z",
+              "canonical_item_sha256": "4977af1cfbd99ede9652330e5899f73c7a37c2a7aaa4c6af7d19ace32e0a1dae"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000012",
+              "uuid": "1e1ee883-2c6e-4df9-bf87-94df786cb1d7",
+              "timestamp": "2026-11-07T16:13:28.223Z",
+              "canonical_item_sha256": "8ea7336b4be6e7e307c78f77a1ef0b593e6895e0ad97908257789a263f3130b2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000013",
+              "uuid": "e5ef52d8-6631-4c3a-9146-f9b897d98dca",
+              "timestamp": "2026-11-07T16:13:28.224Z",
+              "canonical_item_sha256": "86fe53f50d3b7b6027093fb3eb907d3e104b26ac152f19fa0fabd3cb200c8963"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000014",
+              "uuid": "c48d7ca5-466a-41d0-b474-004e4ad54686",
+              "timestamp": "2026-11-07T16:13:28.229Z",
+              "canonical_item_sha256": "93c534ab698e36595953a2f02d7405d33ab0aa9bbf2b9cd6508c54b18df86e8c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000015",
+              "uuid": "357eb4f7-2d82-4e16-b5fd-b35cd56acd62",
+              "timestamp": "2026-11-07T16:13:28.230Z",
+              "canonical_item_sha256": "7919a9ad82139b3771cd10e17aa45748d0bb876a2bee0d4cde567ac965dc0853"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000016",
+              "uuid": "66803312-8a7f-4458-8a3d-b69a1fc7818c",
+              "timestamp": "2026-11-07T16:13:28.231Z",
+              "canonical_item_sha256": "135784135a6183a2ab577baf7526e1377d93b4d5b0f56e4b13ea61174c4f5669"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000017",
+              "uuid": "df2a87b9-ee4c-4be0-a634-ba72f4dd9117",
+              "timestamp": "2026-11-07T16:13:28.232Z",
+              "canonical_item_sha256": "36d69020762553e6cd68c4c06bcf5d90a4871dae53377d33142e9bb2c502290a"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000018",
+              "uuid": "66d00007-7e1d-4439-8c7f-27529ed6e9ff",
+              "timestamp": "2026-11-07T16:13:28.233Z",
+              "canonical_item_sha256": "c7af74632612407e5f6d204d0ed16f31c8172fbde16e11792ecd653f0ce59a79"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000019",
+              "uuid": "9ff74214-cc3d-4bef-bea7-70d05a4b55a6",
+              "timestamp": "2026-11-07T16:13:28.234Z",
+              "canonical_item_sha256": "96e61f03cf695c9e9271a7a0eea673d81f34bbec46480fc8c23524dc1dbe083f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000020",
+              "uuid": "d1a2e549-ef9f-4f11-ba6d-ea5233ea370a",
+              "timestamp": "2026-11-07T16:13:28.235Z",
+              "canonical_item_sha256": "6e0f0f06a63b7f485348a8db09fc152a3b9e02977a9d5f81fe6d1cce88d9761a"
+            }
+          ]
+        },
+        {
+          "request_index": 2,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-batch-000021",
+              "uuid": "1fedbbfc-d860-4ac7-80ef-f3c2a86a98f7",
+              "timestamp": "2026-11-07T16:13:28.236Z",
+              "canonical_item_sha256": "8cf4fc986d2f586d14becdcd8d45a7f416210148a6a4c82cd05137a3131fe9df"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000022",
+              "uuid": "77c04f22-1b7b-4ecf-a5a8-49fc9eeef24e",
+              "timestamp": "2026-11-07T16:13:28.237Z",
+              "canonical_item_sha256": "8be3e2bb47a577badd6a9bc739f2c2fdb87128ea063539ae44806e446c06a2d5"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000023",
+              "uuid": "8dcabbf7-f287-490a-868e-4000570eed18",
+              "timestamp": "2026-11-07T16:13:28.238Z",
+              "canonical_item_sha256": "a09b45e370dcbc6752c5c7bd38bce00c1fb43614ffdf0cefb09908775112fcb7"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000024",
+              "uuid": "0d66fae5-9cfe-4cde-9ae5-0d027526cf64",
+              "timestamp": "2026-11-07T16:13:28.239Z",
+              "canonical_item_sha256": "92b6d76fc91524a7e93fe6f0d8b95283e0ccea666e93ad449eaa51e4c024ed82"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-batch-000025",
+              "uuid": "25b68fd2-5a34-472d-9131-d0cfb0c181c5",
+              "timestamp": "2026-11-07T16:13:28.240Z",
+              "canonical_item_sha256": "0ea2f3366abb0da341c1f62950159be479c26d427bbff391ee08620e95f5566e"
+            }
+          ]
+        }
+      ],
+      "wire": {
+        "requests": 2,
+        "event_rows": 25,
+        "privacy_pass": true,
+        "violation_counts": {},
+        "wire_body_bytes": 10162,
+        "lost_acks": 0,
+        "event_uuids": {
+          "synthetic-http-42389745788-batch-000001": {
+            "rows": 1,
+            "uuids": [
+              "ce86dd23-1331-45ea-922d-69c4a6668c9c"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000002": {
+            "rows": 1,
+            "uuids": [
+              "22aef178-c44d-4f19-843c-138cfdf75e99"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000003": {
+            "rows": 1,
+            "uuids": [
+              "ad061d98-bd42-4454-90a9-d74f57a0f72e"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000004": {
+            "rows": 1,
+            "uuids": [
+              "29a1e309-fa11-4791-9287-56ad7fa972fb"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000005": {
+            "rows": 1,
+            "uuids": [
+              "036dfdf9-c2e0-429f-afb0-6dffeb6c85b7"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000006": {
+            "rows": 1,
+            "uuids": [
+              "b7c0228b-bd29-4a5a-aeb8-957f2b396e97"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000007": {
+            "rows": 1,
+            "uuids": [
+              "cbb914fe-b944-4159-b72c-c927b0e1d8cb"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000008": {
+            "rows": 1,
+            "uuids": [
+              "996ca169-5897-4d0b-b86d-321bd7516652"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000009": {
+            "rows": 1,
+            "uuids": [
+              "4ae41a3d-39a5-47ef-b6a3-50a318273698"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000010": {
+            "rows": 1,
+            "uuids": [
+              "7ee54c58-3f60-46ff-9480-da66ceba56e8"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000011": {
+            "rows": 1,
+            "uuids": [
+              "2ff4c697-6652-495e-a30d-5923a4e15a9a"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000012": {
+            "rows": 1,
+            "uuids": [
+              "1e1ee883-2c6e-4df9-bf87-94df786cb1d7"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000013": {
+            "rows": 1,
+            "uuids": [
+              "e5ef52d8-6631-4c3a-9146-f9b897d98dca"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000014": {
+            "rows": 1,
+            "uuids": [
+              "c48d7ca5-466a-41d0-b474-004e4ad54686"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000015": {
+            "rows": 1,
+            "uuids": [
+              "357eb4f7-2d82-4e16-b5fd-b35cd56acd62"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000016": {
+            "rows": 1,
+            "uuids": [
+              "66803312-8a7f-4458-8a3d-b69a1fc7818c"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000017": {
+            "rows": 1,
+            "uuids": [
+              "df2a87b9-ee4c-4be0-a634-ba72f4dd9117"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000018": {
+            "rows": 1,
+            "uuids": [
+              "66d00007-7e1d-4439-8c7f-27529ed6e9ff"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000019": {
+            "rows": 1,
+            "uuids": [
+              "9ff74214-cc3d-4bef-bea7-70d05a4b55a6"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000020": {
+            "rows": 1,
+            "uuids": [
+              "d1a2e549-ef9f-4f11-ba6d-ea5233ea370a"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000021": {
+            "rows": 1,
+            "uuids": [
+              "1fedbbfc-d860-4ac7-80ef-f3c2a86a98f7"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000022": {
+            "rows": 1,
+            "uuids": [
+              "77c04f22-1b7b-4ecf-a5a8-49fc9eeef24e"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000023": {
+            "rows": 1,
+            "uuids": [
+              "8dcabbf7-f287-490a-868e-4000570eed18"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000024": {
+            "rows": 1,
+            "uuids": [
+              "0d66fae5-9cfe-4cde-9ae5-0d027526cf64"
+            ]
+          },
+          "synthetic-http-42389745788-batch-000025": {
+            "rows": 1,
+            "uuids": [
+              "25b68fd2-5a34-472d-9131-d0cfb0c181c5"
+            ]
+          }
+        }
+      },
+      "synthetic_case_reset_not_revocation": true
+    },
+    "quota": {
+      "status": "PASS",
+      "fixture": "quota",
+      "before": {
+        "schema_version": 1,
+        "action_nonce": "ffac2a6d0b984a7d8c9552de89b10dc7",
+        "action": "capture",
+        "action_ok": true,
+        "error": "",
+        "pid": 9145,
+        "run_id": "synthetic-http-42389745788-quota",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 0,
+        "preflight_rejected": 0,
+        "requests_started": 0,
+        "requests_acked": 0,
+        "transport_failures": 0,
+        "dispatch_attempts": 0,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "990258fd299fe9f425493598d3f89a0c44e8944f2296b222eceb6995038c1796",
+        "queue_after_batch_sha256": "13baabb2287eba6da6b3c4b1060647ad4d8a46ada5d30d79dc4631adc401faa7",
+        "queue_count": 25,
+        "queue_bytes": 10041,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "7b4186e0bc9f8862ce8c56c61d65f2e01eba2f6b58651d911109548f599d42ac",
+        "setting_value": "synthetic-setting-f3299963-1ae1-4884-b596-41bb94346e0b",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "retained": {
+        "schema_version": 1,
+        "action_nonce": "cb1e972ebfc24b0a9c299141a2eb5f9d",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9145,
+        "run_id": "synthetic-http-42389745788-quota",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 1,
+        "dispatch_attempts": 2,
+        "last_response_category": "QUOTA_LIMITED",
+        "queue_snapshot_sha256": "990258fd299fe9f425493598d3f89a0c44e8944f2296b222eceb6995038c1796",
+        "queue_after_batch_sha256": "13baabb2287eba6da6b3c4b1060647ad4d8a46ada5d30d79dc4631adc401faa7",
+        "queue_count": 25,
+        "queue_bytes": 10041,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "7b4186e0bc9f8862ce8c56c61d65f2e01eba2f6b58651d911109548f599d42ac",
+        "setting_value": "synthetic-setting-f3299963-1ae1-4884-b596-41bb94346e0b",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "final": {
+        "schema_version": 1,
+        "action_nonce": "0e9a9968314142219401062d9626b1b1",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9268,
+        "run_id": "synthetic-http-42389745788-quota",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 4,
+        "preflight_rejected": 0,
+        "requests_started": 3,
+        "requests_acked": 2,
+        "transport_failures": 1,
+        "dispatch_attempts": 4,
+        "last_response_category": "ACKNOWLEDGED",
+        "queue_snapshot_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_after_batch_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_count": 0,
+        "queue_bytes": 0,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "7b4186e0bc9f8862ce8c56c61d65f2e01eba2f6b58651d911109548f599d42ac",
+        "setting_value": "synthetic-setting-f3299963-1ae1-4884-b596-41bb94346e0b",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "state_before_ack": null,
+      "state_restart_offline": {
+        "schema_version": 1,
+        "action_nonce": "1cf9a44702e24baebc6586954e1af8b8",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9268,
+        "run_id": "synthetic-http-42389745788-quota",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 1,
+        "dispatch_attempts": 2,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "990258fd299fe9f425493598d3f89a0c44e8944f2296b222eceb6995038c1796",
+        "queue_after_batch_sha256": "13baabb2287eba6da6b3c4b1060647ad4d8a46ada5d30d79dc4631adc401faa7",
+        "queue_count": 25,
+        "queue_bytes": 10041,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "7b4186e0bc9f8862ce8c56c61d65f2e01eba2f6b58651d911109548f599d42ac",
+        "setting_value": "synthetic-setting-f3299963-1ae1-4884-b596-41bb94346e0b",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "receiver": {
+        "expected_unique": 25,
+        "received_rows": 45,
+        "received_unique": 25,
+        "missing_ids": [],
+        "unexpected_ids": [],
+        "duplicate_rows": 20,
+        "conflicting_ids": [],
+        "delivery_ratio": 1.0
+      },
+      "requests_proof": [
+        {
+          "request_index": 1,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-quota-000001",
+              "uuid": "425b26e1-6fb2-46bf-9e90-b33a3003ab36",
+              "timestamp": "2026-11-07T16:13:30.123Z",
+              "canonical_item_sha256": "56f92eb957a0e1df498fc1b2b5bc28e74ad4d37475bce2daf7fb2fb03282c33f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000002",
+              "uuid": "b6c16ad7-5840-4854-949f-bc807079826c",
+              "timestamp": "2026-11-07T16:13:30.124Z",
+              "canonical_item_sha256": "2e38d73d3680d4fd21f913a2b4d06d6ee2447fcb5f25f4e893289af51db5972b"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000003",
+              "uuid": "d7e1a32c-fbd4-4969-b08c-ec52d9386d4b",
+              "timestamp": "2026-11-07T16:13:30.126Z",
+              "canonical_item_sha256": "8af1c237ab77e051ddd546a8095df4678503ddcf1b743dab69d5fc196d8ab240"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000004",
+              "uuid": "d0944fa9-dddf-4056-b514-d3d28a8ee5c1",
+              "timestamp": "2026-11-07T16:13:30.127Z",
+              "canonical_item_sha256": "4c1507276c579c5b1829a45703d2149629b6a2752ef5eced48de130809d48329"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000005",
+              "uuid": "3bfe70cc-854a-4ed6-af9b-ae8a89c8d4f4",
+              "timestamp": "2026-11-07T16:13:30.127Z",
+              "canonical_item_sha256": "da1ad572ac159dd5c9d3339e738b4b5c8218ae22f3ee1decf2bd3ea3dad3ab88"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000006",
+              "uuid": "1301107e-715e-4de3-8676-09133b40bfd8",
+              "timestamp": "2026-11-07T16:13:30.128Z",
+              "canonical_item_sha256": "df8e7da542a14950fcf314e50ca130ca7d889de75027214cd4a5d138c252f8b6"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000007",
+              "uuid": "655cc7cc-ac53-4949-9e33-87072595c133",
+              "timestamp": "2026-11-07T16:13:30.129Z",
+              "canonical_item_sha256": "8b7d7b057ad444430323ad59aa5d08ad3dea979584230859bc1fb15b03ecdc91"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000008",
+              "uuid": "8f3b7ed8-740b-47d1-bdf2-475e192045c8",
+              "timestamp": "2026-11-07T16:13:30.130Z",
+              "canonical_item_sha256": "f074f4fee775820a0c2deca00a86c6a6c4ea7fe4e5db83d4ef2624c4df27afeb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000009",
+              "uuid": "b5f18bb3-57fb-46ae-9037-ee0930ed7d74",
+              "timestamp": "2026-11-07T16:13:30.131Z",
+              "canonical_item_sha256": "a7ce11c40b549e1e1e57204f390547915e94d6d84984bed440c20c1739134a1f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000010",
+              "uuid": "c618efc0-7124-4be4-862f-0999ab97ea02",
+              "timestamp": "2026-11-07T16:13:30.131Z",
+              "canonical_item_sha256": "978a3b41cf80a25a02debec17811006a026812f6489ceb218548a30dbb7c0b67"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000011",
+              "uuid": "ede5e9dc-dad9-409d-b2cb-60c85f11f780",
+              "timestamp": "2026-11-07T16:13:30.137Z",
+              "canonical_item_sha256": "8529118c5b19c39df6a9dd545853eb68e717234ea71f57e92dea631f49aa15c2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000012",
+              "uuid": "9cb6df62-cd71-4fb7-982a-2e30bfff3f67",
+              "timestamp": "2026-11-07T16:13:30.138Z",
+              "canonical_item_sha256": "208f8fca25a5f0329745e3fe07e1bc25c0461adff81f801156484319f9d13d36"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000013",
+              "uuid": "a36d75cb-7f5f-4dde-a5ef-364d63b63612",
+              "timestamp": "2026-11-07T16:13:30.139Z",
+              "canonical_item_sha256": "6dc2106a6b9b39961b4eda4a70ba7aaac2a9d2e5cfa58dd6aa31bf8e131e136d"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000014",
+              "uuid": "84e485f4-faef-459c-8d6e-a7d1f0a3009d",
+              "timestamp": "2026-11-07T16:13:30.140Z",
+              "canonical_item_sha256": "58769f1bd604b234c3c149aa17b8aafa79370903da70cb6f406c826e1615fe5c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000015",
+              "uuid": "92adb4a6-ea98-4fc9-b3df-6ca2e9c6ac3f",
+              "timestamp": "2026-11-07T16:13:30.141Z",
+              "canonical_item_sha256": "785d100eb5b87ef80640cfb0b22281920b083215ddb9ef8c0fdcb23672a9258c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000016",
+              "uuid": "64b1e6e4-3bd3-4e9a-a713-6fbda08d62ff",
+              "timestamp": "2026-11-07T16:13:30.142Z",
+              "canonical_item_sha256": "a6f6234776cd938acce73dfb1d0c892117e64aa70234c277ee5df913cca84600"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000017",
+              "uuid": "3519d4e7-7ef9-46dc-aa80-5dcf4a27fc3e",
+              "timestamp": "2026-11-07T16:13:30.143Z",
+              "canonical_item_sha256": "8bab94b3b4aee350e618084bcf551faa8476d4c02871893a8073adfa2725167b"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000018",
+              "uuid": "365050a1-cbbc-4bd1-b813-7d85c7bdfb96",
+              "timestamp": "2026-11-07T16:13:30.144Z",
+              "canonical_item_sha256": "8467597a8e79c32bfa5507787c7956b7863f5f57d592adccc698b8d623bd28d3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000019",
+              "uuid": "70a41096-4821-4152-b24a-f7b07984178a",
+              "timestamp": "2026-11-07T16:13:30.145Z",
+              "canonical_item_sha256": "b93c910922d3475fcaf4f296f141e3645996afbe6c8baeb3c8e5d475bc01824d"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000020",
+              "uuid": "bc312012-f535-4916-96ba-1735a8bebc77",
+              "timestamp": "2026-11-07T16:13:30.145Z",
+              "canonical_item_sha256": "b068b5badd55f4f4593687e7a5470aef50378d66ec65f0669f54fedcd14bc386"
+            }
+          ]
+        },
+        {
+          "request_index": 2,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-quota-000001",
+              "uuid": "425b26e1-6fb2-46bf-9e90-b33a3003ab36",
+              "timestamp": "2026-11-07T16:13:30.123Z",
+              "canonical_item_sha256": "56f92eb957a0e1df498fc1b2b5bc28e74ad4d37475bce2daf7fb2fb03282c33f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000002",
+              "uuid": "b6c16ad7-5840-4854-949f-bc807079826c",
+              "timestamp": "2026-11-07T16:13:30.124Z",
+              "canonical_item_sha256": "2e38d73d3680d4fd21f913a2b4d06d6ee2447fcb5f25f4e893289af51db5972b"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000003",
+              "uuid": "d7e1a32c-fbd4-4969-b08c-ec52d9386d4b",
+              "timestamp": "2026-11-07T16:13:30.126Z",
+              "canonical_item_sha256": "8af1c237ab77e051ddd546a8095df4678503ddcf1b743dab69d5fc196d8ab240"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000004",
+              "uuid": "d0944fa9-dddf-4056-b514-d3d28a8ee5c1",
+              "timestamp": "2026-11-07T16:13:30.127Z",
+              "canonical_item_sha256": "4c1507276c579c5b1829a45703d2149629b6a2752ef5eced48de130809d48329"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000005",
+              "uuid": "3bfe70cc-854a-4ed6-af9b-ae8a89c8d4f4",
+              "timestamp": "2026-11-07T16:13:30.127Z",
+              "canonical_item_sha256": "da1ad572ac159dd5c9d3339e738b4b5c8218ae22f3ee1decf2bd3ea3dad3ab88"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000006",
+              "uuid": "1301107e-715e-4de3-8676-09133b40bfd8",
+              "timestamp": "2026-11-07T16:13:30.128Z",
+              "canonical_item_sha256": "df8e7da542a14950fcf314e50ca130ca7d889de75027214cd4a5d138c252f8b6"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000007",
+              "uuid": "655cc7cc-ac53-4949-9e33-87072595c133",
+              "timestamp": "2026-11-07T16:13:30.129Z",
+              "canonical_item_sha256": "8b7d7b057ad444430323ad59aa5d08ad3dea979584230859bc1fb15b03ecdc91"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000008",
+              "uuid": "8f3b7ed8-740b-47d1-bdf2-475e192045c8",
+              "timestamp": "2026-11-07T16:13:30.130Z",
+              "canonical_item_sha256": "f074f4fee775820a0c2deca00a86c6a6c4ea7fe4e5db83d4ef2624c4df27afeb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000009",
+              "uuid": "b5f18bb3-57fb-46ae-9037-ee0930ed7d74",
+              "timestamp": "2026-11-07T16:13:30.131Z",
+              "canonical_item_sha256": "a7ce11c40b549e1e1e57204f390547915e94d6d84984bed440c20c1739134a1f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000010",
+              "uuid": "c618efc0-7124-4be4-862f-0999ab97ea02",
+              "timestamp": "2026-11-07T16:13:30.131Z",
+              "canonical_item_sha256": "978a3b41cf80a25a02debec17811006a026812f6489ceb218548a30dbb7c0b67"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000011",
+              "uuid": "ede5e9dc-dad9-409d-b2cb-60c85f11f780",
+              "timestamp": "2026-11-07T16:13:30.137Z",
+              "canonical_item_sha256": "8529118c5b19c39df6a9dd545853eb68e717234ea71f57e92dea631f49aa15c2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000012",
+              "uuid": "9cb6df62-cd71-4fb7-982a-2e30bfff3f67",
+              "timestamp": "2026-11-07T16:13:30.138Z",
+              "canonical_item_sha256": "208f8fca25a5f0329745e3fe07e1bc25c0461adff81f801156484319f9d13d36"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000013",
+              "uuid": "a36d75cb-7f5f-4dde-a5ef-364d63b63612",
+              "timestamp": "2026-11-07T16:13:30.139Z",
+              "canonical_item_sha256": "6dc2106a6b9b39961b4eda4a70ba7aaac2a9d2e5cfa58dd6aa31bf8e131e136d"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000014",
+              "uuid": "84e485f4-faef-459c-8d6e-a7d1f0a3009d",
+              "timestamp": "2026-11-07T16:13:30.140Z",
+              "canonical_item_sha256": "58769f1bd604b234c3c149aa17b8aafa79370903da70cb6f406c826e1615fe5c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000015",
+              "uuid": "92adb4a6-ea98-4fc9-b3df-6ca2e9c6ac3f",
+              "timestamp": "2026-11-07T16:13:30.141Z",
+              "canonical_item_sha256": "785d100eb5b87ef80640cfb0b22281920b083215ddb9ef8c0fdcb23672a9258c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000016",
+              "uuid": "64b1e6e4-3bd3-4e9a-a713-6fbda08d62ff",
+              "timestamp": "2026-11-07T16:13:30.142Z",
+              "canonical_item_sha256": "a6f6234776cd938acce73dfb1d0c892117e64aa70234c277ee5df913cca84600"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000017",
+              "uuid": "3519d4e7-7ef9-46dc-aa80-5dcf4a27fc3e",
+              "timestamp": "2026-11-07T16:13:30.143Z",
+              "canonical_item_sha256": "8bab94b3b4aee350e618084bcf551faa8476d4c02871893a8073adfa2725167b"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000018",
+              "uuid": "365050a1-cbbc-4bd1-b813-7d85c7bdfb96",
+              "timestamp": "2026-11-07T16:13:30.144Z",
+              "canonical_item_sha256": "8467597a8e79c32bfa5507787c7956b7863f5f57d592adccc698b8d623bd28d3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000019",
+              "uuid": "70a41096-4821-4152-b24a-f7b07984178a",
+              "timestamp": "2026-11-07T16:13:30.145Z",
+              "canonical_item_sha256": "b93c910922d3475fcaf4f296f141e3645996afbe6c8baeb3c8e5d475bc01824d"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000020",
+              "uuid": "bc312012-f535-4916-96ba-1735a8bebc77",
+              "timestamp": "2026-11-07T16:13:30.145Z",
+              "canonical_item_sha256": "b068b5badd55f4f4593687e7a5470aef50378d66ec65f0669f54fedcd14bc386"
+            }
+          ]
+        },
+        {
+          "request_index": 3,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-quota-000021",
+              "uuid": "5d8fd1c5-38e8-41e2-b640-7699bfa69f87",
+              "timestamp": "2026-11-07T16:13:30.146Z",
+              "canonical_item_sha256": "b2d665ac5bd0e316fc26107deecdcc4dfdad9318d396210a178e2088e4a1aca5"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000022",
+              "uuid": "bde836a7-abf8-42b9-b3e8-67f796dc5b1b",
+              "timestamp": "2026-11-07T16:13:30.147Z",
+              "canonical_item_sha256": "f336eb03790cc52171d785dd9b8c851a92d8f863f7ef232146e9f5c0c7ed2e7e"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000023",
+              "uuid": "3beede14-c0f1-4509-999b-13c5701d854d",
+              "timestamp": "2026-11-07T16:13:30.148Z",
+              "canonical_item_sha256": "79df6cf7b957dc573ee77e12b4ba828cb5369d6e528d4fe4cfb07a0c55e813bd"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000024",
+              "uuid": "6949d4d0-c3e3-4742-8cfe-1273d88c396f",
+              "timestamp": "2026-11-07T16:13:30.149Z",
+              "canonical_item_sha256": "a069c0676b8f2f81ba596098f27e3c8c629e3488b869ff2573dc6f70fd6bef55"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-quota-000025",
+              "uuid": "59c66cb9-4c01-4a4c-af49-4fe26c000e2c",
+              "timestamp": "2026-11-07T16:13:30.150Z",
+              "canonical_item_sha256": "c11abb636682e95b511592d2f1a0dee9081e84315ab73be9ea554acb81321ac4"
+            }
+          ]
+        }
+      ],
+      "wire": {
+        "requests": 3,
+        "event_rows": 45,
+        "privacy_pass": true,
+        "violation_counts": {},
+        "wire_body_bytes": 18261,
+        "lost_acks": 0,
+        "event_uuids": {
+          "synthetic-http-42389745788-quota-000001": {
+            "rows": 2,
+            "uuids": [
+              "425b26e1-6fb2-46bf-9e90-b33a3003ab36"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000002": {
+            "rows": 2,
+            "uuids": [
+              "b6c16ad7-5840-4854-949f-bc807079826c"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000003": {
+            "rows": 2,
+            "uuids": [
+              "d7e1a32c-fbd4-4969-b08c-ec52d9386d4b"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000004": {
+            "rows": 2,
+            "uuids": [
+              "d0944fa9-dddf-4056-b514-d3d28a8ee5c1"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000005": {
+            "rows": 2,
+            "uuids": [
+              "3bfe70cc-854a-4ed6-af9b-ae8a89c8d4f4"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000006": {
+            "rows": 2,
+            "uuids": [
+              "1301107e-715e-4de3-8676-09133b40bfd8"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000007": {
+            "rows": 2,
+            "uuids": [
+              "655cc7cc-ac53-4949-9e33-87072595c133"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000008": {
+            "rows": 2,
+            "uuids": [
+              "8f3b7ed8-740b-47d1-bdf2-475e192045c8"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000009": {
+            "rows": 2,
+            "uuids": [
+              "b5f18bb3-57fb-46ae-9037-ee0930ed7d74"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000010": {
+            "rows": 2,
+            "uuids": [
+              "c618efc0-7124-4be4-862f-0999ab97ea02"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000011": {
+            "rows": 2,
+            "uuids": [
+              "ede5e9dc-dad9-409d-b2cb-60c85f11f780"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000012": {
+            "rows": 2,
+            "uuids": [
+              "9cb6df62-cd71-4fb7-982a-2e30bfff3f67"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000013": {
+            "rows": 2,
+            "uuids": [
+              "a36d75cb-7f5f-4dde-a5ef-364d63b63612"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000014": {
+            "rows": 2,
+            "uuids": [
+              "84e485f4-faef-459c-8d6e-a7d1f0a3009d"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000015": {
+            "rows": 2,
+            "uuids": [
+              "92adb4a6-ea98-4fc9-b3df-6ca2e9c6ac3f"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000016": {
+            "rows": 2,
+            "uuids": [
+              "64b1e6e4-3bd3-4e9a-a713-6fbda08d62ff"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000017": {
+            "rows": 2,
+            "uuids": [
+              "3519d4e7-7ef9-46dc-aa80-5dcf4a27fc3e"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000018": {
+            "rows": 2,
+            "uuids": [
+              "365050a1-cbbc-4bd1-b813-7d85c7bdfb96"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000019": {
+            "rows": 2,
+            "uuids": [
+              "70a41096-4821-4152-b24a-f7b07984178a"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000020": {
+            "rows": 2,
+            "uuids": [
+              "bc312012-f535-4916-96ba-1735a8bebc77"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000021": {
+            "rows": 1,
+            "uuids": [
+              "5d8fd1c5-38e8-41e2-b640-7699bfa69f87"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000022": {
+            "rows": 1,
+            "uuids": [
+              "bde836a7-abf8-42b9-b3e8-67f796dc5b1b"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000023": {
+            "rows": 1,
+            "uuids": [
+              "3beede14-c0f1-4509-999b-13c5701d854d"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000024": {
+            "rows": 1,
+            "uuids": [
+              "6949d4d0-c3e3-4742-8cfe-1273d88c396f"
+            ]
+          },
+          "synthetic-http-42389745788-quota-000025": {
+            "rows": 1,
+            "uuids": [
+              "59c66cb9-4c01-4a4c-af49-4fe26c000e2c"
+            ]
+          }
+        }
+      },
+      "synthetic_case_reset_not_revocation": true
+    },
+    "malformed": {
+      "status": "PASS",
+      "fixture": "malformed",
+      "before": {
+        "schema_version": 1,
+        "action_nonce": "646897419d064599970001235fcaa4ee",
+        "action": "capture",
+        "action_ok": true,
+        "error": "",
+        "pid": 9361,
+        "run_id": "synthetic-http-42389745788-malformed",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 0,
+        "preflight_rejected": 0,
+        "requests_started": 0,
+        "requests_acked": 0,
+        "transport_failures": 0,
+        "dispatch_attempts": 0,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "16107460ddee33b09de5b3c8d0449b4a6090499e5db17a82cce0af304e962e4d",
+        "queue_after_batch_sha256": "948a588f784daabf7d43d378673b699e99308bf9c944b395aa170f883153a9e9",
+        "queue_count": 25,
+        "queue_bytes": 10341,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "0bf6d2016f50f124d4dbf0735209fe36062962a5c5fb5b9bbe668ca0b3b6ecec",
+        "setting_value": "synthetic-setting-be87b991-7a70-4be7-8944-4014c3711716",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "retained": {
+        "schema_version": 1,
+        "action_nonce": "79c079d46c5b45f8b344ffa3680c70db",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9361,
+        "run_id": "synthetic-http-42389745788-malformed",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 2,
+        "dispatch_attempts": 2,
+        "last_response_category": "MALFORMED_RESPONSE",
+        "queue_snapshot_sha256": "16107460ddee33b09de5b3c8d0449b4a6090499e5db17a82cce0af304e962e4d",
+        "queue_after_batch_sha256": "948a588f784daabf7d43d378673b699e99308bf9c944b395aa170f883153a9e9",
+        "queue_count": 25,
+        "queue_bytes": 10341,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "0bf6d2016f50f124d4dbf0735209fe36062962a5c5fb5b9bbe668ca0b3b6ecec",
+        "setting_value": "synthetic-setting-be87b991-7a70-4be7-8944-4014c3711716",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "final": {
+        "schema_version": 1,
+        "action_nonce": "8d5bfd0fd0894f628e3b5eb519186f52",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9483,
+        "run_id": "synthetic-http-42389745788-malformed",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 5,
+        "preflight_rejected": 0,
+        "requests_started": 3,
+        "requests_acked": 2,
+        "transport_failures": 3,
+        "dispatch_attempts": 5,
+        "last_response_category": "ACKNOWLEDGED",
+        "queue_snapshot_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_after_batch_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_count": 0,
+        "queue_bytes": 0,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "0bf6d2016f50f124d4dbf0735209fe36062962a5c5fb5b9bbe668ca0b3b6ecec",
+        "setting_value": "synthetic-setting-be87b991-7a70-4be7-8944-4014c3711716",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "state_before_ack": null,
+      "state_restart_offline": {
+        "schema_version": 1,
+        "action_nonce": "8828887863f04cc49d7089c31f2bb31f",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9483,
+        "run_id": "synthetic-http-42389745788-malformed",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 2,
+        "dispatch_attempts": 2,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "16107460ddee33b09de5b3c8d0449b4a6090499e5db17a82cce0af304e962e4d",
+        "queue_after_batch_sha256": "948a588f784daabf7d43d378673b699e99308bf9c944b395aa170f883153a9e9",
+        "queue_count": 25,
+        "queue_bytes": 10341,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "0bf6d2016f50f124d4dbf0735209fe36062962a5c5fb5b9bbe668ca0b3b6ecec",
+        "setting_value": "synthetic-setting-be87b991-7a70-4be7-8944-4014c3711716",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "receiver": {
+        "expected_unique": 25,
+        "received_rows": 45,
+        "received_unique": 25,
+        "missing_ids": [],
+        "unexpected_ids": [],
+        "duplicate_rows": 20,
+        "conflicting_ids": [],
+        "delivery_ratio": 1.0
+      },
+      "requests_proof": [
+        {
+          "request_index": 1,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000001",
+              "uuid": "9aabf892-eae8-4b57-9225-83d3f3dfe4ba",
+              "timestamp": "2026-11-07T16:13:32.947Z",
+              "canonical_item_sha256": "a220724aee16b2f4fd410fdff1a04d993a627506aeb8bb7640ddec376974acbf"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000002",
+              "uuid": "211b091c-ffbe-40e5-b458-d628cc2d00ae",
+              "timestamp": "2026-11-07T16:13:32.950Z",
+              "canonical_item_sha256": "d3b7bb3530e0cc98090cc415d7bab4e4d13e9db7f6b4b91db669cb72bba1cae0"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000003",
+              "uuid": "cd89716d-7f59-422c-bff8-ed60773fce42",
+              "timestamp": "2026-11-07T16:13:32.952Z",
+              "canonical_item_sha256": "e2e9bb029d8670e163bde1dce2d863ff20cd3bf8f1a87c9bd0a4531679872472"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000004",
+              "uuid": "8376a905-06b4-46d3-863f-a8336d4e40fc",
+              "timestamp": "2026-11-07T16:13:32.952Z",
+              "canonical_item_sha256": "665ea181ead56ba5da2d396de5536b9fcd465b75595de42c62a5f93dac61e18f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000005",
+              "uuid": "e90a770a-3771-40b3-a18f-51d46faa44a1",
+              "timestamp": "2026-11-07T16:13:32.953Z",
+              "canonical_item_sha256": "216c85a75a8c0327a418909694e3a653c55b10a252556758c7df8e99bf1a0b5f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000006",
+              "uuid": "9b125b88-32a9-4223-b30a-caa05f73af37",
+              "timestamp": "2026-11-07T16:13:32.954Z",
+              "canonical_item_sha256": "7596008fcdd63b02f9986d77e3c55abfa41c0cb4592cf893427200c9f216a66f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000007",
+              "uuid": "62c2ef3b-e30f-4849-9bd4-140587474d73",
+              "timestamp": "2026-11-07T16:13:32.955Z",
+              "canonical_item_sha256": "d73666cda1ddcff99b794727d96b74bb74ae719db336d1fe5bc425d40c9d6611"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000008",
+              "uuid": "f5107085-0c57-402c-948e-939d691ab917",
+              "timestamp": "2026-11-07T16:13:32.956Z",
+              "canonical_item_sha256": "2ece6e9f1e2a4f4785c019701775edfe634a19e2d6b025cd8a524df956df5824"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000009",
+              "uuid": "b664219b-c7c1-4dfc-875e-76eacd5fa729",
+              "timestamp": "2026-11-07T16:13:32.957Z",
+              "canonical_item_sha256": "7532c96d6be1814a3897c9db000445cfe4310bce889b8113c88df3cbdeafdcc1"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000010",
+              "uuid": "2e44bfb9-3a1c-43f1-8de7-dff377482b55",
+              "timestamp": "2026-11-07T16:13:32.958Z",
+              "canonical_item_sha256": "f42e3a0c53c72492681c027e30317c0f90b77a9be71f1419a7f0e146f1c81218"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000011",
+              "uuid": "e60f8132-6732-4569-9f89-b95f4461e393",
+              "timestamp": "2026-11-07T16:13:32.959Z",
+              "canonical_item_sha256": "42029a505ae53c66a3ee5e42faaa7f4d239e06b02f38d5ff25b37b59cf3e58fa"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000012",
+              "uuid": "6963298e-6210-4b77-928b-d5df2ed32153",
+              "timestamp": "2026-11-07T16:13:32.960Z",
+              "canonical_item_sha256": "7dfdd0798f450d5e8b22d1a61213fe944287ef3fcd0e857bd2d3fe2ff603aeb4"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000013",
+              "uuid": "54b5226b-1ba9-47fa-94f4-c7e45f0f8372",
+              "timestamp": "2026-11-07T16:13:32.961Z",
+              "canonical_item_sha256": "692bbeea48316663780075e263dbe95f64f93c730ade93e26a69ad62c6d7f020"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000014",
+              "uuid": "e000cdb0-1ea5-492b-9cd0-b81687e5728f",
+              "timestamp": "2026-11-07T16:13:32.962Z",
+              "canonical_item_sha256": "23e5e6a6a62ddb1ad1ba9c9b046ab2391345a8c27662602423b3f2d2d690c61f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000015",
+              "uuid": "d03da7e9-d5c3-4139-9b00-2a5a46309dd1",
+              "timestamp": "2026-11-07T16:13:32.963Z",
+              "canonical_item_sha256": "5f9a77d2cb8ad70ecf8a61e5ee1e468b7aceac27fe72888b49a3ec1c5c3edced"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000016",
+              "uuid": "498b2dcd-216b-4b38-9514-ac11a3cbcc75",
+              "timestamp": "2026-11-07T16:13:32.964Z",
+              "canonical_item_sha256": "dc4266abca5530306722e0e25877994cf23add577025c8b6eb6f4fe05c2eb352"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000017",
+              "uuid": "48a2f22e-80f1-4e84-8976-4244ef6c34b6",
+              "timestamp": "2026-11-07T16:13:32.966Z",
+              "canonical_item_sha256": "ed88b204d61b1437478394349978ff14a37b3fdff6094a9388d63c03c6a8a676"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000018",
+              "uuid": "73399bc5-47d3-423b-92e7-2354051aa060",
+              "timestamp": "2026-11-07T16:13:32.967Z",
+              "canonical_item_sha256": "b72be7a8f5e7c48386a1f63ef97b65cad9bef419c3aefda8e118d3d4a3cfa2eb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000019",
+              "uuid": "70acd950-fe93-46f2-a027-b20602babc07",
+              "timestamp": "2026-11-07T16:13:32.968Z",
+              "canonical_item_sha256": "c197a0c3dd8c6f4f418cbc51836a97274ecd613654ad9300430acb567fd81961"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000020",
+              "uuid": "7b0ab1d1-32ab-4ef8-b63f-5391523ba58a",
+              "timestamp": "2026-11-07T16:13:32.969Z",
+              "canonical_item_sha256": "b7398487721045f645a2116fadf4ac88643f38056e3e1139b2658908c0a912ea"
+            }
+          ]
+        },
+        {
+          "request_index": 2,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000001",
+              "uuid": "9aabf892-eae8-4b57-9225-83d3f3dfe4ba",
+              "timestamp": "2026-11-07T16:13:32.947Z",
+              "canonical_item_sha256": "a220724aee16b2f4fd410fdff1a04d993a627506aeb8bb7640ddec376974acbf"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000002",
+              "uuid": "211b091c-ffbe-40e5-b458-d628cc2d00ae",
+              "timestamp": "2026-11-07T16:13:32.950Z",
+              "canonical_item_sha256": "d3b7bb3530e0cc98090cc415d7bab4e4d13e9db7f6b4b91db669cb72bba1cae0"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000003",
+              "uuid": "cd89716d-7f59-422c-bff8-ed60773fce42",
+              "timestamp": "2026-11-07T16:13:32.952Z",
+              "canonical_item_sha256": "e2e9bb029d8670e163bde1dce2d863ff20cd3bf8f1a87c9bd0a4531679872472"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000004",
+              "uuid": "8376a905-06b4-46d3-863f-a8336d4e40fc",
+              "timestamp": "2026-11-07T16:13:32.952Z",
+              "canonical_item_sha256": "665ea181ead56ba5da2d396de5536b9fcd465b75595de42c62a5f93dac61e18f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000005",
+              "uuid": "e90a770a-3771-40b3-a18f-51d46faa44a1",
+              "timestamp": "2026-11-07T16:13:32.953Z",
+              "canonical_item_sha256": "216c85a75a8c0327a418909694e3a653c55b10a252556758c7df8e99bf1a0b5f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000006",
+              "uuid": "9b125b88-32a9-4223-b30a-caa05f73af37",
+              "timestamp": "2026-11-07T16:13:32.954Z",
+              "canonical_item_sha256": "7596008fcdd63b02f9986d77e3c55abfa41c0cb4592cf893427200c9f216a66f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000007",
+              "uuid": "62c2ef3b-e30f-4849-9bd4-140587474d73",
+              "timestamp": "2026-11-07T16:13:32.955Z",
+              "canonical_item_sha256": "d73666cda1ddcff99b794727d96b74bb74ae719db336d1fe5bc425d40c9d6611"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000008",
+              "uuid": "f5107085-0c57-402c-948e-939d691ab917",
+              "timestamp": "2026-11-07T16:13:32.956Z",
+              "canonical_item_sha256": "2ece6e9f1e2a4f4785c019701775edfe634a19e2d6b025cd8a524df956df5824"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000009",
+              "uuid": "b664219b-c7c1-4dfc-875e-76eacd5fa729",
+              "timestamp": "2026-11-07T16:13:32.957Z",
+              "canonical_item_sha256": "7532c96d6be1814a3897c9db000445cfe4310bce889b8113c88df3cbdeafdcc1"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000010",
+              "uuid": "2e44bfb9-3a1c-43f1-8de7-dff377482b55",
+              "timestamp": "2026-11-07T16:13:32.958Z",
+              "canonical_item_sha256": "f42e3a0c53c72492681c027e30317c0f90b77a9be71f1419a7f0e146f1c81218"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000011",
+              "uuid": "e60f8132-6732-4569-9f89-b95f4461e393",
+              "timestamp": "2026-11-07T16:13:32.959Z",
+              "canonical_item_sha256": "42029a505ae53c66a3ee5e42faaa7f4d239e06b02f38d5ff25b37b59cf3e58fa"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000012",
+              "uuid": "6963298e-6210-4b77-928b-d5df2ed32153",
+              "timestamp": "2026-11-07T16:13:32.960Z",
+              "canonical_item_sha256": "7dfdd0798f450d5e8b22d1a61213fe944287ef3fcd0e857bd2d3fe2ff603aeb4"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000013",
+              "uuid": "54b5226b-1ba9-47fa-94f4-c7e45f0f8372",
+              "timestamp": "2026-11-07T16:13:32.961Z",
+              "canonical_item_sha256": "692bbeea48316663780075e263dbe95f64f93c730ade93e26a69ad62c6d7f020"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000014",
+              "uuid": "e000cdb0-1ea5-492b-9cd0-b81687e5728f",
+              "timestamp": "2026-11-07T16:13:32.962Z",
+              "canonical_item_sha256": "23e5e6a6a62ddb1ad1ba9c9b046ab2391345a8c27662602423b3f2d2d690c61f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000015",
+              "uuid": "d03da7e9-d5c3-4139-9b00-2a5a46309dd1",
+              "timestamp": "2026-11-07T16:13:32.963Z",
+              "canonical_item_sha256": "5f9a77d2cb8ad70ecf8a61e5ee1e468b7aceac27fe72888b49a3ec1c5c3edced"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000016",
+              "uuid": "498b2dcd-216b-4b38-9514-ac11a3cbcc75",
+              "timestamp": "2026-11-07T16:13:32.964Z",
+              "canonical_item_sha256": "dc4266abca5530306722e0e25877994cf23add577025c8b6eb6f4fe05c2eb352"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000017",
+              "uuid": "48a2f22e-80f1-4e84-8976-4244ef6c34b6",
+              "timestamp": "2026-11-07T16:13:32.966Z",
+              "canonical_item_sha256": "ed88b204d61b1437478394349978ff14a37b3fdff6094a9388d63c03c6a8a676"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000018",
+              "uuid": "73399bc5-47d3-423b-92e7-2354051aa060",
+              "timestamp": "2026-11-07T16:13:32.967Z",
+              "canonical_item_sha256": "b72be7a8f5e7c48386a1f63ef97b65cad9bef419c3aefda8e118d3d4a3cfa2eb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000019",
+              "uuid": "70acd950-fe93-46f2-a027-b20602babc07",
+              "timestamp": "2026-11-07T16:13:32.968Z",
+              "canonical_item_sha256": "c197a0c3dd8c6f4f418cbc51836a97274ecd613654ad9300430acb567fd81961"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000020",
+              "uuid": "7b0ab1d1-32ab-4ef8-b63f-5391523ba58a",
+              "timestamp": "2026-11-07T16:13:32.969Z",
+              "canonical_item_sha256": "b7398487721045f645a2116fadf4ac88643f38056e3e1139b2658908c0a912ea"
+            }
+          ]
+        },
+        {
+          "request_index": 3,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000021",
+              "uuid": "fb8ccb99-c9de-471a-9edd-0c114bfc23ee",
+              "timestamp": "2026-11-07T16:13:32.970Z",
+              "canonical_item_sha256": "56b48f8977fb98cb5a47cf7257f329dafa169980cea50bb61d66fce440d4cfaa"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000022",
+              "uuid": "a01e4ce9-1dfc-4e40-a9ea-3eb47c71cddc",
+              "timestamp": "2026-11-07T16:13:32.972Z",
+              "canonical_item_sha256": "dc11dfc1392482e1010ca7ec0c1e886c00f0a8e80b58e76341cba680dc7776b4"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000023",
+              "uuid": "5067bab7-7c57-4e63-a848-19c8e3dd2210",
+              "timestamp": "2026-11-07T16:13:32.973Z",
+              "canonical_item_sha256": "1c9dd200d2cedcb4aadae51243b2387925f7e1f95cd5d4cecf16858ba857a546"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000024",
+              "uuid": "4a548e61-eea7-409a-98fe-8f1735915e99",
+              "timestamp": "2026-11-07T16:13:32.974Z",
+              "canonical_item_sha256": "812dfe4da6e13f98d524e022261b335a494e9381cfcf553761346c65bb96389a"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-malformed-000025",
+              "uuid": "d21cf10d-2cf7-4cba-917e-32dd3a421ddd",
+              "timestamp": "2026-11-07T16:13:32.974Z",
+              "canonical_item_sha256": "a350d72c787850cc77f1203c325a869bb4037de5b31c9eddd397cd4e27885747"
+            }
+          ]
+        }
+      ],
+      "wire": {
+        "requests": 3,
+        "event_rows": 45,
+        "privacy_pass": true,
+        "violation_counts": {},
+        "wire_body_bytes": 18801,
+        "lost_acks": 0,
+        "event_uuids": {
+          "synthetic-http-42389745788-malformed-000001": {
+            "rows": 2,
+            "uuids": [
+              "9aabf892-eae8-4b57-9225-83d3f3dfe4ba"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000002": {
+            "rows": 2,
+            "uuids": [
+              "211b091c-ffbe-40e5-b458-d628cc2d00ae"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000003": {
+            "rows": 2,
+            "uuids": [
+              "cd89716d-7f59-422c-bff8-ed60773fce42"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000004": {
+            "rows": 2,
+            "uuids": [
+              "8376a905-06b4-46d3-863f-a8336d4e40fc"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000005": {
+            "rows": 2,
+            "uuids": [
+              "e90a770a-3771-40b3-a18f-51d46faa44a1"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000006": {
+            "rows": 2,
+            "uuids": [
+              "9b125b88-32a9-4223-b30a-caa05f73af37"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000007": {
+            "rows": 2,
+            "uuids": [
+              "62c2ef3b-e30f-4849-9bd4-140587474d73"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000008": {
+            "rows": 2,
+            "uuids": [
+              "f5107085-0c57-402c-948e-939d691ab917"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000009": {
+            "rows": 2,
+            "uuids": [
+              "b664219b-c7c1-4dfc-875e-76eacd5fa729"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000010": {
+            "rows": 2,
+            "uuids": [
+              "2e44bfb9-3a1c-43f1-8de7-dff377482b55"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000011": {
+            "rows": 2,
+            "uuids": [
+              "e60f8132-6732-4569-9f89-b95f4461e393"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000012": {
+            "rows": 2,
+            "uuids": [
+              "6963298e-6210-4b77-928b-d5df2ed32153"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000013": {
+            "rows": 2,
+            "uuids": [
+              "54b5226b-1ba9-47fa-94f4-c7e45f0f8372"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000014": {
+            "rows": 2,
+            "uuids": [
+              "e000cdb0-1ea5-492b-9cd0-b81687e5728f"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000015": {
+            "rows": 2,
+            "uuids": [
+              "d03da7e9-d5c3-4139-9b00-2a5a46309dd1"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000016": {
+            "rows": 2,
+            "uuids": [
+              "498b2dcd-216b-4b38-9514-ac11a3cbcc75"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000017": {
+            "rows": 2,
+            "uuids": [
+              "48a2f22e-80f1-4e84-8976-4244ef6c34b6"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000018": {
+            "rows": 2,
+            "uuids": [
+              "73399bc5-47d3-423b-92e7-2354051aa060"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000019": {
+            "rows": 2,
+            "uuids": [
+              "70acd950-fe93-46f2-a027-b20602babc07"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000020": {
+            "rows": 2,
+            "uuids": [
+              "7b0ab1d1-32ab-4ef8-b63f-5391523ba58a"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000021": {
+            "rows": 1,
+            "uuids": [
+              "fb8ccb99-c9de-471a-9edd-0c114bfc23ee"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000022": {
+            "rows": 1,
+            "uuids": [
+              "a01e4ce9-1dfc-4e40-a9ea-3eb47c71cddc"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000023": {
+            "rows": 1,
+            "uuids": [
+              "5067bab7-7c57-4e63-a848-19c8e3dd2210"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000024": {
+            "rows": 1,
+            "uuids": [
+              "4a548e61-eea7-409a-98fe-8f1735915e99"
+            ]
+          },
+          "synthetic-http-42389745788-malformed-000025": {
+            "rows": 1,
+            "uuids": [
+              "d21cf10d-2cf7-4cba-917e-32dd3a421ddd"
+            ]
+          }
+        }
+      },
+      "synthetic_case_reset_not_revocation": true
+    },
+    "utf8": {
+      "status": "PASS",
+      "fixture": "utf8",
+      "before": {
+        "schema_version": 1,
+        "action_nonce": "6c0457ae6cd44c62802da00fc208fd15",
+        "action": "capture",
+        "action_ok": true,
+        "error": "",
+        "pid": 9596,
+        "run_id": "synthetic-http-42389745788-utf8",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 0,
+        "preflight_rejected": 0,
+        "requests_started": 0,
+        "requests_acked": 0,
+        "transport_failures": 0,
+        "dispatch_attempts": 0,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "d495ede051bbdd65f569c75d04d0bdb8a339f442e6029f9adf3562a7f9abf683",
+        "queue_after_batch_sha256": "bfc3de0eb41c574ff1702e2d2cd2fedd34b07f08a3b227319807860acdc312a8",
+        "queue_count": 25,
+        "queue_bytes": 9966,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "775af9e9615780fb0b9cb5db324ad7a6361f52c224def87ee89d5880cdf8c6d8",
+        "setting_value": "synthetic-setting-570ddb45-f4b6-4a2a-bbbd-0ead79a7d0eb",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "retained": {
+        "schema_version": 1,
+        "action_nonce": "abb44a2776df4f36961758a4a713494a",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9596,
+        "run_id": "synthetic-http-42389745788-utf8",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 2,
+        "dispatch_attempts": 2,
+        "last_response_category": "MALFORMED_RESPONSE",
+        "queue_snapshot_sha256": "d495ede051bbdd65f569c75d04d0bdb8a339f442e6029f9adf3562a7f9abf683",
+        "queue_after_batch_sha256": "bfc3de0eb41c574ff1702e2d2cd2fedd34b07f08a3b227319807860acdc312a8",
+        "queue_count": 25,
+        "queue_bytes": 9966,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "775af9e9615780fb0b9cb5db324ad7a6361f52c224def87ee89d5880cdf8c6d8",
+        "setting_value": "synthetic-setting-570ddb45-f4b6-4a2a-bbbd-0ead79a7d0eb",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "final": {
+        "schema_version": 1,
+        "action_nonce": "653e518d17d140159dd774f1654b95ef",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9719,
+        "run_id": "synthetic-http-42389745788-utf8",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 5,
+        "preflight_rejected": 0,
+        "requests_started": 3,
+        "requests_acked": 2,
+        "transport_failures": 3,
+        "dispatch_attempts": 5,
+        "last_response_category": "ACKNOWLEDGED",
+        "queue_snapshot_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_after_batch_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_count": 0,
+        "queue_bytes": 0,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "775af9e9615780fb0b9cb5db324ad7a6361f52c224def87ee89d5880cdf8c6d8",
+        "setting_value": "synthetic-setting-570ddb45-f4b6-4a2a-bbbd-0ead79a7d0eb",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "state_before_ack": null,
+      "state_restart_offline": {
+        "schema_version": 1,
+        "action_nonce": "873790498f5841fc964a83a025c8e5a3",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9719,
+        "run_id": "synthetic-http-42389745788-utf8",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 2,
+        "dispatch_attempts": 2,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "d495ede051bbdd65f569c75d04d0bdb8a339f442e6029f9adf3562a7f9abf683",
+        "queue_after_batch_sha256": "bfc3de0eb41c574ff1702e2d2cd2fedd34b07f08a3b227319807860acdc312a8",
+        "queue_count": 25,
+        "queue_bytes": 9966,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "775af9e9615780fb0b9cb5db324ad7a6361f52c224def87ee89d5880cdf8c6d8",
+        "setting_value": "synthetic-setting-570ddb45-f4b6-4a2a-bbbd-0ead79a7d0eb",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "receiver": {
+        "expected_unique": 25,
+        "received_rows": 45,
+        "received_unique": 25,
+        "missing_ids": [],
+        "unexpected_ids": [],
+        "duplicate_rows": 20,
+        "conflicting_ids": [],
+        "delivery_ratio": 1.0
+      },
+      "requests_proof": [
+        {
+          "request_index": 1,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000001",
+              "uuid": "93a95931-7052-4e39-8838-9b2147df2b56",
+              "timestamp": "2026-11-07T16:13:36.767Z",
+              "canonical_item_sha256": "ce7799a4e753fb053046228293faeac6e7f944bb998f3f76b70c3e0ec35fbfb6"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000002",
+              "uuid": "ca46d1ef-2697-4ee6-a6e9-50846d3c6146",
+              "timestamp": "2026-11-07T16:13:36.769Z",
+              "canonical_item_sha256": "4bd1efecb7bf0b2f08074fd77d3619a03d14cc26e6cd6f0af6c4e6d0fbf6e773"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000003",
+              "uuid": "1dae25ac-0c0c-431d-adec-68a90fe587c9",
+              "timestamp": "2026-11-07T16:13:36.770Z",
+              "canonical_item_sha256": "1be042a2f9814539025392b8ba5c02907b0389ff93e56a1430da8a739de46348"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000004",
+              "uuid": "289c4dfb-fde0-43e0-8de5-aadab25e915e",
+              "timestamp": "2026-11-07T16:13:36.771Z",
+              "canonical_item_sha256": "b78a9dfa04e6746ac36cfc4bb7989d709e726a298e7527c868210c0e49ccb0f0"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000005",
+              "uuid": "a607ae72-3bdb-4298-a6cd-d71940ddf4e5",
+              "timestamp": "2026-11-07T16:13:36.772Z",
+              "canonical_item_sha256": "eb86ec7fd862145c31a4148d1420f5fbbc3d12e0996614aef4fe7f218a86191f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000006",
+              "uuid": "7c6dd20e-694d-4d28-b7c6-4f91bf8e7f35",
+              "timestamp": "2026-11-07T16:13:36.777Z",
+              "canonical_item_sha256": "3acf55dc6074c65444edc982d1cb3983a726bb73d990d46cb4034a5348b0d8b7"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000007",
+              "uuid": "a3ff25da-af49-48b9-91bc-28b7d76dd35e",
+              "timestamp": "2026-11-07T16:13:36.778Z",
+              "canonical_item_sha256": "b2b38486055cca03c26984ca405184d85defc5d2166e54e3b460223079a73dbc"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000008",
+              "uuid": "65f9fde9-8c4a-401e-b735-e0e4ffa2d7a2",
+              "timestamp": "2026-11-07T16:13:36.779Z",
+              "canonical_item_sha256": "6e3529c389ff0da356e247d908cb6cf1d63bd89af76dad359eb59984091b1601"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000009",
+              "uuid": "ae854a8a-9179-40ba-b219-2f87c3859269",
+              "timestamp": "2026-11-07T16:13:36.780Z",
+              "canonical_item_sha256": "872eeeb7add1f612543ffa07237ee2f55c1e42c19b5e5188c9449aff48910de3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000010",
+              "uuid": "bbcd6bef-a1ce-46e5-8224-1b5f51b58f19",
+              "timestamp": "2026-11-07T16:13:36.785Z",
+              "canonical_item_sha256": "2481c931d23b65dc47f5a9211908d802df3d17cac42fe8a65fc05d27d494fcb3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000011",
+              "uuid": "3d58cb3c-a549-4c3a-83da-43f530f7414d",
+              "timestamp": "2026-11-07T16:13:36.787Z",
+              "canonical_item_sha256": "ef0bef5faf2e34b09df45c860b9c3251ed0d76672dba584d7926afa9aacf9fe2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000012",
+              "uuid": "83c087b6-6f60-4f86-933a-27e221eb5470",
+              "timestamp": "2026-11-07T16:13:36.788Z",
+              "canonical_item_sha256": "3a08673c08af4f5c5390bb3d387a76981ae9470af5f26e97462d87c3f072fca1"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000013",
+              "uuid": "13b4fc90-58ef-4108-96e6-c5060da801d9",
+              "timestamp": "2026-11-07T16:13:36.792Z",
+              "canonical_item_sha256": "344a0f36a9f23308d00ddac25615728f75fd8fe4215d2b7d00248241be814de4"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000014",
+              "uuid": "e067ff09-e3f6-468f-ad6e-82bdc687d2e1",
+              "timestamp": "2026-11-07T16:13:36.793Z",
+              "canonical_item_sha256": "9f5be70a48f67aa605e5f197cde094f0834184de0c855c91c0157830805489e5"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000015",
+              "uuid": "78d63509-29d4-4b2f-8624-94618264e852",
+              "timestamp": "2026-11-07T16:13:36.794Z",
+              "canonical_item_sha256": "91af35885718b9168f9d168e23fcced13eb16f233e14f9fa39693578467fe0c3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000016",
+              "uuid": "29e6628b-793e-4c65-8f4e-9083d0b06007",
+              "timestamp": "2026-11-07T16:13:36.795Z",
+              "canonical_item_sha256": "869caef9b5d2a9cef71d658dfc1d192cb47d3a15328b17fa52e00279f4dc171a"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000017",
+              "uuid": "58b46400-17ae-47c1-b5f1-908e4d0b7d51",
+              "timestamp": "2026-11-07T16:13:36.796Z",
+              "canonical_item_sha256": "c295a946216f2a70862fa8c727fa312b800f6a20e6f72f6be3b532849aa12d73"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000018",
+              "uuid": "61aff818-ee11-4e4e-a2d0-249bb42c71f1",
+              "timestamp": "2026-11-07T16:13:36.797Z",
+              "canonical_item_sha256": "eccbd6d262c3f7176c841111000dad5fe1da08a7a159953c15c92588edbb3297"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000019",
+              "uuid": "a7af0404-18da-4028-9a93-333c0a81a184",
+              "timestamp": "2026-11-07T16:13:36.798Z",
+              "canonical_item_sha256": "5824df875069d8aaf2466a895b268730c2e140d3047e4736f7eb67a26fedbd69"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000020",
+              "uuid": "c9c3b74d-8303-43d6-a592-397a2e9f7343",
+              "timestamp": "2026-11-07T16:13:36.799Z",
+              "canonical_item_sha256": "5d404ebaed43b42ced48a33dd1f309bd84d7cf698380da4432abc138b8b583ae"
+            }
+          ]
+        },
+        {
+          "request_index": 2,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000001",
+              "uuid": "93a95931-7052-4e39-8838-9b2147df2b56",
+              "timestamp": "2026-11-07T16:13:36.767Z",
+              "canonical_item_sha256": "ce7799a4e753fb053046228293faeac6e7f944bb998f3f76b70c3e0ec35fbfb6"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000002",
+              "uuid": "ca46d1ef-2697-4ee6-a6e9-50846d3c6146",
+              "timestamp": "2026-11-07T16:13:36.769Z",
+              "canonical_item_sha256": "4bd1efecb7bf0b2f08074fd77d3619a03d14cc26e6cd6f0af6c4e6d0fbf6e773"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000003",
+              "uuid": "1dae25ac-0c0c-431d-adec-68a90fe587c9",
+              "timestamp": "2026-11-07T16:13:36.770Z",
+              "canonical_item_sha256": "1be042a2f9814539025392b8ba5c02907b0389ff93e56a1430da8a739de46348"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000004",
+              "uuid": "289c4dfb-fde0-43e0-8de5-aadab25e915e",
+              "timestamp": "2026-11-07T16:13:36.771Z",
+              "canonical_item_sha256": "b78a9dfa04e6746ac36cfc4bb7989d709e726a298e7527c868210c0e49ccb0f0"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000005",
+              "uuid": "a607ae72-3bdb-4298-a6cd-d71940ddf4e5",
+              "timestamp": "2026-11-07T16:13:36.772Z",
+              "canonical_item_sha256": "eb86ec7fd862145c31a4148d1420f5fbbc3d12e0996614aef4fe7f218a86191f"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000006",
+              "uuid": "7c6dd20e-694d-4d28-b7c6-4f91bf8e7f35",
+              "timestamp": "2026-11-07T16:13:36.777Z",
+              "canonical_item_sha256": "3acf55dc6074c65444edc982d1cb3983a726bb73d990d46cb4034a5348b0d8b7"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000007",
+              "uuid": "a3ff25da-af49-48b9-91bc-28b7d76dd35e",
+              "timestamp": "2026-11-07T16:13:36.778Z",
+              "canonical_item_sha256": "b2b38486055cca03c26984ca405184d85defc5d2166e54e3b460223079a73dbc"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000008",
+              "uuid": "65f9fde9-8c4a-401e-b735-e0e4ffa2d7a2",
+              "timestamp": "2026-11-07T16:13:36.779Z",
+              "canonical_item_sha256": "6e3529c389ff0da356e247d908cb6cf1d63bd89af76dad359eb59984091b1601"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000009",
+              "uuid": "ae854a8a-9179-40ba-b219-2f87c3859269",
+              "timestamp": "2026-11-07T16:13:36.780Z",
+              "canonical_item_sha256": "872eeeb7add1f612543ffa07237ee2f55c1e42c19b5e5188c9449aff48910de3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000010",
+              "uuid": "bbcd6bef-a1ce-46e5-8224-1b5f51b58f19",
+              "timestamp": "2026-11-07T16:13:36.785Z",
+              "canonical_item_sha256": "2481c931d23b65dc47f5a9211908d802df3d17cac42fe8a65fc05d27d494fcb3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000011",
+              "uuid": "3d58cb3c-a549-4c3a-83da-43f530f7414d",
+              "timestamp": "2026-11-07T16:13:36.787Z",
+              "canonical_item_sha256": "ef0bef5faf2e34b09df45c860b9c3251ed0d76672dba584d7926afa9aacf9fe2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000012",
+              "uuid": "83c087b6-6f60-4f86-933a-27e221eb5470",
+              "timestamp": "2026-11-07T16:13:36.788Z",
+              "canonical_item_sha256": "3a08673c08af4f5c5390bb3d387a76981ae9470af5f26e97462d87c3f072fca1"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000013",
+              "uuid": "13b4fc90-58ef-4108-96e6-c5060da801d9",
+              "timestamp": "2026-11-07T16:13:36.792Z",
+              "canonical_item_sha256": "344a0f36a9f23308d00ddac25615728f75fd8fe4215d2b7d00248241be814de4"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000014",
+              "uuid": "e067ff09-e3f6-468f-ad6e-82bdc687d2e1",
+              "timestamp": "2026-11-07T16:13:36.793Z",
+              "canonical_item_sha256": "9f5be70a48f67aa605e5f197cde094f0834184de0c855c91c0157830805489e5"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000015",
+              "uuid": "78d63509-29d4-4b2f-8624-94618264e852",
+              "timestamp": "2026-11-07T16:13:36.794Z",
+              "canonical_item_sha256": "91af35885718b9168f9d168e23fcced13eb16f233e14f9fa39693578467fe0c3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000016",
+              "uuid": "29e6628b-793e-4c65-8f4e-9083d0b06007",
+              "timestamp": "2026-11-07T16:13:36.795Z",
+              "canonical_item_sha256": "869caef9b5d2a9cef71d658dfc1d192cb47d3a15328b17fa52e00279f4dc171a"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000017",
+              "uuid": "58b46400-17ae-47c1-b5f1-908e4d0b7d51",
+              "timestamp": "2026-11-07T16:13:36.796Z",
+              "canonical_item_sha256": "c295a946216f2a70862fa8c727fa312b800f6a20e6f72f6be3b532849aa12d73"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000018",
+              "uuid": "61aff818-ee11-4e4e-a2d0-249bb42c71f1",
+              "timestamp": "2026-11-07T16:13:36.797Z",
+              "canonical_item_sha256": "eccbd6d262c3f7176c841111000dad5fe1da08a7a159953c15c92588edbb3297"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000019",
+              "uuid": "a7af0404-18da-4028-9a93-333c0a81a184",
+              "timestamp": "2026-11-07T16:13:36.798Z",
+              "canonical_item_sha256": "5824df875069d8aaf2466a895b268730c2e140d3047e4736f7eb67a26fedbd69"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000020",
+              "uuid": "c9c3b74d-8303-43d6-a592-397a2e9f7343",
+              "timestamp": "2026-11-07T16:13:36.799Z",
+              "canonical_item_sha256": "5d404ebaed43b42ced48a33dd1f309bd84d7cf698380da4432abc138b8b583ae"
+            }
+          ]
+        },
+        {
+          "request_index": 3,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000021",
+              "uuid": "2dddbe79-4271-4220-81a8-edc2f4693391",
+              "timestamp": "2026-11-07T16:13:36.800Z",
+              "canonical_item_sha256": "397b85fd47e5786742b85ed8e303bf0754e604de9a5a1efc92b3fadd935838f9"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000022",
+              "uuid": "dc91dd57-02c4-4ee3-9990-b7122715d1cd",
+              "timestamp": "2026-11-07T16:13:36.804Z",
+              "canonical_item_sha256": "00da7eeda611d220f36758920bc16635d8f30102d7efd3d98589ddfbacbe8018"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000023",
+              "uuid": "1ddc7878-ca52-4de6-9469-b2aac23c7fdb",
+              "timestamp": "2026-11-07T16:13:36.805Z",
+              "canonical_item_sha256": "b86846c5a9007068b9a88d9994b19a29a3b4d2b0f8731d2c847b49f5c274ed64"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000024",
+              "uuid": "6cdbf337-3096-479f-b0dd-51cda89d0723",
+              "timestamp": "2026-11-07T16:13:36.806Z",
+              "canonical_item_sha256": "51931a5ba78f39ae3b9382c091106d6cbbefdc62fcb7fd7ce5c5189b750dd984"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-utf8-000025",
+              "uuid": "3ceb402b-4b97-4e07-b177-debdbbfc6858",
+              "timestamp": "2026-11-07T16:13:36.807Z",
+              "canonical_item_sha256": "9c85386e85858d3dd16ffaaa606374ffde4582003eb57731866a20b349087546"
+            }
+          ]
+        }
+      ],
+      "wire": {
+        "requests": 3,
+        "event_rows": 45,
+        "privacy_pass": true,
+        "violation_counts": {},
+        "wire_body_bytes": 18126,
+        "lost_acks": 0,
+        "event_uuids": {
+          "synthetic-http-42389745788-utf8-000001": {
+            "rows": 2,
+            "uuids": [
+              "93a95931-7052-4e39-8838-9b2147df2b56"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000002": {
+            "rows": 2,
+            "uuids": [
+              "ca46d1ef-2697-4ee6-a6e9-50846d3c6146"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000003": {
+            "rows": 2,
+            "uuids": [
+              "1dae25ac-0c0c-431d-adec-68a90fe587c9"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000004": {
+            "rows": 2,
+            "uuids": [
+              "289c4dfb-fde0-43e0-8de5-aadab25e915e"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000005": {
+            "rows": 2,
+            "uuids": [
+              "a607ae72-3bdb-4298-a6cd-d71940ddf4e5"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000006": {
+            "rows": 2,
+            "uuids": [
+              "7c6dd20e-694d-4d28-b7c6-4f91bf8e7f35"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000007": {
+            "rows": 2,
+            "uuids": [
+              "a3ff25da-af49-48b9-91bc-28b7d76dd35e"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000008": {
+            "rows": 2,
+            "uuids": [
+              "65f9fde9-8c4a-401e-b735-e0e4ffa2d7a2"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000009": {
+            "rows": 2,
+            "uuids": [
+              "ae854a8a-9179-40ba-b219-2f87c3859269"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000010": {
+            "rows": 2,
+            "uuids": [
+              "bbcd6bef-a1ce-46e5-8224-1b5f51b58f19"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000011": {
+            "rows": 2,
+            "uuids": [
+              "3d58cb3c-a549-4c3a-83da-43f530f7414d"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000012": {
+            "rows": 2,
+            "uuids": [
+              "83c087b6-6f60-4f86-933a-27e221eb5470"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000013": {
+            "rows": 2,
+            "uuids": [
+              "13b4fc90-58ef-4108-96e6-c5060da801d9"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000014": {
+            "rows": 2,
+            "uuids": [
+              "e067ff09-e3f6-468f-ad6e-82bdc687d2e1"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000015": {
+            "rows": 2,
+            "uuids": [
+              "78d63509-29d4-4b2f-8624-94618264e852"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000016": {
+            "rows": 2,
+            "uuids": [
+              "29e6628b-793e-4c65-8f4e-9083d0b06007"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000017": {
+            "rows": 2,
+            "uuids": [
+              "58b46400-17ae-47c1-b5f1-908e4d0b7d51"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000018": {
+            "rows": 2,
+            "uuids": [
+              "61aff818-ee11-4e4e-a2d0-249bb42c71f1"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000019": {
+            "rows": 2,
+            "uuids": [
+              "a7af0404-18da-4028-9a93-333c0a81a184"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000020": {
+            "rows": 2,
+            "uuids": [
+              "c9c3b74d-8303-43d6-a592-397a2e9f7343"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000021": {
+            "rows": 1,
+            "uuids": [
+              "2dddbe79-4271-4220-81a8-edc2f4693391"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000022": {
+            "rows": 1,
+            "uuids": [
+              "dc91dd57-02c4-4ee3-9990-b7122715d1cd"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000023": {
+            "rows": 1,
+            "uuids": [
+              "1ddc7878-ca52-4de6-9469-b2aac23c7fdb"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000024": {
+            "rows": 1,
+            "uuids": [
+              "6cdbf337-3096-479f-b0dd-51cda89d0723"
+            ]
+          },
+          "synthetic-http-42389745788-utf8-000025": {
+            "rows": 1,
+            "uuids": [
+              "3ceb402b-4b97-4e07-b177-debdbbfc6858"
+            ]
+          }
+        }
+      },
+      "synthetic_case_reset_not_revocation": true
+    },
+    "unknown": {
+      "status": "PASS",
+      "fixture": "unknown",
+      "before": {
+        "schema_version": 1,
+        "action_nonce": "33be6ce7ec04492fb369033149e20845",
+        "action": "capture",
+        "action_ok": true,
+        "error": "",
+        "pid": 9832,
+        "run_id": "synthetic-http-42389745788-unknown",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 0,
+        "preflight_rejected": 0,
+        "requests_started": 0,
+        "requests_acked": 0,
+        "transport_failures": 0,
+        "dispatch_attempts": 0,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "6871f20227203b077241ddf36efd6286868a637ea579fac4aaf8ad246699bd6e",
+        "queue_after_batch_sha256": "eaed678aba5fbbaacedf0963700e5168cb5ab4387e8bcf26fc1a248a99e01eaf",
+        "queue_count": 25,
+        "queue_bytes": 10191,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "0b5f5abe40c558a886e43736ca37a5395eeb40cfa49cc459a3f76e02dec2bdfe",
+        "setting_value": "synthetic-setting-9cfc000d-cafd-4cc0-b34c-b04e838ce962",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "retained": {
+        "schema_version": 1,
+        "action_nonce": "9949fc98de3b4f36b81d2ffaa417e3f0",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9832,
+        "run_id": "synthetic-http-42389745788-unknown",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 1,
+        "dispatch_attempts": 2,
+        "last_response_category": "UNRECOGNIZED_RESPONSE",
+        "queue_snapshot_sha256": "6871f20227203b077241ddf36efd6286868a637ea579fac4aaf8ad246699bd6e",
+        "queue_after_batch_sha256": "eaed678aba5fbbaacedf0963700e5168cb5ab4387e8bcf26fc1a248a99e01eaf",
+        "queue_count": 25,
+        "queue_bytes": 10191,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "0b5f5abe40c558a886e43736ca37a5395eeb40cfa49cc459a3f76e02dec2bdfe",
+        "setting_value": "synthetic-setting-9cfc000d-cafd-4cc0-b34c-b04e838ce962",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "final": {
+        "schema_version": 1,
+        "action_nonce": "ca7ff7ad85de4bf1a8a399ece7e1997e",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9955,
+        "run_id": "synthetic-http-42389745788-unknown",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 4,
+        "preflight_rejected": 0,
+        "requests_started": 3,
+        "requests_acked": 2,
+        "transport_failures": 1,
+        "dispatch_attempts": 4,
+        "last_response_category": "ACKNOWLEDGED",
+        "queue_snapshot_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_after_batch_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_count": 0,
+        "queue_bytes": 0,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "0b5f5abe40c558a886e43736ca37a5395eeb40cfa49cc459a3f76e02dec2bdfe",
+        "setting_value": "synthetic-setting-9cfc000d-cafd-4cc0-b34c-b04e838ce962",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "state_before_ack": null,
+      "state_restart_offline": {
+        "schema_version": 1,
+        "action_nonce": "63743a9d58c943bdb740217ac1b632c0",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 9955,
+        "run_id": "synthetic-http-42389745788-unknown",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 1,
+        "dispatch_attempts": 2,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "6871f20227203b077241ddf36efd6286868a637ea579fac4aaf8ad246699bd6e",
+        "queue_after_batch_sha256": "eaed678aba5fbbaacedf0963700e5168cb5ab4387e8bcf26fc1a248a99e01eaf",
+        "queue_count": 25,
+        "queue_bytes": 10191,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "0b5f5abe40c558a886e43736ca37a5395eeb40cfa49cc459a3f76e02dec2bdfe",
+        "setting_value": "synthetic-setting-9cfc000d-cafd-4cc0-b34c-b04e838ce962",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "receiver": {
+        "expected_unique": 25,
+        "received_rows": 45,
+        "received_unique": 25,
+        "missing_ids": [],
+        "unexpected_ids": [],
+        "duplicate_rows": 20,
+        "conflicting_ids": [],
+        "delivery_ratio": 1.0
+      },
+      "requests_proof": [
+        {
+          "request_index": 1,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000001",
+              "uuid": "e9e7692c-eb4a-49c4-88f2-02dee6166832",
+              "timestamp": "2026-11-07T16:13:40.725Z",
+              "canonical_item_sha256": "f03b5a07f438b60388646d159ce25648f261f649a050f86f2e3b3517b083b4a7"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000002",
+              "uuid": "e68b2a21-76ca-485c-92f6-d4c837acd7d3",
+              "timestamp": "2026-11-07T16:13:40.728Z",
+              "canonical_item_sha256": "70375ae4438999cd897c629afd7f4a15f99d439888598c7d706e7efcfce32720"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000003",
+              "uuid": "49810142-bdf0-401d-87a0-895cb466d9d2",
+              "timestamp": "2026-11-07T16:13:40.729Z",
+              "canonical_item_sha256": "489f62d45a7752fb33e99229e2bd8a196e1aab0514ef14519ea1917e46804405"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000004",
+              "uuid": "8bf2ee33-0300-45c0-880f-ea4fbe77073d",
+              "timestamp": "2026-11-07T16:13:40.730Z",
+              "canonical_item_sha256": "cb292277648c4fc69af3f5150dc1d3ed2650ab847eb77cb74c37c118a2159d88"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000005",
+              "uuid": "8bb1f1f9-ca37-43fd-8258-27df0f20d5a7",
+              "timestamp": "2026-11-07T16:13:40.731Z",
+              "canonical_item_sha256": "7e223f7ccc132eafbd40557dfb7a1a6f0367e7b19a95baf8535187d9ad11d10c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000006",
+              "uuid": "526b3eef-3a57-453c-8b8e-8c0834601ab4",
+              "timestamp": "2026-11-07T16:13:40.737Z",
+              "canonical_item_sha256": "9daee8ccaa4c1a858d42a4d5e7bca546a2f0d41b67b48df1bc0796acbfa74f32"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000007",
+              "uuid": "260942c2-1d1d-472d-972b-70502eb9e392",
+              "timestamp": "2026-11-07T16:13:40.738Z",
+              "canonical_item_sha256": "6815813a67decf8b378a0dbf4688cf03f800a6a54b8b408af70054c976fce9ed"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000008",
+              "uuid": "6e0e5a9b-1fca-43c3-8a31-58e8d689faa3",
+              "timestamp": "2026-11-07T16:13:40.739Z",
+              "canonical_item_sha256": "7b76a61c0e6a6259f28612ad8de8f8e8b06e7a255da8987751b1c28cb83d77f5"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000009",
+              "uuid": "1462a22d-4d57-4bba-ba9e-6423ad3c929b",
+              "timestamp": "2026-11-07T16:13:40.740Z",
+              "canonical_item_sha256": "5f98dc9f7b21ed3351785f59cd1a189ee37e17a1ccbbb0ecc74fa5a2b2ebf7e5"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000010",
+              "uuid": "c1e32f7e-3f72-4874-bcdb-339d5d2978e1",
+              "timestamp": "2026-11-07T16:13:40.743Z",
+              "canonical_item_sha256": "51d5e7746df4e249dce5397f3612a23b52ebe0f222707a29d3f94f3b099be895"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000011",
+              "uuid": "5ae0fcc3-8958-437b-876c-4ed75eae1669",
+              "timestamp": "2026-11-07T16:13:40.744Z",
+              "canonical_item_sha256": "b384728912b9edcff1f331b6b7b84b6aa77f87cbb59e6adfd2dbb41dd32ec288"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000012",
+              "uuid": "fbfeefe4-3206-406d-abc5-1373d4f91154",
+              "timestamp": "2026-11-07T16:13:40.745Z",
+              "canonical_item_sha256": "cd52248c7e97208557eb973006c773c2ff0afc1d25429f5016502100541f3333"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000013",
+              "uuid": "0c085141-0575-4f69-8856-e6b72e48dc1a",
+              "timestamp": "2026-11-07T16:13:40.747Z",
+              "canonical_item_sha256": "9b0553234872ff97382f0a27cbb7abca5712d18f76fa5f347b3a56fdce85f881"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000014",
+              "uuid": "b2b0df0d-74c7-44cf-ac4e-e80034bc2a7e",
+              "timestamp": "2026-11-07T16:13:40.749Z",
+              "canonical_item_sha256": "be8eae3d4876e73be4725d3ad1a0c26b00bd2267ed42644d8621b9f854926b8a"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000015",
+              "uuid": "0970302e-5456-434f-8a63-36ba4f3e1cd8",
+              "timestamp": "2026-11-07T16:13:40.753Z",
+              "canonical_item_sha256": "7dd2afa8a5c062b32e2b28ab63d66bfa57d93d9d376fd84e7e00fc10a0db99a0"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000016",
+              "uuid": "da62d5aa-b74d-4b50-89da-161e95f14b77",
+              "timestamp": "2026-11-07T16:13:40.754Z",
+              "canonical_item_sha256": "beba6178285419dd354e19666930bdbb4a797bd98bb8a51874b36190e649992c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000017",
+              "uuid": "98bc4885-4d38-4c9b-9b83-7e464a73342f",
+              "timestamp": "2026-11-07T16:13:40.755Z",
+              "canonical_item_sha256": "2007f7cb54071614f6c982e29a7d7bd8d99ccddee21081a1bea87c2069e1fd72"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000018",
+              "uuid": "f494620b-acbf-4475-8f3b-83adc2fbe0eb",
+              "timestamp": "2026-11-07T16:13:40.756Z",
+              "canonical_item_sha256": "2069baaa8307495dfdbb12f89a40982d02cef64fc803b33c06be41a1435ad431"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000019",
+              "uuid": "0b2355b8-cd7c-4d1e-a63e-be300e5037a9",
+              "timestamp": "2026-11-07T16:13:40.757Z",
+              "canonical_item_sha256": "048ee8effd32647785fc012de69937abb6003ea9c6d16461aab87b7877647abb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000020",
+              "uuid": "6229547d-0f87-472b-85a7-bffa186d11c7",
+              "timestamp": "2026-11-07T16:13:40.758Z",
+              "canonical_item_sha256": "7e26428a6f963664467510299b36f116d686f0d8c2da2ea07be8ca88162d6293"
+            }
+          ]
+        },
+        {
+          "request_index": 2,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000001",
+              "uuid": "e9e7692c-eb4a-49c4-88f2-02dee6166832",
+              "timestamp": "2026-11-07T16:13:40.725Z",
+              "canonical_item_sha256": "f03b5a07f438b60388646d159ce25648f261f649a050f86f2e3b3517b083b4a7"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000002",
+              "uuid": "e68b2a21-76ca-485c-92f6-d4c837acd7d3",
+              "timestamp": "2026-11-07T16:13:40.728Z",
+              "canonical_item_sha256": "70375ae4438999cd897c629afd7f4a15f99d439888598c7d706e7efcfce32720"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000003",
+              "uuid": "49810142-bdf0-401d-87a0-895cb466d9d2",
+              "timestamp": "2026-11-07T16:13:40.729Z",
+              "canonical_item_sha256": "489f62d45a7752fb33e99229e2bd8a196e1aab0514ef14519ea1917e46804405"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000004",
+              "uuid": "8bf2ee33-0300-45c0-880f-ea4fbe77073d",
+              "timestamp": "2026-11-07T16:13:40.730Z",
+              "canonical_item_sha256": "cb292277648c4fc69af3f5150dc1d3ed2650ab847eb77cb74c37c118a2159d88"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000005",
+              "uuid": "8bb1f1f9-ca37-43fd-8258-27df0f20d5a7",
+              "timestamp": "2026-11-07T16:13:40.731Z",
+              "canonical_item_sha256": "7e223f7ccc132eafbd40557dfb7a1a6f0367e7b19a95baf8535187d9ad11d10c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000006",
+              "uuid": "526b3eef-3a57-453c-8b8e-8c0834601ab4",
+              "timestamp": "2026-11-07T16:13:40.737Z",
+              "canonical_item_sha256": "9daee8ccaa4c1a858d42a4d5e7bca546a2f0d41b67b48df1bc0796acbfa74f32"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000007",
+              "uuid": "260942c2-1d1d-472d-972b-70502eb9e392",
+              "timestamp": "2026-11-07T16:13:40.738Z",
+              "canonical_item_sha256": "6815813a67decf8b378a0dbf4688cf03f800a6a54b8b408af70054c976fce9ed"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000008",
+              "uuid": "6e0e5a9b-1fca-43c3-8a31-58e8d689faa3",
+              "timestamp": "2026-11-07T16:13:40.739Z",
+              "canonical_item_sha256": "7b76a61c0e6a6259f28612ad8de8f8e8b06e7a255da8987751b1c28cb83d77f5"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000009",
+              "uuid": "1462a22d-4d57-4bba-ba9e-6423ad3c929b",
+              "timestamp": "2026-11-07T16:13:40.740Z",
+              "canonical_item_sha256": "5f98dc9f7b21ed3351785f59cd1a189ee37e17a1ccbbb0ecc74fa5a2b2ebf7e5"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000010",
+              "uuid": "c1e32f7e-3f72-4874-bcdb-339d5d2978e1",
+              "timestamp": "2026-11-07T16:13:40.743Z",
+              "canonical_item_sha256": "51d5e7746df4e249dce5397f3612a23b52ebe0f222707a29d3f94f3b099be895"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000011",
+              "uuid": "5ae0fcc3-8958-437b-876c-4ed75eae1669",
+              "timestamp": "2026-11-07T16:13:40.744Z",
+              "canonical_item_sha256": "b384728912b9edcff1f331b6b7b84b6aa77f87cbb59e6adfd2dbb41dd32ec288"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000012",
+              "uuid": "fbfeefe4-3206-406d-abc5-1373d4f91154",
+              "timestamp": "2026-11-07T16:13:40.745Z",
+              "canonical_item_sha256": "cd52248c7e97208557eb973006c773c2ff0afc1d25429f5016502100541f3333"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000013",
+              "uuid": "0c085141-0575-4f69-8856-e6b72e48dc1a",
+              "timestamp": "2026-11-07T16:13:40.747Z",
+              "canonical_item_sha256": "9b0553234872ff97382f0a27cbb7abca5712d18f76fa5f347b3a56fdce85f881"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000014",
+              "uuid": "b2b0df0d-74c7-44cf-ac4e-e80034bc2a7e",
+              "timestamp": "2026-11-07T16:13:40.749Z",
+              "canonical_item_sha256": "be8eae3d4876e73be4725d3ad1a0c26b00bd2267ed42644d8621b9f854926b8a"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000015",
+              "uuid": "0970302e-5456-434f-8a63-36ba4f3e1cd8",
+              "timestamp": "2026-11-07T16:13:40.753Z",
+              "canonical_item_sha256": "7dd2afa8a5c062b32e2b28ab63d66bfa57d93d9d376fd84e7e00fc10a0db99a0"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000016",
+              "uuid": "da62d5aa-b74d-4b50-89da-161e95f14b77",
+              "timestamp": "2026-11-07T16:13:40.754Z",
+              "canonical_item_sha256": "beba6178285419dd354e19666930bdbb4a797bd98bb8a51874b36190e649992c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000017",
+              "uuid": "98bc4885-4d38-4c9b-9b83-7e464a73342f",
+              "timestamp": "2026-11-07T16:13:40.755Z",
+              "canonical_item_sha256": "2007f7cb54071614f6c982e29a7d7bd8d99ccddee21081a1bea87c2069e1fd72"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000018",
+              "uuid": "f494620b-acbf-4475-8f3b-83adc2fbe0eb",
+              "timestamp": "2026-11-07T16:13:40.756Z",
+              "canonical_item_sha256": "2069baaa8307495dfdbb12f89a40982d02cef64fc803b33c06be41a1435ad431"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000019",
+              "uuid": "0b2355b8-cd7c-4d1e-a63e-be300e5037a9",
+              "timestamp": "2026-11-07T16:13:40.757Z",
+              "canonical_item_sha256": "048ee8effd32647785fc012de69937abb6003ea9c6d16461aab87b7877647abb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000020",
+              "uuid": "6229547d-0f87-472b-85a7-bffa186d11c7",
+              "timestamp": "2026-11-07T16:13:40.758Z",
+              "canonical_item_sha256": "7e26428a6f963664467510299b36f116d686f0d8c2da2ea07be8ca88162d6293"
+            }
+          ]
+        },
+        {
+          "request_index": 3,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000021",
+              "uuid": "74e4f04d-515a-42bc-b8cb-3c7f9d88df84",
+              "timestamp": "2026-11-07T16:13:40.759Z",
+              "canonical_item_sha256": "c106f883831bc87466cd072b0ca54dce24bfecc173af52d3b4e8d8031607ba88"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000022",
+              "uuid": "e097d209-ea6f-4724-bcfb-0d0566dc5308",
+              "timestamp": "2026-11-07T16:13:40.760Z",
+              "canonical_item_sha256": "c816f0e3eadb9c125dbcf18a5aafedbc64048b36bae1ee2be89202c5a7233eda"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000023",
+              "uuid": "0af9a064-dcd2-4f9f-b12d-bcbbc6affb27",
+              "timestamp": "2026-11-07T16:13:40.761Z",
+              "canonical_item_sha256": "42d88f275d68bf189606d1496dfbdbe013564d79f8c26d6817a8f39ad15a621b"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000024",
+              "uuid": "1b9f5173-c7df-495c-9897-61bdf450fa4a",
+              "timestamp": "2026-11-07T16:13:40.762Z",
+              "canonical_item_sha256": "9959091b8c7fa31a8d86ba2371912f1926fae813c2aafe5a3abf8064441fd663"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-unknown-000025",
+              "uuid": "1aa8ef48-0afe-4744-8b46-d2c9d1bc737d",
+              "timestamp": "2026-11-07T16:13:40.762Z",
+              "canonical_item_sha256": "806607ef5178c6576ab9b9bc65b0da48168d2a1a967e8848adc88aa61642501f"
+            }
+          ]
+        }
+      ],
+      "wire": {
+        "requests": 3,
+        "event_rows": 45,
+        "privacy_pass": true,
+        "violation_counts": {},
+        "wire_body_bytes": 18531,
+        "lost_acks": 0,
+        "event_uuids": {
+          "synthetic-http-42389745788-unknown-000001": {
+            "rows": 2,
+            "uuids": [
+              "e9e7692c-eb4a-49c4-88f2-02dee6166832"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000002": {
+            "rows": 2,
+            "uuids": [
+              "e68b2a21-76ca-485c-92f6-d4c837acd7d3"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000003": {
+            "rows": 2,
+            "uuids": [
+              "49810142-bdf0-401d-87a0-895cb466d9d2"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000004": {
+            "rows": 2,
+            "uuids": [
+              "8bf2ee33-0300-45c0-880f-ea4fbe77073d"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000005": {
+            "rows": 2,
+            "uuids": [
+              "8bb1f1f9-ca37-43fd-8258-27df0f20d5a7"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000006": {
+            "rows": 2,
+            "uuids": [
+              "526b3eef-3a57-453c-8b8e-8c0834601ab4"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000007": {
+            "rows": 2,
+            "uuids": [
+              "260942c2-1d1d-472d-972b-70502eb9e392"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000008": {
+            "rows": 2,
+            "uuids": [
+              "6e0e5a9b-1fca-43c3-8a31-58e8d689faa3"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000009": {
+            "rows": 2,
+            "uuids": [
+              "1462a22d-4d57-4bba-ba9e-6423ad3c929b"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000010": {
+            "rows": 2,
+            "uuids": [
+              "c1e32f7e-3f72-4874-bcdb-339d5d2978e1"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000011": {
+            "rows": 2,
+            "uuids": [
+              "5ae0fcc3-8958-437b-876c-4ed75eae1669"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000012": {
+            "rows": 2,
+            "uuids": [
+              "fbfeefe4-3206-406d-abc5-1373d4f91154"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000013": {
+            "rows": 2,
+            "uuids": [
+              "0c085141-0575-4f69-8856-e6b72e48dc1a"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000014": {
+            "rows": 2,
+            "uuids": [
+              "b2b0df0d-74c7-44cf-ac4e-e80034bc2a7e"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000015": {
+            "rows": 2,
+            "uuids": [
+              "0970302e-5456-434f-8a63-36ba4f3e1cd8"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000016": {
+            "rows": 2,
+            "uuids": [
+              "da62d5aa-b74d-4b50-89da-161e95f14b77"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000017": {
+            "rows": 2,
+            "uuids": [
+              "98bc4885-4d38-4c9b-9b83-7e464a73342f"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000018": {
+            "rows": 2,
+            "uuids": [
+              "f494620b-acbf-4475-8f3b-83adc2fbe0eb"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000019": {
+            "rows": 2,
+            "uuids": [
+              "0b2355b8-cd7c-4d1e-a63e-be300e5037a9"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000020": {
+            "rows": 2,
+            "uuids": [
+              "6229547d-0f87-472b-85a7-bffa186d11c7"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000021": {
+            "rows": 1,
+            "uuids": [
+              "74e4f04d-515a-42bc-b8cb-3c7f9d88df84"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000022": {
+            "rows": 1,
+            "uuids": [
+              "e097d209-ea6f-4724-bcfb-0d0566dc5308"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000023": {
+            "rows": 1,
+            "uuids": [
+              "0af9a064-dcd2-4f9f-b12d-bcbbc6affb27"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000024": {
+            "rows": 1,
+            "uuids": [
+              "1b9f5173-c7df-495c-9897-61bdf450fa4a"
+            ]
+          },
+          "synthetic-http-42389745788-unknown-000025": {
+            "rows": 1,
+            "uuids": [
+              "1aa8ef48-0afe-4744-8b46-d2c9d1bc737d"
+            ]
+          }
+        }
+      },
+      "synthetic_case_reset_not_revocation": true
+    },
+    "truncated": {
+      "status": "PASS",
+      "fixture": "truncated",
+      "before": {
+        "schema_version": 1,
+        "action_nonce": "c6238d156ce14d0d922c87f4707c13fb",
+        "action": "capture",
+        "action_ok": true,
+        "error": "",
+        "pid": 10048,
+        "run_id": "synthetic-http-42389745788-truncated",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 1,
+        "preflight_rejected": 0,
+        "requests_started": 0,
+        "requests_acked": 0,
+        "transport_failures": 0,
+        "dispatch_attempts": 1,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "715389ca979dc31707a9d3c9d16e9eae509a66537c33764912d4bd537cec6fc0",
+        "queue_after_batch_sha256": "92b04d4663500025e9c2317de2e059f59a172aec6523402dd8c469eb6fb6572b",
+        "queue_count": 25,
+        "queue_bytes": 10341,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "23b59f1d9ff5504f51adf724ecb475b9e12ce56b01ff7aaec1e357d2be1a1e6d",
+        "setting_value": "synthetic-setting-0ed2759a-f21b-4e3a-ad8c-da9f11503bee",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "retained": {
+        "schema_version": 1,
+        "action_nonce": "3e9aff45f3e94352a0b73174c5606c0a",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 10048,
+        "run_id": "synthetic-http-42389745788-truncated",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 2,
+        "dispatch_attempts": 2,
+        "last_response_category": "RESPONSE_READ_FAILED",
+        "queue_snapshot_sha256": "715389ca979dc31707a9d3c9d16e9eae509a66537c33764912d4bd537cec6fc0",
+        "queue_after_batch_sha256": "92b04d4663500025e9c2317de2e059f59a172aec6523402dd8c469eb6fb6572b",
+        "queue_count": 25,
+        "queue_bytes": 10341,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "23b59f1d9ff5504f51adf724ecb475b9e12ce56b01ff7aaec1e357d2be1a1e6d",
+        "setting_value": "synthetic-setting-0ed2759a-f21b-4e3a-ad8c-da9f11503bee",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "final": {
+        "schema_version": 1,
+        "action_nonce": "29ade420e2dd4da6afd6653d8412a1d4",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 10168,
+        "run_id": "synthetic-http-42389745788-truncated",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 4,
+        "preflight_rejected": 0,
+        "requests_started": 3,
+        "requests_acked": 2,
+        "transport_failures": 2,
+        "dispatch_attempts": 4,
+        "last_response_category": "ACKNOWLEDGED",
+        "queue_snapshot_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_after_batch_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "queue_count": 0,
+        "queue_bytes": 0,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "23b59f1d9ff5504f51adf724ecb475b9e12ce56b01ff7aaec1e357d2be1a1e6d",
+        "setting_value": "synthetic-setting-0ed2759a-f21b-4e3a-ad8c-da9f11503bee",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "state_before_ack": null,
+      "state_restart_offline": {
+        "schema_version": 1,
+        "action_nonce": "d7bb6b846ae7433c9d77222a6aa58239",
+        "action": "state",
+        "action_ok": true,
+        "error": "",
+        "pid": 10168,
+        "run_id": "synthetic-http-42389745788-truncated",
+        "consent": true,
+        "generation": 0,
+        "capacity": 1000,
+        "dropped_count": 0,
+        "refused_count": 0,
+        "revoked_count": 0,
+        "preflight_count": 2,
+        "preflight_rejected": 0,
+        "requests_started": 1,
+        "requests_acked": 0,
+        "transport_failures": 2,
+        "dispatch_attempts": 2,
+        "last_response_category": "NOT_OBSERVED",
+        "queue_snapshot_sha256": "715389ca979dc31707a9d3c9d16e9eae509a66537c33764912d4bd537cec6fc0",
+        "queue_after_batch_sha256": "92b04d4663500025e9c2317de2e059f59a172aec6523402dd8c469eb6fb6572b",
+        "queue_count": 25,
+        "queue_bytes": 10341,
+        "queue_byte_limit": 1048576,
+        "database_max_bytes": 4194304,
+        "in_flight_count": 0,
+        "trace_sha256": "23b59f1d9ff5504f51adf724ecb475b9e12ce56b01ff7aaec1e357d2be1a1e6d",
+        "setting_value": "synthetic-setting-0ed2759a-f21b-4e3a-ad8c-da9f11503bee",
+        "connectivity": {
+          "probe_available": true,
+          "active_network": false,
+          "internet_capable": false,
+          "validated": false,
+          "transports": []
+        },
+        "transport_mode": "local_loopback"
+      },
+      "receiver": {
+        "expected_unique": 25,
+        "received_rows": 45,
+        "received_unique": 25,
+        "missing_ids": [],
+        "unexpected_ids": [],
+        "duplicate_rows": 20,
+        "conflicting_ids": [],
+        "delivery_ratio": 1.0
+      },
+      "requests_proof": [
+        {
+          "request_index": 1,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000001",
+              "uuid": "4fb20df5-91fa-4ffb-a0d8-5cd1749891e0",
+              "timestamp": "2026-11-07T16:13:43.521Z",
+              "canonical_item_sha256": "c1acfd7f33a784c923a8cc5f13f9ea5d8624358a3fde98d7f1acafd6a1506d01"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000002",
+              "uuid": "a986e99d-0fc4-46a7-b9b1-aeff492b4d0d",
+              "timestamp": "2026-11-07T16:13:43.522Z",
+              "canonical_item_sha256": "142e16099aeb543c6acb673c83e9a9a8085048db043cc09d671823ec0a3d7ae0"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000003",
+              "uuid": "1602be69-9d0a-4a97-82fd-f693133bac1f",
+              "timestamp": "2026-11-07T16:13:43.523Z",
+              "canonical_item_sha256": "f09de0fa73f3c2a777192ce0bf7f9d97211aef05e32259b55c6feceb270d9fcc"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000004",
+              "uuid": "af368d11-3653-4e67-8fc2-1ef06e2c3254",
+              "timestamp": "2026-11-07T16:13:43.532Z",
+              "canonical_item_sha256": "3e92ccdd5d85a85eb8498205a2539f1b16efe2ba98c7a7e6c2af8ee8bc012d2d"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000005",
+              "uuid": "b7d56d3a-05e0-42a1-94dd-850ed4365c45",
+              "timestamp": "2026-11-07T16:13:43.538Z",
+              "canonical_item_sha256": "7aad4164b1d76764438f1abe3f99a2df9a726d2d1a683f441e9dbb2686824c5c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000006",
+              "uuid": "530fed02-f607-455b-93cf-21519537a792",
+              "timestamp": "2026-11-07T16:13:43.539Z",
+              "canonical_item_sha256": "4b1412f2fb6712b1fce569a73c68b5e910edf5aff3881cf6784f9d5197dd0ecb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000007",
+              "uuid": "2988f552-c98d-4673-80fe-686dc1f03b44",
+              "timestamp": "2026-11-07T16:13:43.540Z",
+              "canonical_item_sha256": "a251e411d0ffc524a4c0d79c9896081946b60bf544702cca036e7aaeb11fcbcb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000008",
+              "uuid": "f7e4f511-529f-48e1-be36-af352b6d20cd",
+              "timestamp": "2026-11-07T16:13:43.544Z",
+              "canonical_item_sha256": "d1bb0dc9c3d02cd1f9dd43ddd688ca863d12a98350e92388a559952469bfdef2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000009",
+              "uuid": "2cd85a88-96ea-480f-8071-20a0cb0ef511",
+              "timestamp": "2026-11-07T16:13:43.545Z",
+              "canonical_item_sha256": "8cc944b2a477f6c1d83be053ef887c3965cbf9e12c49a98c8ed01b6ed6511ffd"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000010",
+              "uuid": "e2a1f3c6-72bd-4aaa-8150-0514740d81ae",
+              "timestamp": "2026-11-07T16:13:43.545Z",
+              "canonical_item_sha256": "a3cfe6d538e515b674875898fc7c39fcaf8ff320cd56bbf0b1113eeded260a50"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000011",
+              "uuid": "bb29c4f0-eb8c-4cf0-ad50-9b04d9fbfe66",
+              "timestamp": "2026-11-07T16:13:43.546Z",
+              "canonical_item_sha256": "b0008fc2ab8ef41ef7fb956e2dd87b69c1928cf641674512388cc527baa4f082"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000012",
+              "uuid": "4327c9a7-8a59-4c02-b183-be65b61897cf",
+              "timestamp": "2026-11-07T16:13:43.547Z",
+              "canonical_item_sha256": "8d192b83d0d535c03a03821d59625a064482f33953f4acdd65d25acdb9bebd3d"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000013",
+              "uuid": "ccc472ce-3ac4-458b-96dc-bbfcdfe10aaa",
+              "timestamp": "2026-11-07T16:13:43.548Z",
+              "canonical_item_sha256": "1aa88bb3b8e24e257f969a70d3ce45b4ec32bc5ccedcc4538e1fcb73ef4ca5d2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000014",
+              "uuid": "40f6f942-b0aa-4ead-998b-1ccca71198fa",
+              "timestamp": "2026-11-07T16:13:43.552Z",
+              "canonical_item_sha256": "33da8536075593bd5285cc780b27c5240fc0d7bbb46f841d4c030fc76f913865"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000015",
+              "uuid": "08df85f9-2179-4df6-8955-936967a2451e",
+              "timestamp": "2026-11-07T16:13:43.553Z",
+              "canonical_item_sha256": "4f93164f0bffa466817acb6d631c4fa941d9cc36be50e0e3a5c11633971713d4"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000016",
+              "uuid": "00b8523b-1d6c-4608-97c4-a88fc077f423",
+              "timestamp": "2026-11-07T16:13:43.554Z",
+              "canonical_item_sha256": "a8f7a92234199da116cd3959d5b862f8a555b8807b832a450c6d6a09ef7d4018"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000017",
+              "uuid": "b45f86b2-5448-4e14-ab8b-f12d2b39903e",
+              "timestamp": "2026-11-07T16:13:43.555Z",
+              "canonical_item_sha256": "79fe07b9da9330d88c91bea2795f1a344f9104a70a6117942e3600374ca74d2c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000018",
+              "uuid": "0d5b7c54-73c1-4217-b8bd-2204f47d22ea",
+              "timestamp": "2026-11-07T16:13:43.556Z",
+              "canonical_item_sha256": "1b5eb715051d3524a84fe2064e6a32ff75d79341879285d676918c597c23d51b"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000019",
+              "uuid": "1f0e69fd-11df-450d-b7f4-8734ff407bdd",
+              "timestamp": "2026-11-07T16:13:43.557Z",
+              "canonical_item_sha256": "875832fa9d4883a372d21bde6e01d9f102ecdeb5b2c75563206770c99ce1efb3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000020",
+              "uuid": "ed8183f2-0aac-4058-82c7-2566f2adaa9f",
+              "timestamp": "2026-11-07T16:13:43.558Z",
+              "canonical_item_sha256": "f9277b4715102832a7450fc20ed4a3d258842e587d2ba359bf51d1c1cd7f5b66"
+            }
+          ]
+        },
+        {
+          "request_index": 2,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000001",
+              "uuid": "4fb20df5-91fa-4ffb-a0d8-5cd1749891e0",
+              "timestamp": "2026-11-07T16:13:43.521Z",
+              "canonical_item_sha256": "c1acfd7f33a784c923a8cc5f13f9ea5d8624358a3fde98d7f1acafd6a1506d01"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000002",
+              "uuid": "a986e99d-0fc4-46a7-b9b1-aeff492b4d0d",
+              "timestamp": "2026-11-07T16:13:43.522Z",
+              "canonical_item_sha256": "142e16099aeb543c6acb673c83e9a9a8085048db043cc09d671823ec0a3d7ae0"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000003",
+              "uuid": "1602be69-9d0a-4a97-82fd-f693133bac1f",
+              "timestamp": "2026-11-07T16:13:43.523Z",
+              "canonical_item_sha256": "f09de0fa73f3c2a777192ce0bf7f9d97211aef05e32259b55c6feceb270d9fcc"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000004",
+              "uuid": "af368d11-3653-4e67-8fc2-1ef06e2c3254",
+              "timestamp": "2026-11-07T16:13:43.532Z",
+              "canonical_item_sha256": "3e92ccdd5d85a85eb8498205a2539f1b16efe2ba98c7a7e6c2af8ee8bc012d2d"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000005",
+              "uuid": "b7d56d3a-05e0-42a1-94dd-850ed4365c45",
+              "timestamp": "2026-11-07T16:13:43.538Z",
+              "canonical_item_sha256": "7aad4164b1d76764438f1abe3f99a2df9a726d2d1a683f441e9dbb2686824c5c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000006",
+              "uuid": "530fed02-f607-455b-93cf-21519537a792",
+              "timestamp": "2026-11-07T16:13:43.539Z",
+              "canonical_item_sha256": "4b1412f2fb6712b1fce569a73c68b5e910edf5aff3881cf6784f9d5197dd0ecb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000007",
+              "uuid": "2988f552-c98d-4673-80fe-686dc1f03b44",
+              "timestamp": "2026-11-07T16:13:43.540Z",
+              "canonical_item_sha256": "a251e411d0ffc524a4c0d79c9896081946b60bf544702cca036e7aaeb11fcbcb"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000008",
+              "uuid": "f7e4f511-529f-48e1-be36-af352b6d20cd",
+              "timestamp": "2026-11-07T16:13:43.544Z",
+              "canonical_item_sha256": "d1bb0dc9c3d02cd1f9dd43ddd688ca863d12a98350e92388a559952469bfdef2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000009",
+              "uuid": "2cd85a88-96ea-480f-8071-20a0cb0ef511",
+              "timestamp": "2026-11-07T16:13:43.545Z",
+              "canonical_item_sha256": "8cc944b2a477f6c1d83be053ef887c3965cbf9e12c49a98c8ed01b6ed6511ffd"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000010",
+              "uuid": "e2a1f3c6-72bd-4aaa-8150-0514740d81ae",
+              "timestamp": "2026-11-07T16:13:43.545Z",
+              "canonical_item_sha256": "a3cfe6d538e515b674875898fc7c39fcaf8ff320cd56bbf0b1113eeded260a50"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000011",
+              "uuid": "bb29c4f0-eb8c-4cf0-ad50-9b04d9fbfe66",
+              "timestamp": "2026-11-07T16:13:43.546Z",
+              "canonical_item_sha256": "b0008fc2ab8ef41ef7fb956e2dd87b69c1928cf641674512388cc527baa4f082"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000012",
+              "uuid": "4327c9a7-8a59-4c02-b183-be65b61897cf",
+              "timestamp": "2026-11-07T16:13:43.547Z",
+              "canonical_item_sha256": "8d192b83d0d535c03a03821d59625a064482f33953f4acdd65d25acdb9bebd3d"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000013",
+              "uuid": "ccc472ce-3ac4-458b-96dc-bbfcdfe10aaa",
+              "timestamp": "2026-11-07T16:13:43.548Z",
+              "canonical_item_sha256": "1aa88bb3b8e24e257f969a70d3ce45b4ec32bc5ccedcc4538e1fcb73ef4ca5d2"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000014",
+              "uuid": "40f6f942-b0aa-4ead-998b-1ccca71198fa",
+              "timestamp": "2026-11-07T16:13:43.552Z",
+              "canonical_item_sha256": "33da8536075593bd5285cc780b27c5240fc0d7bbb46f841d4c030fc76f913865"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000015",
+              "uuid": "08df85f9-2179-4df6-8955-936967a2451e",
+              "timestamp": "2026-11-07T16:13:43.553Z",
+              "canonical_item_sha256": "4f93164f0bffa466817acb6d631c4fa941d9cc36be50e0e3a5c11633971713d4"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000016",
+              "uuid": "00b8523b-1d6c-4608-97c4-a88fc077f423",
+              "timestamp": "2026-11-07T16:13:43.554Z",
+              "canonical_item_sha256": "a8f7a92234199da116cd3959d5b862f8a555b8807b832a450c6d6a09ef7d4018"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000017",
+              "uuid": "b45f86b2-5448-4e14-ab8b-f12d2b39903e",
+              "timestamp": "2026-11-07T16:13:43.555Z",
+              "canonical_item_sha256": "79fe07b9da9330d88c91bea2795f1a344f9104a70a6117942e3600374ca74d2c"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000018",
+              "uuid": "0d5b7c54-73c1-4217-b8bd-2204f47d22ea",
+              "timestamp": "2026-11-07T16:13:43.556Z",
+              "canonical_item_sha256": "1b5eb715051d3524a84fe2064e6a32ff75d79341879285d676918c597c23d51b"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000019",
+              "uuid": "1f0e69fd-11df-450d-b7f4-8734ff407bdd",
+              "timestamp": "2026-11-07T16:13:43.557Z",
+              "canonical_item_sha256": "875832fa9d4883a372d21bde6e01d9f102ecdeb5b2c75563206770c99ce1efb3"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000020",
+              "uuid": "ed8183f2-0aac-4058-82c7-2566f2adaa9f",
+              "timestamp": "2026-11-07T16:13:43.558Z",
+              "canonical_item_sha256": "f9277b4715102832a7450fc20ed4a3d258842e587d2ba359bf51d1c1cd7f5b66"
+            }
+          ]
+        },
+        {
+          "request_index": 3,
+          "audit_pass": true,
+          "violations": [],
+          "items": [
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000021",
+              "uuid": "79c2dc67-0cb7-4215-aca4-45f128aaf493",
+              "timestamp": "2026-11-07T16:13:43.559Z",
+              "canonical_item_sha256": "1fcafd5c647d3891e3a38efdedd0a77d422f50d38fc7d8aa688f3e3e76dd094e"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000022",
+              "uuid": "7fbcb146-2c94-4daf-b6e2-2cab2ac4b7a9",
+              "timestamp": "2026-11-07T16:13:43.560Z",
+              "canonical_item_sha256": "3bccca2c0c50b14ed61fd7c638fdaca8f12628e9cf27b533ab9247221732f25e"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000023",
+              "uuid": "8ca23381-5ddb-4a6e-80f9-144f038bd07b",
+              "timestamp": "2026-11-07T16:13:43.561Z",
+              "canonical_item_sha256": "156b23562f1d4672a67159c3db3e9abd581957bfde7d9b2e717fc472dd6eca6d"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000024",
+              "uuid": "3841faff-3573-4822-a634-e1855b3d1f1d",
+              "timestamp": "2026-11-07T16:13:43.561Z",
+              "canonical_item_sha256": "c2aed845d9087244e142d51b0fdf247f1583729828327ef650e32a178dd5a490"
+            },
+            {
+              "event_id": "synthetic-http-42389745788-truncated-000025",
+              "uuid": "88d3f006-89f4-455f-b738-788e063460e0",
+              "timestamp": "2026-11-07T16:13:43.562Z",
+              "canonical_item_sha256": "d2f21701a9e215456507c3f050b5bc19928f4687337b73f60f311a29cf653fce"
+            }
+          ]
+        }
+      ],
+      "wire": {
+        "requests": 3,
+        "event_rows": 45,
+        "privacy_pass": true,
+        "violation_counts": {},
+        "wire_body_bytes": 18801,
+        "lost_acks": 0,
+        "event_uuids": {
+          "synthetic-http-42389745788-truncated-000001": {
+            "rows": 2,
+            "uuids": [
+              "4fb20df5-91fa-4ffb-a0d8-5cd1749891e0"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000002": {
+            "rows": 2,
+            "uuids": [
+              "a986e99d-0fc4-46a7-b9b1-aeff492b4d0d"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000003": {
+            "rows": 2,
+            "uuids": [
+              "1602be69-9d0a-4a97-82fd-f693133bac1f"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000004": {
+            "rows": 2,
+            "uuids": [
+              "af368d11-3653-4e67-8fc2-1ef06e2c3254"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000005": {
+            "rows": 2,
+            "uuids": [
+              "b7d56d3a-05e0-42a1-94dd-850ed4365c45"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000006": {
+            "rows": 2,
+            "uuids": [
+              "530fed02-f607-455b-93cf-21519537a792"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000007": {
+            "rows": 2,
+            "uuids": [
+              "2988f552-c98d-4673-80fe-686dc1f03b44"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000008": {
+            "rows": 2,
+            "uuids": [
+              "f7e4f511-529f-48e1-be36-af352b6d20cd"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000009": {
+            "rows": 2,
+            "uuids": [
+              "2cd85a88-96ea-480f-8071-20a0cb0ef511"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000010": {
+            "rows": 2,
+            "uuids": [
+              "e2a1f3c6-72bd-4aaa-8150-0514740d81ae"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000011": {
+            "rows": 2,
+            "uuids": [
+              "bb29c4f0-eb8c-4cf0-ad50-9b04d9fbfe66"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000012": {
+            "rows": 2,
+            "uuids": [
+              "4327c9a7-8a59-4c02-b183-be65b61897cf"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000013": {
+            "rows": 2,
+            "uuids": [
+              "ccc472ce-3ac4-458b-96dc-bbfcdfe10aaa"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000014": {
+            "rows": 2,
+            "uuids": [
+              "40f6f942-b0aa-4ead-998b-1ccca71198fa"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000015": {
+            "rows": 2,
+            "uuids": [
+              "08df85f9-2179-4df6-8955-936967a2451e"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000016": {
+            "rows": 2,
+            "uuids": [
+              "00b8523b-1d6c-4608-97c4-a88fc077f423"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000017": {
+            "rows": 2,
+            "uuids": [
+              "b45f86b2-5448-4e14-ab8b-f12d2b39903e"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000018": {
+            "rows": 2,
+            "uuids": [
+              "0d5b7c54-73c1-4217-b8bd-2204f47d22ea"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000019": {
+            "rows": 2,
+            "uuids": [
+              "1f0e69fd-11df-450d-b7f4-8734ff407bdd"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000020": {
+            "rows": 2,
+            "uuids": [
+              "ed8183f2-0aac-4058-82c7-2566f2adaa9f"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000021": {
+            "rows": 1,
+            "uuids": [
+              "79c2dc67-0cb7-4215-aca4-45f128aaf493"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000022": {
+            "rows": 1,
+            "uuids": [
+              "7fbcb146-2c94-4daf-b6e2-2cab2ac4b7a9"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000023": {
+            "rows": 1,
+            "uuids": [
+              "8ca23381-5ddb-4a6e-80f9-144f038bd07b"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000024": {
+            "rows": 1,
+            "uuids": [
+              "3841faff-3573-4822-a634-e1855b3d1f1d"
+            ]
+          },
+          "synthetic-http-42389745788-truncated-000025": {
+            "rows": 1,
+            "uuids": [
+              "88d3f006-89f4-455f-b738-788e063460e0"
+            ]
+          }
+        }
+      },
+      "synthetic_case_reset_not_revocation": true
+    }
+  },
+  "inherited_suite_status": "PASS",
+  "limits": [
+    "LOOPBACK_HTTP_NOT_TLS_OR_CLOUD_STORAGE",
+    "NO_OLD20_RETRY",
+    "NO_PHONE_OR_BATTERY_PROOF"
+  ],
+  "offline_before": {
+    "radio_settings": {
+      "airplane_mode_on": true,
+      "wifi_on": false,
+      "mobile_data": false
+    },
+    "active_default_network_absent": true,
+    "raw_connectivity_dump_published": false
+  },
+  "offline_after": {
+    "radio_settings": {
+      "airplane_mode_on": true,
+      "wifi_on": false,
+      "mobile_data": false
+    },
+    "active_default_network_absent": true,
+    "raw_connectivity_dump_published": false
+  },
+  "lab_stopped_route_removed": true,
+  "radios_restored": true,
+  "safe_command_categories": [
+    {
+      "stage": "READ_AIRPLANE_MODE_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_WIFI_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_MOBILE_DATA",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "AIRPLANE_ENABLE",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": false,
+      "stderr_present": false
+    },
+    {
+      "stage": "WIFI_DISABLE",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": false,
+      "stderr_present": false
+    },
+    {
+      "stage": "DATA_DISABLE",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": false,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_AIRPLANE_MODE_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_WIFI_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_MOBILE_DATA",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "CONNECTIVITY_OFFLINE_READ",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_AIRPLANE_MODE_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_WIFI_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_MOBILE_DATA",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "CONNECTIVITY_OFFLINE_READ",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "AIRPLANE_ENABLE",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": false,
+      "stderr_present": false
+    },
+    {
+      "stage": "WIFI_DISABLE",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": false,
+      "stderr_present": false
+    },
+    {
+      "stage": "DATA_DISABLE",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": false,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_AIRPLANE_MODE_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_WIFI_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_MOBILE_DATA",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "CONNECTIVITY_OFFLINE_READ",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "RESTORE_AIRPLANE",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": false,
+      "stderr_present": false
+    },
+    {
+      "stage": "RESTORE_WIFI",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": false,
+      "stderr_present": false
+    },
+    {
+      "stage": "RESTORE_DATA",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": false,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_AIRPLANE_MODE_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_WIFI_ON",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    },
+    {
+      "stage": "READ_MOBILE_DATA",
+      "returncode": 0,
+      "error_category": "NONE",
+      "stdout_present": true,
+      "stderr_present": false
+    }
+  ]
+}

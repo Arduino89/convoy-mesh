@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "scope": "INDEPENDENT_STATIC_SOURCE_REVIEW_AND_HOST_REGRESSIONS_NOT_ANDROID_OR_CLOUD",
+  "status": "PASS_SOURCE_REVIEW_ANDROID_WORKFLOW_PENDING",
+  "reviewer": "/root/ack_independent_review",
+  "checked_at_utc": "2026-11-06T23:03:53.372815+00:00",
+  "base_head": "75b83254c99f20703f8a4ddbcc0da92a41d9990c",
+  "base_java_sha256_independently_fetched": "81222e42f65f27d5524ad80b5b66eb5f685b6f3091e5d467a564636ecaa31312",
+  "files_sha256": {
+    "tools/telemetry_spike/direct_trial/DirectQueue.java": "4d983271deb281775ef780ae2e621f297e8432575721f8ecb15141561ea69f0b",
+    "tools/telemetry_spike/ci_cloud_trial.py": "9f16368404361b2c02591cfec6087aba340e7ed67df25890e79933770027e562",
+    "tools/telemetry_spike/ci_direct_trial.py": "9f1a5dcca866d209b4413926a1dccf2190fe3ddfba42cd743d1a81d74dfc1356",
+    "tools/telemetry_spike/test_ci_cloud_trial.py": "540f32f93662b3625d07c32b0078f57ab1796d640512d50f6e3aae44696d5bc5",
+    "tools/telemetry_spike/test_ack_response_trial.py": "639f851b11175c95e96f662b1999fe92bea7fa3c4b3171792b5074de2709eea8",
+    "tools/telemetry_spike/ack_response_trial/ResponseProofActivity.java": "c2e152c123bf78ae164afe89e5d761f92053bd700a13a273c37ae24b0cf19aaa",
+    "tools/telemetry_spike/ack_response_trial/build.py": "0b7bb1cdd091a955cf7b02f11a3a9f871b84e8a8543e2d186f66a766f9e5eefe",
+    "tools/telemetry_spike/ci_ack_response_trial.py": "ecadd8f37a1b96da569e8c5cf0c010b7d7c013072a136fb0fd5ec9da21ca4cb1",
+    "tools/telemetry_spike/run_ci_ack_response.sh": "5b4ab28cca0ced6d011e560af99d3563b7121caab08f605a1c4c239bb7616e6d"
+  },
+  "host_controls": {
+    "total": 202,
+    "passed": 201,
+    "failed": 0,
+    "skipped": 1,
+    "skip_scope": "Historical sh/pipefail reproduction on current host Dash, not an Android gate."
+  },
+  "targeted_failfast_controls": {
+    "total": 23,
+    "passed": 23,
+    "failed": 0
+  },
+  "findings": {
+    "blockers": [],
+    "exact_documented_status_Ok_or_legacy_integer_one_only": true,
+    "quota_guard_preserved": true,
+    "same_predicate_used_by_native_sender_and_baseline_fixture": true,
+    "same_classifier_used_by_sender_and_after_fixture": true,
+    "strict_json_whole_body_duplicates_and_bounds": true,
+    "utf8_reader_uses_strict_decoder": true,
+    "shared_sqlite_ack_transaction_preserves_original_semantics": true,
+    "false_ack_returns_before_any_sqlite_mutation": true,
+    "selected_rows_only_deleted_and_counter_same_transaction": true,
+    "retry_ack_discard_still_precedes_shared_deletion": true,
+    "no_test_endpoint_cloud_mode_or_sender_instance_hook_added": true,
+    "test_activity_never_constructs_sender": true,
+    "distinct_before_after_permissionless_package_builds": true,
+    "source_and_apk_hashes_and_signature_checks_present": true,
+    "failfast_uses_actual_run_cases_path_and_fresh_state_predicate": true,
+    "permanent_transport_or_budget_block_precedes_empty_queue_success": true,
+    "unrecognized_block_reason_is_fixed_UNKNOWN_category": true,
+    "only_finite_response_category_added_to_existing_audit": true,
+    "zero_new_cloud_ingestion_authorized": true
+  },
+  "review_limits": [
+    "Android compilation and execution pending; host tests do not prove Android JsonReader/SQLite runtime.",
+    "Workflow not yet concrete; inspect exact branch/event/run-number/attempt/message/checkout and absence of credentials before push.",
+    "Baseline receipt must be described as reproduction of rejection (behavior RED); its harness may pass because the rejection is expected.",
+    "Candidate fixtures invoke native classifier and shared SQLite helper directly: not full sendOnce/TLS/server acknowledgment or cloud delivery proof.",
+    "UTF-8 InputStream decoder and IO-failure branches are statically reviewed; current33 fixtures exercise String classifier and SQLite, not actual InputStream transport.",
+    "Runtime15 actual response body/status value remain unknown; documented fixture compatibility is not retroactive identification of that body.",
+    "No cloud revocation/new-consent/retry/deduplication, integration, phone or battery approval."
+  ]
+}

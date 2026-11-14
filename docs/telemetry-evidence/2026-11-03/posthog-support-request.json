@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-11-03T10:11:01Z",
+  "local_date": "2026-11-03",
+  "local_timezone": "Europe/Rome",
+  "project_id": 330212,
+  "operation": "SCOPED_TECHNICAL_SUPPORT_INQUIRY",
+  "recipient": "PostHog support engineers",
+  "channel": "Authenticated PostHog app: More > Support > Create new ticket",
+  "ticket_number": 80503,
+  "ticket_state_observed": "new",
+  "submission_status": "CREATED_AND_FULL_MESSAGE_VERIFIED_IN_MY_TICKETS_UI",
+  "submission_count": 1,
+  "reply_observed": false,
+  "supported_deletion_procedure_verified": false,
+  "support_plan_label_observed": "Free (your plan): Community support only",
+  "support_response_sla": "NOT_PROMISED",
+  "submitted_plain_text": "Technical clarification: selective deletion of synthetic events without person profiles — EU project 330212\n\nWe are evaluating a small Android telemetry laboratory on our existing PostHog Cloud EU Free plan. The test events are synthetic. They use $process_person_profile:false, a run_id for each trial and a stable UUID for each event.\n\nAn authenticated GET to /api/projects/330212/data_deletion_requests/ returns:\n{\"type\":\"authentication_error\",\"code\":\"permission_denied\",\"detail\":\"This endpoint is in alpha and is not yet publicly available.\",\"attr\":null}\nThe endpoint is documented at https://posthog.com/docs/api/data-deletion-requests.\n\nIs there an officially supported procedure, including a manual or support-assisted procedure, to delete only one synthetic trial selected by run_id and/or an exact list of event UUIDs, without creating person profiles or deleting the project?\n\nPlease clarify:\n1. Is that procedure available on our current Free plan, without an upgrade or a paid service?\n2. How do we preview or confirm the exact matching event set and ensure other historical events are excluded?\n3. What are the expected processing times and the supported way to check completion? Does completion mean physical removal, and what limitations apply to backups, replicas or derived data?\n\nWe have paused the new cloud test pending this clarification. This is an information request only. Please do not delete any data, enable features or change our plan. The exact event set would be approved separately before any deletion. No credentials, diagnostic logs, real names, device locations or recordings are attached.\n\nThank you.",
+  "verification": {
+    "ticket_number_visible": true,
+    "active_ticket_count_visible": 1,
+    "full_outgoing_message_visible_after_navigation": true,
+    "message_verified_before_browser_failure": true,
+    "precise_server_submission_timestamp": "NOT_READ_FROM_UI",
+    "initial_ticket_list_load_error": "A transient Failed to load tickets alert preceded submission. The full-screen My tickets view subsequently showed this ticket and its complete message. No resubmission was made.",
+    "screenshot": "NOT_AVAILABLE: screenshot capture disconnected the browser tool after the ticket and full message had been verified; no screenshot file was produced."
+  },
+  "privacy": {
+    "attachments_sent": 0,
+    "credentials_sent": false,
+    "diagnostic_logs_sent": false,
+    "real_user_event_rows_sent": false,
+    "device_location_sent": false,
+    "requested_new_account_or_service": false,
+    "ticket_account_identity_and_private_ticket_uuid_omitted_from_public_receipt": true
+  },
+  "authorization_limits": {
+    "inquiry_only": true,
+    "purchases_or_plan_changes": false,
+    "support_features_enabled": false,
+    "deletion_requested_or_executed": false,
+    "exact_event_set_requires_user_approval_before_any_actual_deletion": true,
+    "manual_or_assisted_supported_procedure_is_acceptable_for_lab": true,
+    "new_android_execution": false,
+    "cloud_trial_rows_transmitted_this_continuation": 0,
+    "cloud_status": "NOT_RUN",
+    "github_secret_configured": false
+  },
+  "sources": [
+    "https://posthog.com/docs/support-options",
+    "Authenticated project330212 support form and full-screen My tickets UI"
+  ]
+}

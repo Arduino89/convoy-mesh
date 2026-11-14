@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "status": "PASS_INDEPENDENT_HOST_ONLY_LABEL_CORRECTION_REVIEW",
+  "reviewer": "/root/review_launch",
+  "runtime_source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "new_analyzer_commit": null,
+  "new_analyzer_commit_limit": "Closure commit not yet created. New analyzer bound below by file SHA256; neither Android run used this new analyzer.",
+  "analyzer_before_sha256": "6118f91f0d20af596623ffbbf8c3d1bb03d5f65eb4df3decaf6046f8c1f90e0f",
+  "analyzer_after_sha256": "b6b84142bb82d0503cbbd51c61195ada85db0136520a204c963d2b2c2147bae8",
+  "test_before_sha256": "658b2a821ab528c08afacb3b1dea2fbc3a55117e035779bd1ac96081f3d1b348",
+  "test_after_sha256": "28ddd8bf4068dac90130f2ba5844f897e54cc810ab50fd321b58806aa451a404",
+  "problem": "A blocked/incomplete client trial with no retry execution was labeled as multiple client body writes.",
+  "correction": "If client_error exists, use NOT_ATTESTED_INCOMPLETE_CLIENT_EVIDENCE. Retain observed rows_per_id, all raw counts, universal_deduplication_guarantee=false, BLOCKED state and acceptance thresholds.",
+  "regression": {
+    "test": "test_failed_transport_preserves_actual_cloud_rows_without_acceptance_pass",
+    "independent_before_after_executed": true,
+    "before_label": "ONE_OR_ZERO_STORED_ROWS_PER_ID_AFTER_MULTIPLE_CLIENT_BODY_WRITES",
+    "after_label": "NOT_ATTESTED_INCOMPLETE_CLIENT_EVIDENCE",
+    "difference_paths": [
+      "/retry_storage_observation/interpretation"
+    ],
+    "before_and_after_status": "BLOCKED",
+    "raw_rows_preserved": 121
+  },
+  "actual_run15_analysis_comparison": {
+    "only_changed_path": "/retry_storage_observation/interpretation",
+    "original_result_sha256": "83b60e6880b0f610d6bc941f2754528e51e01fa47c1593aa9b560d7429d7c77c",
+    "corrected_result_sha256": "1f29246174a6e4663e8ae011bd27186ad523f9d15971cddce15eb2c65a9ab9fd",
+    "before_and_after_status": "BLOCKED",
+    "raw_rows_preserved": 20,
+    "before_retry_rows_per_id": {},
+    "after_retry_rows_per_id": {}
+  },
+  "tests": {
+    "command": "python3 -m unittest discover -s tools/telemetry_spike -p test_reconcile_cloud_trial.py -q",
+    "independently_executed": true,
+    "total": 24,
+    "passed": 24,
+    "skipped": 0,
+    "failed": 0
+  },
+  "limits": [
+    "Host-only analysis wording change; no transport, Android source, credentials, quota, cloud run or raw receipts changed.",
+    "No acceptance assertion or server-side filter was removed or weakened.",
+    "Original analyzer result retained alongside corrected result with distinct file hashes.",
+    "Cloud run15 remains BLOCKED, revocation/new consent/retry NOT_RUN, no universal cloud deduplication established."
+  ]
+}

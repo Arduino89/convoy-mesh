@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "status": "APPROVED_FOR_SINGLE_LAUNCH",
+  "scope": "INDEPENDENT_STATIC_WORKFLOW_AND_GATE_REVIEW_ONLY",
+  "checked_at_utc": "2026-11-06T21:51:20.629714+00:00",
+  "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "workflow_sha256": "c3cfff78f6e946748295aec2e0a4b8b8c41ff92a6428dc2cac4d0c9cd5772be6",
+  "restored_workflow_sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5",
+  "gate_json_sha256": "135265b7b8d91a37c40744b71709c1c26dbf5b3f1e60deee1f0d0af629f6f74d",
+  "expected_run_number": 15,
+  "expected_attempt": 1,
+  "expected_branch": "experiment/telemetry-runtime-lab",
+  "expected_commit_message": "Execute authorized synthetic cloud laboratory once (additional budget 200)",
+  "run_id": "synthetic-cloud-20261106-r15",
+  "new_allowance_rows_including_retries": 200,
+  "historical_conservative_consumption": 500,
+  "cumulative_ceiling": 700,
+  "nominal_rows_reserved": 130,
+  "nominal_unique_received": 120,
+  "guard_matrix": [
+    {
+      "case": "authorized_push",
+      "job_enabled": true
+    },
+    {
+      "case": "other_repository",
+      "job_enabled": false
+    },
+    {
+      "case": "private_repository",
+      "job_enabled": false
+    },
+    {
+      "case": "manual_dispatch",
+      "job_enabled": false
+    },
+    {
+      "case": "other_branch",
+      "job_enabled": false
+    },
+    {
+      "case": "tag_ref",
+      "job_enabled": false
+    },
+    {
+      "case": "previous_run",
+      "job_enabled": false
+    },
+    {
+      "case": "next_run",
+      "job_enabled": false
+    },
+    {
+      "case": "rerun_attempt_2",
+      "job_enabled": false
+    },
+    {
+      "case": "wrong_message",
+      "job_enabled": false
+    },
+    {
+      "case": "newline_message",
+      "job_enabled": false
+    }
+  ],
+  "cloud_executed": false,
+  "android_executed": false,
+  "limitations": [
+    "Static expression truth table is not a GitHub Actions execution.",
+    "Live account controls and local Android receipts are reviewed references, not executed by this verifier.",
+    "Exact wrapper commit must be recorded before push; no self-referential commit guard is claimed.",
+    "A consumed run number or any failed attempt blocks; no automatic rerun, substitution or refund.",
+    "Transport acknowledgment requires separate raw cloud reconciliation; no deletion authorized.",
+    "Restore the pinned original workflow using skip-ci after this one execution.",
+    "Account privacy, free quota, retention and existing support ticket were freshly observed by root and reviewed here as typed references; this reviewer did not independently log in to PostHog.",
+    "Only wrapper run15 attempt1 and exact marker/source/gate are approved. Record immutable wrapper commit and recheck branch lease/counter immediately before push; a race must block rather than substitute a run number.",
+    "This independent static approval does not approve any merge, release, real users, deletion, new service or spending."
+  ],
+  "reviewer": "/root/review_launch",
+  "reviewed_gate_file_sha256": "cb9463c617e1620f61632dcb046178432cd010044dd1edd2257be30f827b3ed1",
+  "concrete_checks": {
+    "exact_four_workflow_fields_changed": true,
+    "strict_job_guard_includes_complete_message": true,
+    "secret_confined_to_private_prepare_step": true,
+    "checkout_source_matches_gate_and_local14": true,
+    "local_suite_must_pass_again_before_cloud": true,
+    "support_procedure_wording_corrected_and_performed_false": true,
+    "no_fork_manual_sdk_file_removal_or_app_data_clear_introduced": true,
+    "native_application_hashes_unchanged": true,
+    "wrapper_commit_sha_recorded": false
+  },
+  "local_regression_independent_evidence": {
+    "path": "run-42299072769/independent-runtime-review.json",
+    "sha256": "8eb7cfee4864211db2c2915f1822a902401c195fa84c98ac876a9aedfa2513e6",
+    "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+    "run_id": 42299072769,
+    "job_id": 128171820455,
+    "attempt": 1,
+    "runtime_review": "INDEPENDENT_RECOMPUTATION_COMPLETE",
+    "host_controls": {
+      "total": 193,
+      "passed": 193,
+      "skipped": 0,
+      "failed": 0
+    },
+    "cloud_setup_skipped": true
+  },
+  "live_github_recheck": {
+    "checked_at_utc": "2026-11-06T21:51:47.890783+00:00",
+    "branch_head": "809caf200f6232b162fee009fa2a7c2b484d7855",
+    "pr_number": 5,
+    "pr_draft": true,
+    "latest_workflow_run_id": 42299072769,
+    "latest_workflow_run_number": 14,
+    "latest_workflow_conclusion": "success",
+    "latest_job_id": 128171820455,
+    "latest_job_conclusion": "success",
+    "next_run_number_required": 15
+  },
+  "helper_independent_review": {
+    "path": "launch-helper-review.json",
+    "sha256": "5e8268c64fad296e1d62c2f7a2385a2251cf66a885de65c00cc7d51e83aa1493",
+    "status": "PASS_STATIC_HELPER_REVIEW_NO_LAUNCH",
+    "reviewer": "budget_fix_agent"
+  }
+}

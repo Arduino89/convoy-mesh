@@ -1,0 +1,142 @@
+name: Isolated Android telemetry laboratory
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: 'Exact reviewed source SHA; empty uses this branch commit'
+        required: false
+        type: string
+      cloud_gate_json:
+        description: 'Reviewed, unexpired gate JSON for this one run; {} keeps cloud disabled'
+        required: false
+        default: '{}'
+        type: string
+  push:
+    branches: [experiment/telemetry-runtime-lab]
+    paths:
+      - 'tools/telemetry_spike/**'
+      - '.github/workflows/telemetry-runtime-control.yml'
+concurrency:
+  group: telemetry-lab-${{ github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  runtime-and-telemetry:
+    if: github.repository == 'Arduino89/convoy-mesh' && github.event.repository.private == false && github.event.head_commit.message != 'Diagnose isolated LAB provisioning offline (no cloud)'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI: "true"
+      BOT: "true"
+      FLUTTER_SUPPRESS_ANALYTICS: "true"
+      DART_SUPPRESS_ANALYTICS: "true"
+      DASH__SUPPRESS_ANALYTICS: "true"
+      LAB_RUN_ID: synthetic-direct-${{ github.run_id }}
+      CONVOY_CLOUD_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.cloud_gate_json != '' && inputs.cloud_gate_json != '{}' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source_commit || github.sha }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify host analysis controls
+        run: python3 -m unittest discover -s tools/telemetry_spike -p 'test_*.py' -q
+      - name: Prepare private configuration only for an explicitly gated cloud run
+        if: env.CONVOY_CLOUD_ENABLED == 'true'
+        env:
+          CONVOY_CLOUD_GATE: ${{ inputs.cloud_gate_json }}
+          CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
+        run: python3 tools/telemetry_spike/prepare_ci_cloud.py
+      - name: Require accelerated host
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Prepare pinned control toolchain
+        run: |
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Build tiny native control only
+        run: >-
+          python3 tools/telemetry_spike/runtime_control/build.py
+          --sdk "$ANDROID_HOME" --jdk "$JAVA_HOME"
+          --out "$RUNNER_TEMP/runtime-control-build"
+      - name: Control Android first, then execute synthetic direct-sender cases
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          disable-animations: true
+          script: bash tools/telemetry_spike/run_ci_lab.sh
+      - name: Remove private cloud inputs
+        if: always() && env.CONVOY_CLOUD_ENABLED == 'true'
+        run: rm -f -- "$RUNNER_TEMP/cloud-private/config.json" "$RUNNER_TEMP/cloud-private/gate.json"
+      - name: Emit reviewed evidence without artifact or cache storage
+        if: always()
+        run: python3 tools/telemetry_spike/emit_ci_evidence.py "$RUNNER_TEMP"
+  diagnostic-provision:
+    if: github.repository == 'Arduino89/convoy-mesh' && github.event.repository.private == false && github.event_name == 'push' && github.ref == 'refs/heads/experiment/telemetry-runtime-lab' && github.event.head_commit.message == 'Diagnose isolated LAB provisioning offline (no cloud)' && github.run_number == 13 && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      BOT: "true"
+      CONVOY_CLOUD_ENABLED: "false"
+    steps:
+      - name: Check out reviewed diagnostic source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Reuse exact previously tested application source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          ref: 2d76100fda1df0637e953f4ad90f26073028880c
+          path: pinned-app
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify preparation and offline diagnostic host controls
+        run: |
+          python3 -m unittest discover -s tools/telemetry_spike -p 'test_cloud_preparation.py' -q
+          python3 -m unittest discover -s tools/telemetry_spike -p 'test_ci_provision_probe.py' -q
+          python3 -m unittest discover -s tools/telemetry_spike -p 'test_adb_provision_contract.py' -q
+      - name: Require accelerated host
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Prepare the same pinned Android toolchain
+        run: |
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Build independent Android control
+        run: >-
+          python3 pinned-app/tools/telemetry_spike/runtime_control/build.py
+          --sdk "$ANDROID_HOME" --jdk "$JAVA_HOME"
+          --out "$RUNNER_TEMP/runtime-control-build"
+      - name: Control Android first, then diagnose one offline installation and provision
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          disable-animations: true
+          script: bash tools/telemetry_spike/run_ci_provision_probe.sh
+      - name: Emit only the sanitized provisioning result
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/provision-diagnostic/result.json"; then
+            python3 tools/telemetry_spike/ci_provision_probe.py --emit "$RUNNER_TEMP/provision-diagnostic/result.json"
+          else
+            echo 'PROVISION_DIAGNOSTIC_NOT_RUN_NO_RECEIPT'
+          fi

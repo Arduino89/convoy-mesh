@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "status": "BLOCKED_AFTER_SINGLE_ATTEMPT_NO_AUTOMATIC_BUDGET_REFUND",
+  "checked_at_utc": "2026-11-03T07:47:06.944Z",
+  "project_id": 330212,
+  "api_host": "https://eu.i.posthog.com",
+  "access": {
+    "project_role": "admin",
+    "project_settings_read": true,
+    "billing_read": true,
+    "events_schema_read": true,
+    "ingestion_token_available_privately": true,
+    "browser_project_settings_authenticated": true,
+    "github_repository_secrets_page_authenticated": true,
+    "github_repository_secret_present": true,
+    "github_secret_created": true
+  },
+  "privacy": {
+    "anonymize_ips": true,
+    "session_recording_opt_in": false,
+    "capture_console_log_opt_in": true,
+    "capture_performance_opt_in": true,
+    "notes": [
+      "Native direct sender contains no recording, console, performance or analytics SDK; project flags alone are not outbound payload proof.",
+      "Data sent must satisfy unchanged LAB allowlist. Unknown cloud metadata values must stay out of public evidence.",
+      "Organization AI-training setting is not exposed by current read response; not attested."
+    ]
+  },
+  "billing": {
+    "billing_plan": "free",
+    "subscription_level": "free",
+    "has_active_subscription": false,
+    "billing_period": {
+      "current_period_start": "2026-11-01T19:16:06.532Z",
+      "current_period_end": "2026-12-01T19:16:06.532Z",
+      "interval": "month"
+    },
+    "events": {
+      "usage": 162,
+      "limit": 1000000,
+      "todays_usage": 0
+    },
+    "free_rows_remaining": 999838,
+    "trial": null
+  },
+  "retention": {
+    "feature": {
+      "key": "product_analytics_data_retention",
+      "name": "Data retention",
+      "description": "Keep a historical record of your data.",
+      "unit": "year",
+      "limit": 1,
+      "note": null,
+      "entitlement_only": false,
+      "is_plan_default": true,
+      "category": null
+    },
+    "verified": "PLAN_ENTITLEMENT_ONE_YEAR_QUERY_WINDOW",
+    "physical_erasure_after_one_year": "NOT_VERIFIED_NOT_CLAIMED",
+    "docs": "https://posthog.com/docs/data/events-retention"
+  },
+  "deletion": {
+    "documented_api": "https://posthog.com/docs/api/data-deletion-requests",
+    "list_endpoint": "GET /api/projects/330212/data_deletion_requests/",
+    "preview_endpoint": "POST /api/projects/330212/data_deletion_requests/preview/",
+    "delete_endpoint": "POST /api/projects/330212/data_deletion_requests/",
+    "connector_capability": "NOT_EXPOSED",
+    "project_availability_and_permission": "DOCUMENTED_ENDPOINT_DENIED_ALPHA_NOT_PUBLICLY_AVAILABLE",
+    "executed": false,
+    "access_probe_ref": "deletion-access-probe.json",
+    "alternative_without_person_profile": "NO_SUPPORTED_SELECTIVE_PERSONLESS_DELETION_PATH_VERIFIED",
+    "path_review_ref": "deletion-path-review.json",
+    "support_ticket_number": 80503,
+    "support_reply": "PROCEDURE_CONFIRMED_IN_TICKET_NOT_EXECUTED",
+    "exact_set_user_approval_required_before_actual_deletion": true
+  },
+  "budget": {
+    "maximum_transmitted_rows_including_retries": 500,
+    "cloud_rows_sent_this_turn": 0
+  },
+  "blockers": [
+    "Cloud COMMAND_NONZERO_EXIT before scenarios; exact install/mkdir/stat failure not attested.",
+    "Native cloud reservation receipts missing; conservative500consumed,0remaining for future gates."
+  ],
+  "sources": [
+    "PostHog project-get id330212",
+    "PostHog billing-overview-get",
+    "PostHog organization-get for project organization",
+    "PostHog execute-sql events schema",
+    "PostHog docs-search retention/deletion",
+    "GitHub PR5 and repository GET",
+    "Authenticated browser observations in deletion-access-probe.json",
+    "GitHub run41600690330/job125798442094 plus independently recomputed synthetic receipts"
+  ],
+  "github_runner": {
+    "repository": "Arduino89/convoy-mesh",
+    "repository_public_verified": true,
+    "label": "ubuntu-24.04",
+    "standard_public_runner_free": true,
+    "artifact_uploads": false,
+    "actions_cache": false,
+    "source": "https://docs.github.com/en/actions/concepts/billing-and-usage",
+    "runner_reference": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+    "checked_date_utc": "2026-11-03"
+  },
+  "followup_recorded_at_utc": "2026-11-03T09:14:30Z",
+  "local_android_regression": {
+    "status": "PASS",
+    "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+    "run_id": 41600690330,
+    "job_id": 125798442094,
+    "run_attempt": 1,
+    "host_tests_passed": 133,
+    "independent_review_ref": "direct-review-41600690330/independent-runtime-review.json",
+    "scope": "LOCAL_LOOPBACK_ONLY_CLOUD_NOT_RUN"
+  },
+  "resolved_previous_blockers": [
+    "GitHub and PostHog browser authentication succeeded.",
+    "Exact-source Android local regression and independent receipt/source review passed on 2d76100.",
+    "Vendor-supported selective personless deletion procedure confirmed; exact-set approval still required.",
+    "Repository secret presence verified on5Nov2026 without reading its value."
+  ],
+  "support_followup": {
+    "recorded_at_utc": "2026-11-03T10:11:01Z",
+    "ticket_number": 80503,
+    "status": "CREATED_MESSAGE_VERIFIED_AWAITING_REPLY",
+    "evidence_ref": "posthog-support-request.json",
+    "supported_manual_or_assisted_path_acceptable": true,
+    "exact_set_user_approval_required_before_any_actual_deletion": true,
+    "secrets_setup_documented_not_applied": true,
+    "new_android_execution": false,
+    "new_cloud_rows_sent": 0
+  },
+  "followup_2026_11_05": {
+    "checked_at_utc": "2026-11-05T08:00:43.171Z",
+    "status": "BLOCKED_EXECUTION_ENVIRONMENT_UNAVAILABLE",
+    "project_id": 330212,
+    "api_host": "https://eu.i.posthog.com",
+    "privacy": {
+      "anonymize_ips": true,
+      "session_recording_opt_in": false
+    },
+    "billing": {
+      "plan": "free",
+      "has_active_subscription": false,
+      "events_usage": 162,
+      "events_limit": 1000000,
+      "events_remaining": 999838
+    },
+    "runner_secret": {
+      "name": "CONVOY_LAB_POSTHOG_TOKEN",
+      "repository": "Arduino89/convoy-mesh",
+      "presence_verified_in_authenticated_ui": true,
+      "last_updated_display": "Nov 5, 2026, 08:49 GMT+1",
+      "value_read": false,
+      "value_validity": "NOT_TESTED_BY_RUNNING_JOB"
+    },
+    "deletion_procedure": {
+      "status": "CONFIRMED_BY_VENDOR_SUPPORT_NOT_EXECUTED",
+      "ticket": 80503,
+      "response_observed_date": "2026-11-04",
+      "reply_local_time": "2026-11-03T11:17+01:00",
+      "manual_support_assisted": true,
+      "personless_selective": true,
+      "free_plan_no_charge_stated": true,
+      "preview_filter_and_count_before_confirmation": true,
+      "user_approval_of_exact_set_required": true,
+      "timing_stated": "Confirmed by Friday: weekend batch; provider confirms completion in ticket and same event count becomes zero. Recent transient copy about8days, backups about2weeks later; not independently measured.",
+      "fresh_browser_recheck": "NOT_COMPLETED_BROWSER_DISCONNECTED"
+    },
+    "runtime": {
+      "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+      "last_valid_local_run": 41600690330,
+      "next_expected_workflow_number_at_check": 8,
+      "new_runs_started": 0,
+      "new_cloud_rows_sent": 0,
+      "global_row_ceiling_including_retries": 500,
+      "previous_rows_reserved_in_this_cloud_continuation": 0,
+      "cloud_status": "NOT_RUN"
+    },
+    "blockers": [
+      "GitHub default branch is main and the LAB workflow is absent there; the UI offers no Run workflow. Official workflow_dispatch requires the file on the default branch.",
+      "Browser disconnected and the managed environment became unavailable before a fresh gate or cloud run was submitted. No identical retries or alternate cloud sends.",
+      "An explicit one-shot push wrapper on the existing LAB branch was reviewed conceptually as a possible minimum reuse path; no YAML change was implemented, tested, published or activated."
+    ],
+    "next_step": "Restore the execution environment, refresh observations/run-number/gate, then prepare and independently review a single-use push configuration on the existing LAB branch. Preserve main and the already-tested executable source. Do not delete any data without user approval of the exact set.",
+    "reuse_first": {
+      "level": 5,
+      "decision": "Configure/compose the existing branch-local workflow and pinned source; no new sender, service, account or main integration.",
+      "implementation_status": "PROPOSED_ONLY"
+    },
+    "sources": [
+      "PostHog project-get and billing-overview-get current read",
+      "Authenticated GitHub Actions secrets UI, name and timestamp only",
+      "GitHub PR5/run list and main workflow404",
+      "https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow",
+      "Previously read authenticated ticket80503 reply"
+    ]
+  },
+  "single_launch_2026_11_05": {
+    "mode": "EXPLICIT_SINGLE_USE_EXISTING_BRANCH_PUSH",
+    "workflow_change_only": true,
+    "native_and_harness_source_unchanged": "2d76100fda1df0637e953f4ad90f26073028880c",
+    "gate": {
+      "schema_version": 1,
+      "status": "PASS",
+      "project_id": 330212,
+      "api_host": "https://eu.i.posthog.com",
+      "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+      "run_id": "synthetic-cloud-20261105-r8",
+      "execution_id": "Isolated Android telemetry laboratory:8",
+      "run_attempt": 1,
+      "quota_rows_available": 999838,
+      "total_ceiling": 500,
+      "remaining_budget": 500,
+      "expires_utc": "2026-11-05T12:12:35.059Z",
+      "privacy": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:00:43.171Z",
+        "evidence_ref": "Existing cloud-preflight.json followup_2026_11_05: live project-get, EU endpoint, anonymize_ips true/replay false plus unchanged prewrite allowlist.",
+        "anonymize_ips": true,
+        "session_recording_opt_in": false
+      },
+      "retention": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:00:43.171Z",
+        "evidence_ref": "Live billing plan entitlement: product_analytics_data_retention one-year query window; not a physical-erasure guarantee."
+      },
+      "deletion": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:12:35.059Z",
+        "evidence_ref": "Review of ticket80503 response read04Nov: vendor offers free selective personless support-run deletion by run_id/UUID; sends filter/count before approval. Actual deletion requires Cama exact-set approval; no deletion requested.",
+        "mode": "SUPPORTED_MANUAL_ASSISTED",
+        "performed": false
+      },
+      "quota": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:00:43.171Z",
+        "evidence_ref": "Live billing-overview-get Free/no active subscription, 162/1000000 used; 999838 available. Standard public ubuntu-24.04 runner; no artifacts/cache.",
+        "free_plan": true
+      },
+      "local_regression": {
+        "status": "VERIFIED",
+        "checked_at_utc": "2026-11-05T08:12:35.059Z",
+        "evidence_ref": "Fresh GitHub recheck of completed successful run41600690330/job125798442094 attempt1 on exact source2d76100; original execution03Nov, not a new Android run. Independent runtime review preserved.",
+        "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+        "original_execution_date": "2026-11-03"
+      }
+    },
+    "expected_run_number": 8,
+    "run_attempt": 1,
+    "commit_message": "Execute authorized synthetic cloud laboratory once (budget 500)",
+    "cloud_rows_reserved_before_launch": 0,
+    "source_checkout_pinned": true,
+    "restore_original_workflow_after_run": true,
+    "deletion_requires_separate_exact_set_approval": true,
+    "reuse_first_level": 5,
+    "reason": "Compose existing push workflow and pinned LAB; no default-branch changes or new sending component.",
+    "independent_review": {
+      "status": "APPROVED_FOR_SINGLE_LAUNCH",
+      "checked_at_utc": "2026-11-05T08:15:58.240576+00:00",
+      "receipt_ref": "../2026-11-05/cloud-launch-review.json",
+      "workflow_sha256": "dfb77a333f0bc79f33acf9481cf26d6e49830c3bc2443b416ff47f11d9d19709",
+      "gate_sha256": "35b9191929ca83a5e796d294657cfdd3a4729c0b8ebbf4fd44a18912b016a54b"
+    },
+    "result_ref": "../2026-11-05/run-41993361681/summary.json",
+    "workflow_restore": "Exact original restored in this evidence commit, skip-ci."
+  }
+}

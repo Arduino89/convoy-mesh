@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "scope": "READ_ONLY_PINNED_ANDROID_SOURCE_PREFLIGHT_NOT_RUNTIME",
+  "reviewed_utc": "2026-11-02T18:56:05.862794+00:00",
+  "candidate_flutter": {
+    "version": "3.1.0",
+    "commit": "d8dbb35abde88c676748f179db922f9e0a20094f",
+    "declared_native_dependencies": {
+      "mixpanel-android": "8.11.1",
+      "mixpanel-android-common": "1.1.0"
+    },
+    "source": "packages/mixpanel_flutter/android/build.gradle",
+    "evidence_scope": "Declared by immutable Flutter source checked by sibling reviewer; no Gradle resolution or lock/runtime proof performed"
+  },
+  "android": {
+    "version": "8.11.1",
+    "tag": "v8.11.1",
+    "tag_type": "commit",
+    "commit": "56b8a0b33cec9a08fb046bd3d1d75f9e9743de80",
+    "repository": "mixpanel/mixpanel-android",
+    "source_files": [
+      {
+        "path": "analytics/build.gradle",
+        "git_blob_sha1": "9a03e1cd859b747369d66c140557fcf44b0f258d",
+        "bytes": 7840,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/build.gradle",
+        "sha256": "73ce02f2b12995908d3fc7946f6696e9bdeb6909f67eac4ddffbd6c2322bb570"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/AGENTS.md",
+        "git_blob_sha1": "866be6931914af8799f56e7dde0c013b5e599238",
+        "bytes": 3848,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/AGENTS.md",
+        "sha256": "aba9cdd59d58314b488fa4ca91fe10eb84f465eb8afcec868b210b8bd955370c"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java",
+        "git_blob_sha1": "29ab2e6fc929b8d79714030d90fffb88294b9d70",
+        "bytes": 39482,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java",
+        "sha256": "30733dc841c9ebb8293605022095992e47573d082fc53c18de6adf99df913309"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/AutocaptureOptions.java",
+        "git_blob_sha1": "7282aefabc2a3484ea37fcc13821371bded5e688",
+        "bytes": 6418,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/AutocaptureOptions.java",
+        "sha256": "cc74d055997d898a3a30501b2b12a1ae3adc473914c37556f63eff8d7bd6fefe"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/MPConfig.java",
+        "git_blob_sha1": "229e37d440b2ad4b67a810d4e2f47b5cf400c4a1",
+        "bytes": 28086,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/MPConfig.java",
+        "sha256": "a8a706baf1ad5e6a9662b0eea4533e70ea370ca0b7bc3b4e23dd3bf39b7d9bf1"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/MPDbAdapter.java",
+        "git_blob_sha1": "9814523b5291b9c811f82d6c19222b1a0656dd9e",
+        "bytes": 31608,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/MPDbAdapter.java",
+        "sha256": "948eb8499105b2d2400f89833b2ddf11854aa7b173497974a2760b3e72b6b321"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java",
+        "git_blob_sha1": "8d977ed2c39de9fbd346cbe35c6bdd53154cbc99",
+        "bytes": 146940,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java",
+        "sha256": "e50e47d355bf8fc9090f9bd5457987cefe1fbbae18e6d30bbde1e91a98231b56"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelOptions.java",
+        "git_blob_sha1": "899f1f2f5a534466f8b06f105eff31a9a8574745",
+        "bytes": 17582,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelOptions.java",
+        "sha256": "06bd543dea7dd0d8cab98974bd7d349805564a3b3b46977692328b6fb2194a25"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/PersistentIdentity.java",
+        "git_blob_sha1": "8cb717bb306b743dad0731309a341e547dc789e3",
+        "bytes": 28799,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/PersistentIdentity.java",
+        "sha256": "8a37c153d763378be243426e9608230bae8c00186fbd73b845db54903e5a9701"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/SessionMetadata.java",
+        "git_blob_sha1": "949fbceac51995c975980952a21552d318d5d5cd",
+        "bytes": 1683,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/SessionMetadata.java",
+        "sha256": "ece4b4efcd5b945b13252f0652e1b9afa96c571dabef37f050634e0430677ff7"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/mpmetrics/SystemInformation.java",
+        "git_blob_sha1": "c43fb45aa3ebc079e9f47b3ba6bc6428f54c3dbf",
+        "bytes": 7568,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/mpmetrics/SystemInformation.java",
+        "sha256": "f957815cedcc3d5d50749fb64c6b5aa09bf891028161a572fcc968ff285a0afa"
+      },
+      {
+        "path": "analytics/src/main/java/com/mixpanel/android/util/HttpService.java",
+        "git_blob_sha1": "9d7ac4e11809174d42fbe126434043dce74cd865",
+        "bytes": 33102,
+        "url": "https://github.com/mixpanel/mixpanel-android/blob/56b8a0b33cec9a08fb046bd3d1d75f9e9743de80/analytics/src/main/java/com/mixpanel/android/util/HttpService.java",
+        "sha256": "239e329163abc414aeaed6aacdf7f2b6068df74dbdfaad0f5e5686be528a6137"
+      }
+    ]
+  },
+  "decision": "PREFLIGHT_BLOCKED_CURRENT_MINIMAL_CONTRACT_DO_NOT_START_ANDROID",
+  "decision_reason": "Public excludeProperties is real and removes many final property keys, but the available public path does not suppress the unconditional opt-in event or remove the separately attached session metadata envelope. The approved event/property contract was not enlarged to obtain a pass.",
+  "findings": [
+    {
+      "id": "supported_queue_delete",
+      "evidence": "DOCUMENTED_AND_IMPLEMENTED_STATIC",
+      "claim": "optOutTracking publicly documents deletion of unflushed events and People updates. It posts EMPTY_QUEUES; worker deletes events/people/groups/anonymous_people rows by token. This differs materially from PostHog reset preserving the outbound queue.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:1511-1536",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java:155-160,539-545",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MPDbAdapter.java:580-596"
+      ]
+    },
+    {
+      "id": "delete_not_durable_ack",
+      "evidence": "STATIC_NO_CRASH_EXECUTION",
+      "claim": "API returns after posting to Handler; there is no combined deletion/consent completion. Four deletes are separate; opt-out flag is written late and preferences use apply. Crash or a prior flush may precede deletion. hasOptedOutTracking true does not prove purge.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:1517-1529",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java:446-453,534-545,633-672",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/PersistentIdentity.java:468-470,642-651,698-699"
+      ]
+    },
+    {
+      "id": "startup_optout_not_override",
+      "evidence": "STATIC",
+      "claim": "optOutTrackingDefault=true is applied only if already opted out or no flag exists; it does not override a previously saved opt-in. Conversely default=false does not clear a persisted true flag. Existing singleton retrieval does not reconfigure it.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:268-270,630-664"
+      ]
+    },
+    {
+      "id": "endpoint_before_worker",
+      "evidence": "STATIC_CAPABILITY_NOT_NETWORK_ATTESTATION",
+      "claim": "Constructor applies options.serverURL before AnalyticsMessages creation. This supports a future local receiver experiment but does not itself attest zero cloud requests.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:208-215,236-239",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MPConfig.java:382-394"
+      ]
+    },
+    {
+      "id": "exclude_properties_supported",
+      "evidence": "STATIC",
+      "claim": "MixpanelOptions.Builder.excludeProperties is a supported exact-key exclusion set. Worker merges default/device and caller properties, then applies exclusion before storing/sending. It is not a fail-closed final-payload allowlist hook.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelOptions.java:373-415",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java:43-55,736-805"
+      ]
+    },
+    {
+      "id": "reserved_identity_fields",
+      "evidence": "STATIC",
+      "claim": "Exclusion skips token,time,distinct_id,$device_id,$user_id,$had_persisted_distinct_id. Default device ID is persisted, but public deviceIdProvider/caller property overrides exist: this review does not claim a real persistent device identity is unavoidable. Additional protocol keys would still need existing-contract approval rather than silent acceptance.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelOptions.java:20-28,107-114,310-313",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java:47-55",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:3118-3146",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/PersistentIdentity.java:596-620,680-690"
+      ]
+    },
+    {
+      "id": "unfiltered_session_metadata",
+      "evidence": "STATIC_CONTRACT_BLOCKER",
+      "claim": "Worker attaches top-level $mp_metadata after applying exclusions to properties. SessionMetadata contains $mp_event_id, $mp_session_id, $mp_session_seq_id, $mp_session_start_sec. Metadata state is private final and no public replacement/disable method was found in the inspected API/options/config. These technical event/session IDs are not classified here as human identifiers; they are extra unapproved session structure under the current contract.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java:789-805",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/SessionMetadata.java:22-26,37-43",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:236,3154,3316"
+      ]
+    },
+    {
+      "id": "unconditional_optin_event",
+      "evidence": "STATIC_CONTRACT_BLOCKER",
+      "claim": "Every optInTracking overload reaches track($opt_in,properties). The public track overload uses isAutomaticEvent=false, so trackAutomaticEvents=false does not suppress it. No public enable-without-event or event-name drop hook was found. identify may additionally emit $identify.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:1547-1581,1029-1031,3068-3070,866-896"
+      ]
+    },
+    {
+      "id": "observational_bridge_not_filter",
+      "evidence": "STATIC_ANDROID",
+      "claim": "EventBridge receives a prepared properties copy and is notified independently; the event is already prepared for insertion. It has no final-envelope veto contract. ProxyServerInteractor offers headers/response handling, not a final serialized payload mutation/drop hook.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/AnalyticsMessages.java:808-818",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelOptions.java:338-368",
+        "analytics/src/main/java/com/mixpanel/android/util/HttpService.java:443-449,511-524"
+      ]
+    },
+    {
+      "id": "automatic_scope",
+      "evidence": "STATIC",
+      "claim": "Automatic mobile events can be disabled and autocapture is opt-in; these controls do not remove $opt_in or session envelope. Optional People identity would also cause deleteUser/clearCharges during opt-out and is unnecessary for this lab.",
+      "sites": [
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelAPI.java:280-295,1519-1522",
+        "analytics/src/main/java/com/mixpanel/android/mpmetrics/MixpanelOptions.java:89-104,147-158"
+      ]
+    }
+  ],
+  "public_alternatives_checked": [
+    "Direct native MixpanelOptions.excludeProperties exists even though Flutter binding does not expose it; still cannot remove envelope metadata or opt-in event",
+    "deviceIdProvider is public and can supply synthetic identity; does not establish full event/payload compliance",
+    "reset explicitly leaves already queued analytics messages and flushes; not a consent-enabling substitute",
+    "Initialization defaults and a new instance configuration are not a supported reset of previously persisted consent for the same run",
+    "No reflection, subclass interception, custom transport, proxy rewrite, internal database deletion or event contract expansion adopted"
+  ],
+  "runtime_status": {
+    "new_android_runs": 0,
+    "gradle_resolution": "NOT_RUN",
+    "queue_purge": "NOT_RUN",
+    "interrupted_revocation": "NOT_RUN",
+    "final_wire_privacy": "NOT_RUN",
+    "sentinels": "NOT_RUN",
+    "cloud_ingestion": "NOT_RUN",
+    "posthog_historical_evidence": "UNCHANGED"
+  },
+  "interruption_test_if_future_supported_candidate": {
+    "acceptance": "Do not equate API return or stored opt-out flag with durable deletion. A future candidate requires deterministic interruptions around durable app deny/pending state, SDK delete dispatch, actual deletion completion, and online restart; reconcile all forbidden/new IDs and unrelated sentinels.",
+    "static_risks": [
+      "EMPTY_QUEUES is an in-memory worker message and can be lost before execution",
+      "Process death may occur between per-table deletes",
+      "Persisted opt-in can survive before async deny write completes",
+      "Deny may persist while queue deletion has not completed",
+      "A scheduled or in-progress flush can precede EMPTY_QUEUES; no cancellation completion is exposed"
+    ]
+  },
+  "limits": [
+    "Static review only; no runtime result or universally impossible statement",
+    "Android source fixed to declared dependency version, not a newly resolved compiled dependency",
+    "Twelve selected official source blobs verified against Git tree hashes; full repository/API history not exhaustively audited",
+    "No claim that technical session IDs are inherently personal identifiers",
+    "No proof that unrelated app data is preserved until future sentinel execution",
+    "A public asynchronous deletion API is a testable candidate, not automatically disqualified solely for lacking an ACK; current stop is the separate minimization contract failure"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "scope": "PUBLISHABLE_SYNTHETIC_RECEIPT_BUNDLE_PRIVACY_REVIEW",
+  "source_commit": "2d76100fda1df0637e953f4ad90f26073028880c",
+  "run_id": 41600690330,
+  "status": "NO_PUBLISHING_PRIVACY_FINDINGS",
+  "files_scanned": 108,
+  "json_objects_scanned": 2846,
+  "string_values_scanned": 11736,
+  "redacted_fake_token_fields": 16,
+  "loopback_ip_occurrences": 16,
+  "nonloopback_ip_findings": 0,
+  "findings": [],
+  "manifest_sha256": "bef3e028b33a2a94dda49cb99831ea908d621d62ad93e2dc0413ce61fb1075b8",
+  "identity_assessment": "Synthetic run/event IDs, random event UUIDs and sentinel UUIDs, Android process/boot/nonce identifiers, source/APK/certificate hashes and emulator serial are laboratory/provenance identifiers; no personal user identity is present. Independently recomputed payload contract and sentinel contents support this classification.",
+  "limitations": [
+    "Pattern scanning alone cannot prove absence of all personal data; this assessment also relies on the exact synthetic schema, source review and raw payload/state recomputation.",
+    "The review covers the extracted108-file public bundle, not private job environment, raw diagnostic logs or cloud data.",
+    "Fake token values are already redacted; the scan does not recover or expose any original credential."
+  ]
+}

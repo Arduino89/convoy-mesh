@@ -1,0 +1,2 @@
+{"action_nonce": "d2379b0bcf9b42afaca464d97c29b671", "cloud_rows_reserved": 0, "connectivity": {"active_network": false, "internet_capable": false, "probe_available": true, "transports": [], "validated": false}, "online_requested": false, "pid": 8949, "requests_started": 0}
+{"action_nonce": "11a11e9db2834546bfffe1451155232f", "cloud_rows_reserved": 0, "connectivity": {"active_network": true, "internet_capable": true, "probe_available": true, "transports": ["cellular"], "validated": true}, "online_requested": true, "pid": 9325, "requests_started": 0}

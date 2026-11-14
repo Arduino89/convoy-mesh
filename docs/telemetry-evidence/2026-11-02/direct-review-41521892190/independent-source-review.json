@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "reviewer": "independent_readonly",
+  "review_status": "STATIC_REVIEW_NO_MATERIAL_BLOCKER_FOUND",
+  "runtime_status": "PENDING_RAW_RECEIPTS_NOT_ATTESTED",
+  "source_commit": "89b3a35d3a55c86d60a1cb5b779cfeba7fd00776",
+  "local_source_commit": "ffba2c353f2189cbcdd3ecdf91e11eda33a10122",
+  "run_id": 41521892190,
+  "job_id": 125539742017,
+  "scope": "SYNTHETIC_LOOPBACK_DIRECT_SENDER_NOT_CONVOY",
+  "source_equality": {
+    "method": "Independently fetched all fourteen published changed files at exact immutable commit; compare reported Git blob SHA with locally recomputed Git blob hash.",
+    "files": [
+      {
+        "path": ".github/workflows/telemetry-runtime-control.yml",
+        "github_blob_sha1": "895b864a8aaca9ea7a80c7ea6f847ef6aaacf324",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/.github/workflows/telemetry-runtime-control.yml",
+        "local_sha256": "726a4cca7ae9077c4b761ecf7f1358babbd22c73561f52d9d27b9776c17cfbb1",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "CONTINUITY.md",
+        "github_blob_sha1": "a9d9617447866cd881b1a9a8ac56a5d67010c9fb",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/CONTINUITY.md",
+        "local_sha256": "baaa54fd04f808c67588269ccc98bfd2d28121ed7be17d68b06fadd3ce254001",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "docs/telemetry-minimum-infrastructure.md",
+        "github_blob_sha1": "eefb9da5e29631bf07c0f23123dc11614335bbd6",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/docs/telemetry-minimum-infrastructure.md",
+        "local_sha256": "e6e9064cf118a0ac698ba008782f691a6d076974b83979979191af3dcb82f962",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/README.md",
+        "github_blob_sha1": "0f1c4190d41c5a4806fd4815b06407083bec052d",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/README.md",
+        "local_sha256": "f29884c5f31ba4321260b823a77c6039202929ecaff3a03f8136e7f41e3e9ad3",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/ci_direct_trial.py",
+        "github_blob_sha1": "6573b14276d934550f66950c112bd92a366e0699",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/ci_direct_trial.py",
+        "local_sha256": "a610bdf118ddea2526705f8e368b703573e410660bef7105ca124be7e45262ee",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/direct_trial/AndroidManifest.xml",
+        "github_blob_sha1": "26b69a8dc55aac5b02ccf0010a31380a89c3677f",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/direct_trial/AndroidManifest.xml",
+        "local_sha256": "9508c27ed88c70a2b50e661124384ad856ebf5ca2150f0a4aeb8b3ccd2a5121b",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+        "github_blob_sha1": "c5f722dfa1a382152bf38a63c4512813d1aec393",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/direct_trial/DirectQueue.java",
+        "local_sha256": "b9c841c5a45da37c6e7d0fec9283480e4aca605d613dc7c45e30d4382d40f4a9",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/direct_trial/MainActivity.java",
+        "github_blob_sha1": "2b93e056ff5b657fd7830c61de10ec17a45bb629",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/direct_trial/MainActivity.java",
+        "local_sha256": "72cf0b1cc631af2daf78cfb7b806359655a948d4ab690cee0b327f7f73b2bf3f",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/direct_trial/README.md",
+        "github_blob_sha1": "49194bcca5dcc4a7fd0d87a57d7b0e1d207b7852",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/direct_trial/README.md",
+        "local_sha256": "0d82a7419b756baf3fffc94e29ddde2643f561a8709bd087399db872a633af11",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/direct_trial/build.py",
+        "github_blob_sha1": "52417345afb786688645f1c42f654a59b3b97f0d",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/direct_trial/build.py",
+        "local_sha256": "cd268b5113fd0c8e38b54773f12e208c69c7fc10742fd7ee926881ee8b51bf19",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/emit_ci_evidence.py",
+        "github_blob_sha1": "942e39b9f365cb5cbfeea2b905c6af7595d1ff83",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/emit_ci_evidence.py",
+        "local_sha256": "887515a435c737b4ef9f0b58d735ce4f08cc590b8617479664bd534fff785943",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/run_ci_lab.sh",
+        "github_blob_sha1": "8bf8369441ce42bf3e669df5a401f21d6b5faba5",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/run_ci_lab.sh",
+        "local_sha256": "4b856901e6ede7376ec1d86a2a7a8ed90aa59caab9b4ace56cc9807d495b39f3",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/test_ci_direct_trial.py",
+        "github_blob_sha1": "9515e152692b2fe4d61f831ab1c7e4738b9c846d",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/test_ci_direct_trial.py",
+        "local_sha256": "5e900b1cd02732f502016556e6eac56d9f562932982c8995d9ec894970ea8be0",
+        "published_blob_matches_local": true
+      },
+      {
+        "path": "tools/telemetry_spike/test_emit_ci_evidence.py",
+        "github_blob_sha1": "3fba7dc62c11c6a8b92f19b5f64fde794047e84e",
+        "github_url": "https://github.com/Arduino89/convoy-mesh/blob/89b3a35d3a55c86d60a1cb5b779cfeba7fd00776/tools/telemetry_spike/test_emit_ci_evidence.py",
+        "local_sha256": "a636a2501229f9c35d8bc4c31d8bae90418cee3896c312ed34c616be177ecde3",
+        "published_blob_matches_local": true
+      }
+    ],
+    "verified_file_count": 14
+  },
+  "findings": [
+    {
+      "claim": "Deny and generation change commit in SQLite before separate queue purge; startup with denied consent purges before sender kick.",
+      "basis": "STATIC",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        55,
+        57,
+        63,
+        67,
+        85,
+        106,
+        188,
+        191,
+        197,
+        199,
+        204
+      ]
+    },
+    {
+      "claim": "Shared dispatch gate covers final validation and request body write, flush and close; response wait occurs outside gate. Late ACK deletes only its own monotonic IDs.",
+      "basis": "STATIC",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        235,
+        249,
+        272,
+        273,
+        275,
+        279,
+        286
+      ]
+    },
+    {
+      "claim": "Sentinels are random per installation; a partial missing initialized setting alongside database or trace blocks startup and missing trace is not recreated.",
+      "basis": "STATIC",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        404,
+        407,
+        409,
+        411,
+        418
+      ]
+    },
+    {
+      "claim": "Before-commit interruption has no accepted durable revocation; its observed prior-consent recovery is classified separately. Three post-commit cutpoints are tested, not every crash.",
+      "basis": "STATIC",
+      "path": "tools/telemetry_spike/ci_direct_trial.py",
+      "lines": [
+        127,
+        128,
+        266,
+        271,
+        281,
+        289
+      ]
+    },
+    {
+      "claim": "Harness observes refusal online before/after restart, post-revoke refusal, genuine lost ACK, final receiver through verified process stop, FIFO overflow with durable counter, source/APK identity.",
+      "basis": "STATIC",
+      "path": "tools/telemetry_spike/ci_direct_trial.py",
+      "lines": [
+        410,
+        473,
+        488,
+        500,
+        535,
+        557,
+        582,
+        641
+      ]
+    }
+  ],
+  "limits": [
+    "No runtime success inferred from source or host-test success.",
+    "No cloud request or cloud deduplication/ingestion claim.",
+    "Endpoint reachability is adb-reverse removal/restoration; not Android radios offline.",
+    "Committed cutpoint process kills do not prove all crash timings, power loss, storage hardware durability or forensic erasure.",
+    "Before first durable deny commit remains an unaccepted request and may recover old consent.",
+    "Already transmitted bytes cannot be recalled; request counters alone do not prove remote receipt.",
+    "Row count saturation is tested; byte cap, total memory, transient journal and physical-phone battery are not measured by this review."
+  ]
+}

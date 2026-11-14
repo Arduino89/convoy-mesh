@@ -1,0 +1,213 @@
+{
+  "format": "convoy-telemetry-spike-v2",
+  "date": "2026-11-01",
+  "decision": "POSTHOG_EU_DATA_LAB_CANDIDATE_ADOPTION_BLOCKED_PURGE_AND_MINIMIZATION",
+  "gate": "ADOPTION_BLOCKED_REVOKED_QUEUE_RESURRECTION_AND_NATIVE_METADATA",
+  "repository": "Arduino89/convoy-mesh",
+  "base_branch": "experiment/pedestrian-acquisition-v1",
+  "base_sha": "2d8a50af9c151d29f7b1ed13e02b1643d404aa09",
+  "work_branch": "experiment/telemetry-minimum-infrastructure",
+  "governance": {
+    "source": "Arduino89/Cama-Enterprise main fetched 2026-11-01",
+    "planning_fingerprint": "927eb4b277be9c50a9b7d01757c9d6cabe38200f5ee4e68a221353c6e969b766",
+    "validation_fingerprint": "6d79d72d984ec710637aa3337d35f52d14d49a5db4655a1538cf469c93594d47",
+    "source_digests": {
+      "enterprisePatternRegistrySha256": "afbee2ce0f0944239ac8629b8a91549b76ba8de1ddc1ca4225f724dd69e5c4f7",
+      "jarvisOperationsNotebookSha256": "223a2f64fe84a44cf609fd0814a5188690f8b62553aae41a02dfc8e33e0001b8",
+      "routingMemorySha256": "051efa8264ccc21e5494314485fabb13a9d36a9306aef3847c9c1633397ccbdb",
+      "ideaProfileSha256": "d471ddeeda4fd7e2b1b7de130dc4a2fbfa6123be8affb6ede082b5a8ed3c445f"
+    },
+    "planning_patterns": [
+      "EP-001-canonical-source-and-artifact-roles",
+      "EP-003-human-sentinel-and-regression",
+      "EP-004-end-to-end-reality-check",
+      "EP-006-diminishing-returns-stop-gate",
+      "EP-007-minimal-context-and-reuse-first"
+    ],
+    "validation_patterns": [
+      "EP-001-canonical-source-and-artifact-roles",
+      "EP-002-evidence-state-and-absence-gate",
+      "EP-003-human-sentinel-and-regression",
+      "EP-004-end-to-end-reality-check"
+    ],
+    "notebook_notes": [
+      "JON-2026-08-25-010",
+      "JON-2026-08-25-003",
+      "JON-2026-08-25-005",
+      "JON-2026-08-25-009",
+      "JON-2026-08-25-011",
+      "JON-2026-08-25-012"
+    ],
+    "routing_memory": "EVIDENCE_AVAILABLE",
+    "followup_validation_fingerprint": "04b4d0c92ffc07da11b248fe50e90e82f090ccff7f6a723f777d9cce7be7eab9",
+    "followup_validation_patterns": [
+      "EP-001-canonical-source-and-artifact-roles",
+      "EP-002-evidence-state-and-absence-gate",
+      "EP-003-human-sentinel-and-regression",
+      "EP-004-end-to-end-reality-check",
+      "EP-009-executable-proof-escalation"
+    ],
+    "followup_profile_sha256": "3543c1f71002ae17af1f893266e8e062b3a833c6ded6fd737f0a08c0fde8c1d6"
+  },
+  "reuse_first": {
+    "minimize": 1,
+    "production_candidate_sdk": 3,
+    "local_reference_composition": 5
+  },
+  "evidence": {
+    "local_contract_unit_checks": 10,
+    "local_reference_scenarios": 5,
+    "flutter_sample": "ANDROID_DEBUG_BUILD_VERIFIED_LOCAL_RECEIVER_ONLY",
+    "provider_queries": "REAL_POSTHOG_EU_PROJECT_330212_CONTROL_10_OF_10",
+    "vendor_offline_restart": "PASS_100_EXPECTED_100_RECEIVED_NO_MISSING_NO_DUPLICATES",
+    "vendor_consent_purge": "FAIL_ALL_20_REVOKED_IDS_REAPPEAR_AFTER_RECONSENT",
+    "android_memory_network": "EMULATOR_PSS_APP_DATA_AND_CUMULATIVE_UID_NETWORK_HISTORY;NO_PAIRED_PHYSICAL_BUDGET_VALIDATION",
+    "battery": "NOT_MEASURED",
+    "independent_review": "PENDING",
+    "android_emulator": "API35_X86_64_NO_KVM_REAL_SDK_DEBUG_EXTENSION_EXECUTED",
+    "flutter_cloud_sample": {
+      "status": "ANDROID_DEBUG_BUILD_VERIFIED",
+      "source_commit": "02034a0222c464ae28a7d0d9e5f6d64cd18c0139",
+      "sha256": "1a40224f35610eabe654f57e2631d85e147bc25e580c67f9454688edf91fd73e",
+      "bytes": 155896762,
+      "debug_only_test_extension": true
+    },
+    "vendor_initial_refusal": "10_INITIAL_AND_10_POST_REVOKE_REJECTED;CONSENT_FALSE_SURVIVES_PROCESS_RESTART",
+    "vendor_offline_request": "100_REQUESTED_WITH_AIRPLANE_MODE_NO_NETWORK_PRE_RECONNECT_CLOUD_ZERO",
+    "native_runtime_method": "EXPLICIT_DEBUG_EXTENSION_SAME_ACTIONS_AS_LAB_UI",
+    "vendor_repeated_flush": "PASS_100_ROWS_100_UNIQUE_AFTER_TWO_MORE_FLUSHES",
+    "native_privacy": {
+      "ip_geoip": "100_FLAGS_TRUE_ZERO_IP_OR_LOCATION_FIELDS",
+      "person_profiles": "100_DISABLED",
+      "metadata_whitelist": "FAIL_38_KEYS_INCLUDING_DEVICE_NAME",
+      "human_names": "NONE_SYNTHETIC_EMULATOR_LABEL_EMU64X"
+    },
+    "python_unit_checks": 25,
+    "vendor_overflow": "45_REQUESTED_CAP32_RECEIVED_LAST32_IDS14_TO45_MISSING_FIRST13",
+    "vendor_os_reboot_and_mid_write_kill": "NOT_RUN",
+    "vendor_failed_ack_retry": "NOT_RUN_REFERENCE_ONLY",
+    "traffic_history_sample": {
+      "tx_bytes": 15210,
+      "rx_bytes": 10685,
+      "scope": "LAST_POLL_CUMULATIVE_UID_NOT_SDK_ONLY_NO_BASELINE"
+    }
+  },
+  "limitations": [
+    "Python reference results are not vendor SDK behavior.",
+    "Actual Android debug emulator offline/process-restart cloud path passed; not physical/OEM/reboot/mid-write durability proof.",
+    "No real-user or production activation, no spending or publication; physical phone and battery evidence pending.",
+    "Native Dart whitelist does not remove 32 added properties; 38 property keys observed including the synthetic device label.",
+    "Native optOut did not erase queued events in this pinned stack: all 20 returned after optIn/setup and flush.",
+    "Native ACK-lost retry, OS reboot, kill during write, background/OEM and physical resource budgets are not proven."
+  ],
+  "learning_closure": {
+    "status": "PROJECT_SPECIFIC_FAILURES_PRESERVED_NO_GLOBAL_MEMORY_CHANGE",
+    "reason": "Revoked queue resurrection and native metadata additions are executable project evidence, retained in receipts and the report; independent review and any reusable global promotion remain pending."
+  },
+  "initial_profile": {
+    "schemaVersion": 1,
+    "ideaId": "convoy_telemetry_minimum_2026_11_01",
+    "title": "Convoy telemetry isolated evaluation",
+    "summary": "Compare PostHog plus Data against Firebase and build a synthetic-only reproducible validation kit, without modifying the app or activating cloud collection.",
+    "stage": "EVALUATION",
+    "domains": [
+      "mobile",
+      "product_analytics"
+    ],
+    "requestedArtifacts": [
+      "research",
+      "prototype"
+    ],
+    "userContext": {
+      "targetUser": "Cama, future voluntary Convoy testers",
+      "environment": "personal",
+      "platforms": [
+        "Android",
+        "Flutter"
+      ],
+      "usageFrequency": "one isolated trial"
+    },
+    "signals": {
+      "requiresCode": true,
+      "interactionLevel": "LOW",
+      "freshResearch": true,
+      "externalData": true,
+      "realWorldIntegration": false,
+      "dataSensitivity": "LOW",
+      "novelty": "LOW",
+      "technicalComplexity": "MEDIUM",
+      "safetyImpact": "LOW",
+      "monetizationIntent": "NONE",
+      "regulatedContext": false,
+      "multiDevice": false,
+      "voiceOrMedia": false
+    },
+    "constraints": [
+      "Synthetic events only; privacy: no names, coordinates, screen recordings or diagnostic log upload.",
+      "No spending, publication, real-user activation or new credentials.",
+      "Cloud and handset evidence pending access; this profile covers local preparation only."
+    ],
+    "knownUnknowns": [
+      "SDK restart and consent purge behavior on Android",
+      "Actual PostHog/Data query access",
+      "Phone battery, network and storage overhead"
+    ],
+    "requestedOutcome": "Decision supported by primary sources and executable synthetic reconciliation, with unverified native/provider gates explicit.",
+    "humanDecisionRequired": true
+  },
+  "profile": {
+    "schemaVersion": 1,
+    "ideaId": "convoy_telemetry_minimum_2026_11_01",
+    "title": "Convoy telemetry isolated evaluation",
+    "summary": "Extend the isolated telemetry evaluation with a real EU PostHog synthetic API control, SDK build and emulator checks; no production integration.",
+    "stage": "EVALUATION",
+    "domains": [
+      "mobile",
+      "product_analytics"
+    ],
+    "requestedArtifacts": [
+      "research",
+      "prototype"
+    ],
+    "userContext": {
+      "targetUser": "Cama, future voluntary Convoy testers",
+      "environment": "personal",
+      "platforms": [
+        "Android",
+        "Flutter"
+      ],
+      "usageFrequency": "one isolated trial"
+    },
+    "signals": {
+      "requiresCode": true,
+      "interactionLevel": "LOW",
+      "freshResearch": true,
+      "externalData": true,
+      "realWorldIntegration": true,
+      "dataSensitivity": "LOW",
+      "novelty": "LOW",
+      "technicalComplexity": "MEDIUM",
+      "safetyImpact": "LOW",
+      "monetizationIntent": "NONE",
+      "regulatedContext": false,
+      "multiDevice": false,
+      "voiceOrMedia": false
+    },
+    "constraints": [
+      "Synthetic events only; no names, coordinates, replay or full diagnostic uploads.",
+      "No spend, publication, real-user activation, repository push or production app change.",
+      "Use only EU test project 330212 on its verified free plan; no billing or global project settings changes."
+    ],
+    "knownUnknowns": [
+      "Actual Android SDK offline restart, saturation and consent queue behavior.",
+      "Mobile memory, traffic and battery overhead; real phones unavailable.",
+      "AI training opt-out remains unverified; all uploaded content is synthetic."
+    ],
+    "requestedOutcome": "Decision supported by primary sources and executable synthetic reconciliation, with unverified native/provider gates explicit.",
+    "humanDecisionRequired": true
+  },
+  "github_remote_written": false,
+  "posthog_synthetic_ingestion": true,
+  "posthog_global_settings_changed": false,
+  "profile_is_frozen_planning_input": true
+}

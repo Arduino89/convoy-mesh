@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "scope": "BOUNDED_OBSERVATION_OF_PRIVATE_GITHUB_JOB_LOG_NOT_ANDROID_TEST_ITSELF",
+  "run_id": 42300571195,
+  "job_id": 128176961434,
+  "run_attempt": 1,
+  "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "command": "python3 -m unittest discover -s tools/telemetry_spike -p 'test_*.py' -q",
+  "total": 193,
+  "passed": 193,
+  "skipped": 0,
+  "failed": 0,
+  "stdout_summary_lines": [
+    "2026-11-06T21:55:05.9899280Z Ran 193 tests in 5.410s",
+    "2026-11-06T21:55:05.9900118Z OK"
+  ],
+  "private_connector_job_response_sha256": "cbeeda06aa88f3bce429c8f00289a18deafe41f26b4f23ade41ed5e43258345c",
+  "job_url": "https://github.com/Arduino89/convoy-mesh/actions/runs/42300571195/job/128176961434",
+  "interpretation": "All193 host controls passed without skips before the separate cloud transport blocked. Host tests do not replace Android evidence."
+}

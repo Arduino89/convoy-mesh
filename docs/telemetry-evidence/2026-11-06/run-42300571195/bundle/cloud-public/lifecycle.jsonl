@@ -1,0 +1,3 @@
+{"action": "force_stop", "old_pid": 8949, "pid_absent": true}
+{"action": "restart", "new_pid": 9325, "old_pid": 8949}
+{"action": "force_stop", "old_pid": 9325, "pid_absent": true}

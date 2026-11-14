@@ -1,0 +1,65 @@
+{
+  "compiled_source": "50386a5c8ce5b0cf628073989a0eaf1549008e79",
+  "files": {
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/README.md": {
+      "bytes": 6271,
+      "sha256": "cca464ce39d732929f69b624e47869a56d3e004f22208e6df8e3e9bd346ca53f"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/cloud-proposal.md": {
+      "bytes": 2403,
+      "sha256": "86d1599847cf456c22fe2238eb2e27613b20bf7f2cd5dfbfbcc7c282a3b4dc4f"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/decode_archive.py": {
+      "bytes": 1072,
+      "sha256": "031f6ffae4ad943179c5c00a3cdd00531d40fb201db1e32f6bd5eeb146ecac95"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/export-integrity.json": {
+      "bytes": 5879,
+      "sha256": "cfcba08d4caf6ca5fbd7e67e65c64116a5d54c7ac426e76c067ab7a970b40727"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/full-result.json": {
+      "bytes": 154942,
+      "sha256": "94f69fa092d12f1b07f9b3d508d95e097588648254b0cd6ebcf15c007a8c0450"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/independent-restoration-review.json": {
+      "bytes": 4637,
+      "sha256": "d38288ca2ab1d8520227ed68714757eb29824016204b7f493508698bc31089ba"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/independent-runtime-review.json": {
+      "bytes": 13932,
+      "sha256": "4e523e969e688c3823c5a2f08fa4295e348ace2e5beeab64cb8b5b341fa13828"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/independent-source-review.json": {
+      "bytes": 4429,
+      "sha256": "c590ecf2a0477068709f6995ad7f7c9531c4d85ad9ba86aae88780701984ab70"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/independent-workflow-review.json": {
+      "bytes": 4115,
+      "sha256": "599b786b916f132364d7429486eefbc7647a87abf3803ed8b4475db269e04ef5"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/inherited-evidence.b64": {
+      "bytes": 124241,
+      "sha256": "aa2a55a7cad68c5e27c3e8ce270a3413c50c11372d535fc7c76379cf40be04ef"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/plan.json": {
+      "bytes": 4599,
+      "sha256": "c4f4ca94e7545386147e43a96baae579c7d1f5386c6d80c85457341458b665ce"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/summary.json": {
+      "bytes": 4351,
+      "sha256": "bd44b9822e3f3137c4904bccd15e5224b5cc63b85db63ad34f457899f72e5a03"
+    },
+    "docs/telemetry-evidence/2026-11-07/full-sender-local/verify_runtime_evidence.py": {
+      "bytes": 18998,
+      "sha256": "1a0a591c2c7f0a0288c14f19b6b3e0b6f469f98fcbcec0a68bc0f64487b24723"
+    },
+    "CONTINUITY.md": {
+      "bytes": 10282,
+      "sha256": "049a4fece2c6f92a1eeb92a79a8b103a1d6b83252d3b23236bd365fa80e8d62c"
+    },
+    ".github/workflows/telemetry-runtime-control.yml": {
+      "bytes": 3391,
+      "sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5"
+    }
+  }
+}

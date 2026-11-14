@@ -1,0 +1,239 @@
+{
+  "schema_version": 1,
+  "review_status": "SOURCE_REVIEW_NO_MATERIAL_BLOCKER_FOR_LOCAL_REGRESSION",
+  "cloud_execution_status": "NOT_RUN",
+  "new_android_regression_status": "NOT_ATTESTED_BY_THIS_REVIEW",
+  "scope": "INDEPENDENT_STATIC_REVIEW_CLOUD_PREPARATION_NATIVE_HARNESS_READBACK_WORKFLOW_AND_EXPORT",
+  "base_local_commit": "89a8ab8d84d331098c4100903eaef73e193d10e9",
+  "uncommitted_snapshot": true,
+  "source_sha256": {
+    "tools/telemetry_spike/direct_trial/DirectQueue.java": "81222e42f65f27d5524ad80b5b66eb5f685b6f3091e5d467a564636ecaa31312",
+    "tools/telemetry_spike/direct_trial/MainActivity.java": "e520e97c6639643eb37a95aa60b85241b3d6b82a18824e3943aa1b4c0ff308f4",
+    "tools/telemetry_spike/direct_trial/AndroidManifest.xml": "dff2a8c38aab22edb716312e1f47f6368cbfece96dc01c054722cc070d084345",
+    "tools/telemetry_spike/direct_trial/build.py": "c51cbe3989c6ff21b0acdaab68c5e4c372b041e90c99dc2d1bd615a42fcd81d6",
+    "tools/telemetry_spike/direct_trial/README.md": "04d2724b83e82f94995216c524ed5296203c582221c1583a4d490e246006e504",
+    "tools/telemetry_spike/ci_direct_trial.py": "173ecbe03351839a8dc6d39d83eda43e116bd4a0e81d5e605c017d046b344382",
+    "tools/telemetry_spike/test_ci_direct_trial.py": "5e900b1cd02732f502016556e6eac56d9f562932982c8995d9ec894970ea8be0",
+    ".github/workflows/telemetry-runtime-control.yml": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5",
+    "tools/telemetry_spike/run_ci_lab.sh": "9cfcca3f033ba800f93dd9e339cded95dcab156f5742c0773eebb9525f215b81",
+    "tools/telemetry_spike/run_ci_cloud_lab.sh": "e3de9c4e34ebeccad50544c0868780a91a60af8637b37312c7f0e852111251a9",
+    "tools/telemetry_spike/prepare_ci_cloud.py": "fd05a9ca43064109bb5cc1161be72fc8f7f52b7d07ca135012da5400b8e743fc",
+    "tools/telemetry_spike/ci_cloud_trial.py": "825a09c560802e7f17b79e59bd6dfdd36459c286922e6a8bbb7f131704214187",
+    "tools/telemetry_spike/reconcile_cloud_trial.py": "e0112b58b6f86708efcb21b05bcdb6100ef7c25e42c8174067f2513bf0479a81",
+    "tools/telemetry_spike/test_ci_cloud_trial.py": "967a1c770e5e78fc0b31c4e2e981b763d8e4768f3d85f89d7caa8035d56daa71",
+    "tools/telemetry_spike/test_reconcile_cloud_trial.py": "055c2a38b844ec23a26b861242de1e31bc0ead312cf67a454f99fd0f2c09ad18",
+    "tools/telemetry_spike/emit_ci_evidence.py": "d1b205965e3c5101f849bbefd33372aa8b4dd71fc9590904b7b8a23c46f51d77",
+    "tools/telemetry_spike/test_emit_ci_evidence.py": "339d2d2f47ac050d72632b9387081101c2fa32a07323b63e5c4409c8b3f441a3"
+  },
+  "reviewed": [
+    {
+      "claim": "Only the exact EU HTTPS batch endpoint is accepted for cloud mode; default Android TLS/hostname verification remains; redirects disabled. Local loopback mode remains available.",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        41,
+        132,
+        370,
+        382
+      ]
+    },
+    {
+      "claim": "Private config is loaded from the app sandbox, strict keys and value types checked, and endpoint/key/run/limit binding stored privately. Missing/changed config after binding blocks startup without loopback fallback. No key or binding digest is included in writeState or synthetic audit.",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        68,
+        119,
+        132,
+        144,
+        365,
+        728
+      ]
+    },
+    {
+      "claim": "Final serialized payload is validated against the same event/property contract before transport. Public audit replaces the project token with a redaction marker; arbitrary server response text and exception messages are not emitted.",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        337,
+        339,
+        363,
+        364,
+        512,
+        538
+      ]
+    },
+    {
+      "claim": "Reserved row count and attempt ID commit together before opening a connection. The same gate covers request-body write and durable revocation. Reservations have no refund and are not reset by consent/revocation/restart.",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        326,
+        347,
+        356,
+        360,
+        388,
+        389
+      ]
+    },
+    {
+      "claim": "Cloud response classification requires integer status1. Quota-limited, unrecognized200 and HTTP3xx/4xx responses persist a transport block; audit failures also persist a block.",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        402,
+        406,
+        414,
+        417,
+        482,
+        498,
+        538
+      ]
+    },
+    {
+      "claim": "The deliberate single-ACK-discard decision is persisted before subsequent retry; it is not described as actual network ACK loss. Event UUID/timestamp remain in stored rows.",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        419,
+        422,
+        426
+      ]
+    },
+    {
+      "claim": "Seven new native self-checks test four budget arithmetic cases and three response classification cases. Local harness now requires the exact fourteen-key result and aligned build scope/permissions.",
+      "path": "tools/telemetry_spike/direct_trial/DirectQueue.java",
+      "lines": [
+        680,
+        689
+      ],
+      "harness": "tools/telemetry_spike/ci_direct_trial.py"
+    },
+    {
+      "claim": "Startup UI no longer falsely labels the cloud-capable app Loopback only.",
+      "path": "tools/telemetry_spike/direct_trial/MainActivity.java",
+      "lines": [
+        19
+      ]
+    },
+    {
+      "claim": "Cloud activation requires explicit manual nonempty gate; push/default manual runs stay local. Credential environment is scoped to preparation; files use private permissions and credentials enter Android via stdin, not argv or intent. Local suite failure stops before cloud.",
+      "paths": [
+        ".github/workflows/telemetry-runtime-control.yml",
+        "tools/telemetry_spike/run_ci_lab.sh",
+        "tools/telemetry_spike/run_ci_cloud_lab.sh",
+        "tools/telemetry_spike/prepare_ci_cloud.py"
+      ]
+    },
+    {
+      "claim": "Gate binds exact source/run/execution/first attempt and current explicit privacy/retention/deletion/quota/local-regression evidence. Missing controls or stale gate reject before cloud harness ADB operations. Gate is an operator attestation, not independent authentication of its referenced account settings.",
+      "path": "tools/telemetry_spike/ci_cloud_trial.py",
+      "functions": [
+        "validate_cloud_gate",
+        "read_private_config"
+      ]
+    },
+    {
+      "claim": "One cloud installation and run are used without phase resets. Critical offline/consent/restart/sentinel/transport failures now stop dependent grants/reconnections. Offline needs the native active-network/capability probe, not only an airplane-mode command.",
+      "path": "tools/telemetry_spike/ci_cloud_trial.py",
+      "functions": [
+        "CloudDevice.connectivity",
+        "CloudDevice.network",
+        "run_cases"
+      ]
+    },
+    {
+      "claim": "Attempt reconciliation checks reservation totals, ordered unique phases, response/final flags and eventual per-ID transport acknowledgement. No-response code0 matches Java. A failed reserved attempt followed by success keeps its budget charge.",
+      "path": "tools/telemetry_spike/ci_cloud_trial.py",
+      "functions": [
+        "summarize_transport"
+      ]
+    },
+    {
+      "claim": "On failure, after stopping the process the harness attempts to recover safe partial audit records and the last persisted state without relaunching. A stale snapshot is not refund authority; unknown consumption uses the entire remaining budget. Cleanup/export errors have safe reason handling.",
+      "path": "tools/telemetry_spike/ci_cloud_trial.py",
+      "functions": [
+        "main"
+      ]
+    },
+    {
+      "claim": "Readback queries preserve raw row multiplicity and select by run OR distinct_id OR attested UUID within an explicit date window. A separate same-predicate count checks completeness at cap500. The normalizer preserves rows and parses properties JSON deterministically.",
+      "path": "tools/telemetry_spike/reconcile_cloud_trial.py",
+      "functions": [
+        "expected_queries",
+        "normalize_connector_rows",
+        "validate_readback"
+      ]
+    },
+    {
+      "claim": "Readback checks independent event UUID ownership, unchanged UUID/timestamp, normal/new duplicates, revoked and unexpected IDs; unknown metadata values and unattested UUIDs are redacted and flagged for review.",
+      "path": "tools/telemetry_spike/reconcile_cloud_trial.py",
+      "functions": [
+        "client_evidence",
+        "reconcile_trial"
+      ]
+    },
+    {
+      "claim": "Cloud prewrite public output does not mislabel the real credential as a fake token: it removes the redacted API-key entry while retaining envelope keys and a credential-redacted marker. The unchanged fake-token auditor is reused only in memory.",
+      "path": "tools/telemetry_spike/ci_cloud_trial.py",
+      "functions": [
+        "sanitize_preflight"
+      ]
+    },
+    {
+      "claim": "Exporter enumerates only public receipt paths, excludes cloud-private, reparses and serializes JSON/JSONL, rejects unsafe credentials/duplicates/nonfinite scalars and preserves repeated event rows.",
+      "paths": [
+        "tools/telemetry_spike/emit_ci_evidence.py",
+        "tools/telemetry_spike/test_emit_ci_evidence.py"
+      ]
+    }
+  ],
+  "resolved_during_review": [
+    "Quota-limited or unknown success previously retried; now a persistent transport block is written.",
+    "Number.intValue previously accepted fractional status values; now exact Integer1 is required.",
+    "Audit failures now block even if a later finished-record append succeeds.",
+    "Local builder/verifier scope and fourteen native SELF_CHECKS were mismatched; now aligned.",
+    "Initial UI label was misleading for cloud mode; now neutral.",
+    "Critical phase checks initially accumulated failures but continued; now they stop dependent activity.",
+    "Transport summaries initially tolerated missing response/finished records; they now require phase and acknowledgement consistency.",
+    "Missing-response code was initially mismatched at0native versus-1harness; now aligned to0 with a recovery fixture.",
+    "Cleanup/export failures could preempt a safe receipt; guarded finalization and conservative partial evidence handling added.",
+    "Client UUID reuse across different business IDs could conceal later cloud deduplication losses; now rejected.",
+    "Unattested cloud UUID values were publicly emitted; now redacted.",
+    "Raw query selection, count evidence and connector table adaptation were strengthened without removing duplicate rows."
+  ],
+  "coverage_limits": [
+    "No Android build/execution, cloud send, PostHog project query or live credential access was performed by this reviewer.",
+    "The planned local regression uses cloudMode=false. It can attest preserved local behavior and execution of the pure self-check functions; it does not exercise actual cloud reservation, HTTPS, private config binding, persistent ACK discard or failure blocking.",
+    "The Python test fixtures derive their preflight shape from SELF_CHECKS. Their success alone does not attest the compiled native JSON shape; the next Android run must do that.",
+    "Budget predicate checks are not storage transaction, crash or restart tests. The durable reservation ordering is a source finding until the actual cloud path is exercised.",
+    "cloud_rows_written/body_written are recorded after completing the body write. A crash in between can undercount possible transmissions; only committed reserved rows provide the conservative upper bound.",
+    "An external authorization ledger must cover new jobs, reinstallations and manual reruns. The app SQLite budget cannot survive clearing its own app data.",
+    "The request before durable revoke commit remains unaccepted and may recover previous consent. Already dispatched bytes cannot be recalled.",
+    "Response predicate checks do not exercise real HTTP failures, timeout/EOF, oversized responses, TLS or upstream quota behavior.",
+    "AOSP Android15/API35 source review supports nonreplay of a fixed-length streaming body after write; it is not an attestation of every OEM or the exact system-image fingerprint.",
+    "Preflight records serialized event body content before HTTPS, not independently captured TLS wire bytes/headers. Cloud ingestion and enrichment require separate connector readback.",
+    "The actual project, key-to-project match, free quota, effective retention/deletion access, IP-discard setting and metadata remain pre-send gates; no generic documentation or code check attests those account settings.",
+    "Host evidence-guard tests are not Android cloud-path tests. This reviewer inspected their assertions but did not execute tests or a workflow.",
+    "The normalized readback wrapper contains caller-supplied response references and hashes. During a real run the reviewer must compare these to original connector responses, including schema, pagination, cache/freshness and completeness. The CLI does not authenticate external provenance.",
+    "The query uses a five-minute clock margin and an explicit bounded timestamp window. It cannot exclude server changes that move an event outside that window.",
+    "One row observed per retried UUID is compatible with cloud deduplication, not proof that all transmitted copies were separately ingested. Immediate and later snapshots must remain distinct.",
+    "Native prewrite metadata and HTTPS endpoint selection are source/prewrite evidence, not decrypted wire captures of actual cloud headers.",
+    "Failures before the cloud harness starts (gate preparation or wrapper setup) may have only a constant safe job-log reason; no event has been sent by that path.",
+    "The new permission is ACCESS_NETWORK_STATE only in the synthetic LAB APK. It does not prove physical radio behavior or phone battery cost."
+  ],
+  "required_before_cloud_execution": [
+    "Complete account-specific destination/access/privacy/retention/deletion/free-quota checks without new accounts or spend.",
+    "Reconcile raw connector rows without DISTINCT or query-side deduplication, retaining UUID/event/timestamp/distinct_id and metadata differences; HTTP200 alone is not delivery.",
+    "Preserve scope distinction between accepted durable revocation, precommit interruption, already-dispatched requests, copies attempted and rows observable after possible cloud deduplication.",
+    "Run and independently review the exact-source local Android regression; then exercise the cloud path only after all account-specific gates are actually verified and the global remaining budget is recorded."
+  ],
+  "account_preflight_context": {
+    "basis": "Parent coordinator report, not independently queried",
+    "status": "BLOCKED_DELETION_ACCESS_AND_CREDENTIAL_PRECHECK"
+  },
+  "diff_whitespace_check": "PASSED_READ_ONLY_CHECK",
+  "approval_scope": "LOCAL_REGRESSION_ONLY_NO_CLOUD_ACTIVATION_INFERRED",
+  "host_validation": {
+    "status": "PASSED_REPORTED_BY_PARENT_COORDINATOR",
+    "passed_tests": 133,
+    "basis": "Parent message after running full host suite; this reviewer did not rerun tests",
+    "new_android_execution_attested": false,
+    "cloud_execution_attested": false
+  },
+  "source_snapshot_status": "OWNERS_AND_PARENT_REPORTED_FROZEN_EXCEPT_THIS_REVIEW_JSON"
+}

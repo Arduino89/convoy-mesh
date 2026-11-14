@@ -1,0 +1,15 @@
+name: convoy_telemetry_lab
+description: Synthetic-only isolated PostHog trial; no Convoy runtime integration.
+publish_to: none
+version: 0.0.1+1
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  posthog_flutter: 5.58.3
+  shared_preferences: 2.5.4
+dev_dependencies:
+  flutter_lints: 6.0.0
+flutter:
+  uses-material-design: true

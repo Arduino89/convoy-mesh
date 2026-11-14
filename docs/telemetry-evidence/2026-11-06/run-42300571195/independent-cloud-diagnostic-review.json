@@ -1,0 +1,116 @@
+{
+  "apk": {
+    "bytes": 45459,
+    "certificate_sha256": "bbaeaa7f902d6e784f733355bdaf7cecc30870e4c66fa9d93855880ba3913aa5",
+    "original_receipt_hash_verified": true,
+    "package": "com.cama.telemetry.direct_lab",
+    "sha256": "3328825328979304ab929ca0b35bc637c5e5074e73e7dac862a39dfc7898a33a",
+    "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855"
+  },
+  "attempt": 1,
+  "blocked_reason": "HTTP_TRANSPORT_DRAIN_WINDOW_EXPIRED",
+  "budget": {
+    "accounting_schema_version": 2,
+    "acknowledged_requests": 0,
+    "additional_rows_authorized": 200,
+    "automatic_refund_allowed": false,
+    "cloud_received_rows": null,
+    "committed_reserved_rows": 20,
+    "conservative_consumed_for_future_launches": 700,
+    "limit": 200,
+    "observed_body_written_rows": 20,
+    "prior_rows_conservative_consumed": 500,
+    "remaining_for_future_launches": 0,
+    "total_ceiling": 700
+  },
+  "causal_limit": "Response body/shape not retained. HTTP200 plus response_accepted=false proves parser rejection, not its exact response-content cause.",
+  "cloud_readback_status": "DIAGNOSTIC_ONLY_NOT_ACCEPTANCE_PASS",
+  "connector_response_provenance": {
+    "count": {
+      "reference_sha256": "441c4f2adea21e473dae6b066435b0bc6d6cefcee070edf81d9c81c876b975c1",
+      "response_sha256": "65ef7922ac4aa115fb07794f0408354c6d494909059e78c90c88a18aea0948f5"
+    },
+    "row": {
+      "reference_sha256": "f895d50b3420e7436f9efa6bfb1efa3ea0b27d8b971cd8a3f19953a267b4d62c",
+      "response_sha256": "777c73f667434e70f4bfe5f24f34b86fd7c72fed33d145afe6ef40a5d7a46c5e"
+    }
+  },
+  "dependent_cloud_cases": {
+    "cloud_deduplication": "NOT_RUN",
+    "controlled_retry_same_uuid": "NOT_RUN",
+    "new_consent_after_revocation": "NOT_RUN",
+    "new_events_after_revocation": "NOT_RUN",
+    "revocation": "NOT_RUN"
+  },
+  "diagnostic_cloud": {
+    "duplicate_rows": 0,
+    "known_bodywritten_missing_in_window": 0,
+    "metadata_key_counts": {
+      "column:person_id": 20,
+      "column:person_mode": 20
+    },
+    "metadata_values_redacted": true,
+    "private_readback_sha256": "974b6ddd1cda1eb3e1fe020f7e6e65a07e83e17e8d6f074f032003eb5818c835",
+    "query_window_end": "2026-11-06T22:09:47+00:00",
+    "query_window_start": "2026-11-06T21:57:25+00:00",
+    "raw_rows": 20,
+    "retry_exercised": false,
+    "revocation_exercised": false,
+    "stored_control_observations": {},
+    "unique_known_bodywritten_events": 20
+  },
+  "export_zip_sha256": "a887bd4817320277fa7981cffaf3256342b7507691763dd98b674b686e734586",
+  "github_job_id": 128176961434,
+  "github_run_id": 42300571195,
+  "independent_control": {
+    "original_hash_verified": true,
+    "same_boot": true,
+    "status": "PASS_NATIVE_RUNTIME_CONTROL"
+  },
+  "limits": [
+    "This diagnostic verifies an actual blocked attempt; no acceptance threshold was relaxed.",
+    "Prewrite whitelist is observed before sending, not an independent TLS wire capture; the credential value is redacted.",
+    "The native180 remaining counter does not authorize another run; all700 stay conservatively consumed for future launches.",
+    "Planned revoked-intent/expected files are oracles, not proof that those dependent scenarios executed.",
+    "Queue100 after20bodywrites reflects no accepted acknowledgment; it is not proof the server stored zero events.",
+    "HTTP response body was not retained; no exact response-content root cause can be reconstructed from these files.",
+    "Emulator/local controls do not establish phone battery/GNSS/BLE/OEM behavior.",
+    "No rerun, deletion, release, merge, Convoy integration or new spending performed by this review.",
+    "Diagnostic readback can establish receipt of the attempted first20 only; it does not convert this blocked run into a completed delivery/revocation/retry pass.",
+    "Identity mutations outside the finite timestamp window or future late arrivals are not ruled out.",
+    "Server-added metadata values are private; nonnull person columns alone do not prove profile creation."
+  ],
+  "manifest_entries_verified": 120,
+  "native_block_reason": "UNRECOGNIZED_RESPONSE",
+  "normal": {
+    "acknowledged": false,
+    "captured_offline": 100,
+    "http_status": 200,
+    "network_observations": 2,
+    "prewrite_whitelist_verified_for_rows": 20,
+    "queue_remaining": 100,
+    "reserved_first_batch": 20,
+    "response_accepted": false,
+    "settings_and_trace_preserved_all_states": true,
+    "state_observations": 241,
+    "status": "PARTIAL_BLOCKED_NOT_DELIVERY_PASS",
+    "survived_offline_restart": 100,
+    "unique_state_nonces": 241,
+    "written_first_batch": 20
+  },
+  "preparation": {
+    "all_exits0": true,
+    "final_stop_private_removal_radio_restore": true,
+    "phases": 9,
+    "private_content_write_verified": true,
+    "shell_v2_confirmed": true
+  },
+  "raw_extraction_independently_rechecked": true,
+  "reviewer": "/root/review_launch",
+  "run_id": "synthetic-cloud-20261106-r15",
+  "schema_version": 1,
+  "scope": "INDEPENDENT_RECOMPUTATION_OF_ACTUAL_PARTIAL_CLOUD_RECEIPTS_NOT_NEW_EXECUTION",
+  "source_authentication_limit": "REFERENCED_CONNECTOR_RESPONSES_NOT_CRYPTOGRAPHIC_ATTESTATION",
+  "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "status": "BLOCKED_DIAGNOSTIC_VERIFIED_NOT_ACCEPTANCE_PASS"
+}

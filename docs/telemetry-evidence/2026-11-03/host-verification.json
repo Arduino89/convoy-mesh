@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "scope": "HOST_ONLY_NOT_ANDROID_NOT_CLOUD",
+  "command": "python3 -m unittest discover -s tools/telemetry_spike -p 'test_*.py' -q",
+  "tests_run": 133,
+  "failures": 0,
+  "errors": 0,
+  "status": "PASSED",
+  "new_cloud_harness_tests": 15,
+  "new_readback_tests": 22,
+  "new_export_tests": 2,
+  "historical_tests_retained": 94,
+  "shell_syntax": "PASSED",
+  "workflow_yaml_parse": "PASSED",
+  "convoy_app_changed": false,
+  "cloud_events_sent": 0,
+  "note": "Native cloud state, HTTPS, budget persistence and retry fault are not exercised by these host fixtures."
+}

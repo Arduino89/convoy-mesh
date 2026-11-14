@@ -1,0 +1,14 @@
+{
+  "control": {
+    "original_sha256": "7863d4a85c35efc4deafe2e6f6e412fd518da69e395c201d4f178b08efe3578e",
+    "normalized_sha256": "b963ebccd071d134a95266864be4e177a15136387b7cd4426b2651e409b980c9",
+    "semantic_equality": true,
+    "original_reconstructed_from_job_stdout_and_verified_against_reference": true
+  },
+  "build": {
+    "original_sha256": "36e222abe7058c9bd3888c23ce9796c97274c90eca81555275136a64721349bf",
+    "normalized_sha256": "60a87d7a00bb449c3e9117dacbec186a038877380759ccf25a22451c8e2bec15",
+    "semantic_equality": true,
+    "original_reconstructed_from_job_stdout_and_verified_against_reference": true
+  }
+}

@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-02",
+  "scope": "STATIC_PINNED_VENDOR_SOURCE_AND_EXISTING_ANDROID_RECEIPTS_NOT_A_NEW_EXECUTION",
+  "laboratory_executed_commit": "764bc41080c7b85d25ea895ed16c4b94130c5822",
+  "workflow_run": 41429419307,
+  "job_id": 125223965237,
+  "vendor_repository": "PostHog/posthog-android",
+  "vendor_commit": "8309f837ef92d3b05eae222c94294d79ce0c7dec",
+  "version_mapping": {
+    "com.posthog:posthog-android:3.75.0": {
+      "tag": "android-v3.75.0",
+      "annotated_tag_sha": "3e651b5e128c1b33836b7fd5e0b197410ee1d48d"
+    },
+    "com.posthog:posthog:6.48.0": {
+      "tag": "core-v6.48.0",
+      "annotated_tag_sha": "839685a3b57a5fa386bd6a843d793ec4f1cac594"
+    }
+  },
+  "gradle_properties_versions_match": true,
+  "source_files": [
+    {
+      "path": "AGENTS.md",
+      "git_blob_sha1": "e9090ddbe04853af5c9725f0c070241f3eb76db6",
+      "sha256": "34f39c378b2c7c261cb268aa2b6324793ee4bb9611e6e86af822d9da796f6656",
+      "bytes": 4323,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/AGENTS.md"
+    },
+    {
+      "path": "gradle.properties",
+      "git_blob_sha1": "f1c3863a07fa8a9dd95134cc6d44c7d8484708a5",
+      "sha256": "97c63c172b3b0e01e9e8a4913a38b24a5cc56619c27c765ea2b51a96abaf8f6e",
+      "bytes": 1590,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/gradle.properties"
+    },
+    {
+      "path": "posthog-android/src/main/java/com/posthog/android/PostHogAndroid.kt",
+      "git_blob_sha1": "c6e845b6e6e5988f8ce8bf81bba08e01531cc537",
+      "sha256": "71bb9ed8218f16245bb5008c8fc75ed2960570c17d27f33dee4d5ffc0887a410",
+      "bytes": 14741,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog-android/src/main/java/com/posthog/android/PostHogAndroid.kt"
+    },
+    {
+      "path": "posthog-android/src/main/java/com/posthog/android/internal/PostHogSharedPreferences.kt",
+      "git_blob_sha1": "c2bb22414fa889c8f547985f2c615c1513da8e65",
+      "sha256": "75251d5d8d4b1d041ceeb84d9249c67e8fe56c4670593006de662a7286056afd",
+      "bytes": 10813,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog-android/src/main/java/com/posthog/android/internal/PostHogSharedPreferences.kt"
+    },
+    {
+      "path": "posthog/api/posthog.api",
+      "git_blob_sha1": "34f8189949af055eaafd2cf97c35b660bf05d4c0",
+      "sha256": "1fe065140abbf8173109878bd56e87600533c352cac62df0e1e168cbf4abeddb",
+      "bytes": 168337,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/api/posthog.api"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/PostHog.kt",
+      "git_blob_sha1": "e8e93a4228bda40b59cfdf204685aa59c3be4402",
+      "sha256": "9b6647cacf33526a73b1f8edab65cece192c52a3e2b8fbd79feaa943b3787ab8",
+      "bytes": 114328,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/PostHog.kt"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/PostHogConfig.kt",
+      "git_blob_sha1": "eb730adab182a61410cb9efbcc531ac126a1cfd3",
+      "sha256": "b28edc1252d56c3b7d9dbd25dca5ad8d96f5f8691569619d418d8990ee5d53a9",
+      "bytes": 31233,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/PostHogConfig.kt"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/PostHogCoreInterface.kt",
+      "git_blob_sha1": "dc77ef3a38131eb28f77c68c9d0b39c903db5e73",
+      "sha256": "afecb3410d035befd11d22359359e63a29d1464ef4d2382839af87ae617452e5",
+      "bytes": 1452,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/PostHogCoreInterface.kt"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/PostHogInterface.kt",
+      "git_blob_sha1": "289df00129153e40a8e2f0143fe58449e64cfffb",
+      "sha256": "54e99b0964e9661a753edca332782820f0a983e9b2d1baa2196ddcc1e148093e",
+      "bytes": 20471,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/PostHogInterface.kt"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/PostHogInternal.kt",
+      "git_blob_sha1": "6e841501187468f4730f1de29671db2a45f9de6a",
+      "sha256": "3c7406fa97c3ce2f03499ade1e5cfb982c48afce230de3e2a8a1fe1095264de1",
+      "bytes": 544,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/PostHogInternal.kt"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/PostHogStateless.kt",
+      "git_blob_sha1": "bc54145ad6b2357fefe3a8f46b183869fe9d5c61",
+      "sha256": "97243c3c27732654b0cc9db12ab83d31bcdf16eb1d706978a99830df7a44f341",
+      "bytes": 33578,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/PostHogStateless.kt"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/internal/EndpointSpec.kt",
+      "git_blob_sha1": "4ed7bcf4818eb5bdd9cd0c1a3fde052da69029c0",
+      "sha256": "027de1126ce44cf5ec1963e924b373116f0377892f3cd591c05a6c58034cccc0",
+      "bytes": 7594,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/internal/EndpointSpec.kt"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/internal/PostHogApi.kt",
+      "git_blob_sha1": "c3cdbec6dd363355f7ad0ef28bbcf7212151160d",
+      "sha256": "d5bd51695c31583f4097881de5f124f691f31f967fa54cf7e0797dc8d7329d22",
+      "bytes": 17917,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/internal/PostHogApi.kt"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/internal/PostHogQueue.kt",
+      "git_blob_sha1": "8b07352c23ff38d208582f617f2c1377b7cdb9b6",
+      "sha256": "81f31385e42f6a35cc7d0a1d3194ff7d12e2ec1928d08414d0a7b0e86196e470",
+      "bytes": 17291,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/internal/PostHogQueue.kt"
+    },
+    {
+      "path": "posthog/src/main/java/com/posthog/internal/PostHogQueueInterface.kt",
+      "git_blob_sha1": "8b3ece53d1dddf58c3045bc64b7319099f6fa48f",
+      "sha256": "0de6095bdc61c085763150b3532479f8d19c7d758092af1b3e05104f513101e9",
+      "bytes": 671,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/main/java/com/posthog/internal/PostHogQueueInterface.kt"
+    },
+    {
+      "path": "posthog/src/test/java/com/posthog/PostHogTest.kt",
+      "git_blob_sha1": "174b16976d8861929fb0da20b5dc087a0ff2a529",
+      "sha256": "7c4e1a038b23a77a59fcc7f29a0a95eeac12a929ac386186e638f7c2b2f98229",
+      "bytes": 226221,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/test/java/com/posthog/PostHogTest.kt"
+    },
+    {
+      "path": "posthog/src/test/java/com/posthog/internal/PostHogQueueDurabilityTest.kt",
+      "git_blob_sha1": "7b282290014265273c91e8eec24eb85daadc8cf9",
+      "sha256": "272edf0ddb80b984eabe95ca5a5fc061205fec746124d94e5166fb14899cf6b2",
+      "bytes": 12839,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/test/java/com/posthog/internal/PostHogQueueDurabilityTest.kt"
+    },
+    {
+      "path": "posthog/src/test/java/com/posthog/internal/PostHogQueueTest.kt",
+      "git_blob_sha1": "35b4471605741f1b89681e4fa6f7767af5ddbebc",
+      "sha256": "c147775bd5e427f3e639d6cb2dac53a65846ddc78a373dd6b583ba79058d73dd",
+      "bytes": 37458,
+      "url": "https://github.com/PostHog/posthog-android/blob/8309f837ef92d3b05eae222c94294d79ce0c7dec/posthog/src/test/java/com/posthog/internal/PostHogQueueTest.kt"
+    }
+  ],
+  "our_compiled_source_sha256_still_matches": {
+    "tools/telemetry_spike/ci_build_trial.py": true,
+    "tools/telemetry_spike/posthog_trial/MainActivity.kt": true,
+    "tools/telemetry_spike/posthog_trial/locks/android-debug.lockfile": true,
+    "tools/telemetry_spike/posthog_trial/locks/pubspec.lock": true,
+    "tools/telemetry_spike/posthog_trial/main.dart": true,
+    "tools/telemetry_spike/posthog_trial/prepare_trial.py": true,
+    "tools/telemetry_spike/posthog_trial/pubspec.yaml": true
+  },
+  "binary_scope": "Build receipt attests resolved Maven versions and APK digests. This follow-up verifies official Git blobs for those release tags; no new APK/JAR bytecode inspection or Android run.",
+  "findings": [
+    {
+      "id": "same_instance",
+      "file": "posthog-android/src/main/java/com/posthog/android/PostHogAndroid.kt",
+      "lines": [
+        103,
+        119
+      ],
+      "corroborating_file": "posthog/src/main/java/com/posthog/PostHog.kt",
+      "corroborating_lines": [
+        2702,
+        2707,
+        2833,
+        2842
+      ],
+      "result": "Android.setup and the capture/optOut/reset/close facade use the same shared core instance; no binding mismatch found."
+    },
+    {
+      "id": "optout_is_not_purge",
+      "file": "posthog/src/main/java/com/posthog/PostHog.kt",
+      "lines": [
+        1396,
+        1424
+      ],
+      "result": "Sets opt-out and updates integrations/preferences; does not clear analytics queue."
+    },
+    {
+      "id": "reset_preserves_queue",
+      "file": "posthog/src/main/java/com/posthog/PostHog.kt",
+      "lines": [
+        2202,
+        2278
+      ],
+      "result": "Clears identity/preferences/flags/session state; no queue.clear. Persisted OPT_OUT is not in keep-list; second optOut rewrites it."
+    },
+    {
+      "id": "close_not_purge_and_may_send",
+      "file": "posthog/src/main/java/com/posthog/PostHog.kt",
+      "lines": [
+        613,
+        653
+      ],
+      "result": "Calls flush before disabling and stopping queues. No deletion or durable purge acknowledgment."
+    },
+    {
+      "id": "stop_retains_files",
+      "file": "posthog/src/main/java/com/posthog/internal/PostHogQueue.kt",
+      "lines": [
+        477,
+        489
+      ],
+      "result": "stop cancels timer and unregisters connectivity. clear is separate, asynchronous and internal."
+    },
+    {
+      "id": "persistent_replay",
+      "file": "posthog/src/main/java/com/posthog/internal/PostHogQueue.kt",
+      "lines": [
+        317,
+        355,
+        414,
+        449
+      ],
+      "result": "Network-return/timer/flush can load surviving disk records. Queue delivery checks connectivity/backoff, not a per-event consent generation."
+    },
+    {
+      "id": "hook_not_replayed",
+      "file": "posthog/src/main/java/com/posthog/PostHogStateless.kt",
+      "lines": [
+        296,
+        329
+      ],
+      "corroborating_file": "posthog/src/main/java/com/posthog/internal/PostHogQueue.kt",
+      "corroborating_lines": [
+        247,
+        290
+      ],
+      "result": "beforeSend runs in buildEvent before enqueue; disk replay decodes then sends via EndpointSpec.batch and PostHogApi.batch without applying it again."
+    },
+    {
+      "id": "no_supported_clear_surface",
+      "file": "posthog/src/main/java/com/posthog/internal/PostHogQueueInterface.kt",
+      "lines": [
+        5,
+        32
+      ],
+      "result": "clear belongs to an explicitly non-public supported contract marked PostHogInternal; queueProvider, storagePrefix, httpClient and persistOptOut also marked internal in inspected config."
+    },
+    {
+      "id": "sdk_persistence_no_ack",
+      "file": "posthog-android/src/main/java/com/posthog/android/internal/PostHogSharedPreferences.kt",
+      "lines": [
+        171,
+        175,
+        206
+      ],
+      "result": "Preference mutations call apply; native API return is not a durable erasure receipt."
+    }
+  ],
+  "observed_prior_runtime": {
+    "revoked_ids_reappeared": 20,
+    "new_ids_received": 10,
+    "post_restart_consent": false,
+    "post_restart_sdk": false,
+    "storage_sentinels_preserved": true
+  },
+  "static_only_inferences": [
+    "close can schedule delivery while opted out if network is available; not exercised by the offline revocation case",
+    "A capture-time consent/epoch filter alone cannot reject already serialized records on replay",
+    "Interruption before application deny persists can restore prior granted state; incomplete cleanup has no pending marker"
+  ],
+  "supported_purge_search_result": "NO_PUBLIC_SUPPORTED_ANALYTICS_QUEUE_PURGE_FOUND_FOR_THE_INSPECTED_VERSION_AND_CONTRACT",
+  "not_claimed": "No claim that every conceivable adapter/encryption scheme or future SDK version is impossible.",
+  "excluded_workarounds": [
+    "SDK fork or reflection/internal queue.clear",
+    "manual SDK file deletion or whole-app data clearing",
+    "flush or close as purge",
+    "server-side hiding or filtering",
+    "changing internal storagePrefix or queueProvider",
+    "custom sender",
+    "unproven cryptographic erasure via encryption hook"
+  ],
+  "encryption_hook_note": "Public storage encryption hook exists; no reviewed official purge contract, completion barrier or invalidation of an already decoded batch. A new key-lifecycle design is not a demonstrated minimal fix.",
+  "spec_reference": {
+    "repository": "PostHog/sdk-specs",
+    "commit": "c9dc4ce6ce0888d0a5e6a7a8e488b4a8bd5e2e17",
+    "reset_url": "https://github.com/PostHog/sdk-specs/blob/c9dc4ce6ce0888d0a5e6a7a8e488b4a8bd5e2e17/openspec/specs/reset/spec.md",
+    "reset_contract": "Pending outbound events remain queued; reset is not purge."
+  },
+  "interrupted_revocation_status": "NOT_RUN_NO_SUPPORTED_PURGE_CANDIDATE",
+  "new_android_runs": 0,
+  "new_cloud_requests": 0,
+  "sdk_or_application_implementation_changed": false,
+  "adoption": "BLOCKED",
+  "next_step": "Review prepared Firebase protocol and missing access/observability gates before any activation."
+}

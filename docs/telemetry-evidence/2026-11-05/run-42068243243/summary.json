@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "status": "OFFLINE_BARRIER_BLOCKED_BEFORE_INSTALL_CORRECTED_TRANSFER_NOT_RUN",
+  "run_id": 42068243243,
+  "run_number": 11,
+  "run_attempt": 1,
+  "job_id": 127388407533,
+  "commit": "015d943f2083dd00be107f5a3d972615ac0bbdf4",
+  "runtime_control": "PASS_NATIVE_RUNTIME_CONTROL",
+  "adb_client": {
+    "protocol_version": "1.0.41",
+    "platform_tools_version": "37.0.1",
+    "build_number": "15733141",
+    "raw_output_published": false
+  },
+  "blocked_reason": "PROBE_OFFLINE_BARRIER_UNATTESTED",
+  "preparation_stages": 0,
+  "lab_install_provision": "NOT_RUN",
+  "corrected_transfer_validation": "NOT_RUN",
+  "initial_radios_restored": true,
+  "unknown_budget_counters_preserved": true,
+  "remaining_authorized_rows": 0,
+  "conservative_consumed_from_run8": 500,
+  "limitation": "Failed barrier receipt retains command exit codes but not sampled radio values/default-network classification; precise blocker not attributable.",
+  "next_diagnostic_scope": "One bounded observation-only instrumentation revision may retain last typed radio/default-network state; unchanged safety criterion, no identical rerun, no further Android if barrier still fails."
+}

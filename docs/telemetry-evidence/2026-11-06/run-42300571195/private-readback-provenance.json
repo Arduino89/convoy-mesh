@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "scope": "PRIVATE_SYNTHETIC_RAW_READBACK_RETAINED_SEPARATELY",
+  "archive_file_name": "Convoy-Mesh-LAB-r15-evidenze-private.zip",
+  "archive_sha256": "62fa50062d2146f6446b5d73e97f03028da107eb4f53b8dc07892705b3a9ed3d",
+  "archive_bytes": 5501,
+  "credentials_included": false,
+  "raw_diagnostic_logs_included": false,
+  "rows": 20,
+  "source_commit": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "public_values_redacted": true,
+  "actual_deletion_performed": false
+}

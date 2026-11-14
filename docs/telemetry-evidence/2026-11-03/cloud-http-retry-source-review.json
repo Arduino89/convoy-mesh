@@ -1,0 +1,91 @@
+{
+  "scope": "READ_ONLY_PRIMARY_SOURCE_REVIEW_NOT_ANDROID_RUNTIME_TEST",
+  "review_date_utc": "2026-11-03",
+  "target": "Workflow api-level35, google_apis, x86_64",
+  "source_scope": "Official AOSP Android15 tag android-15.0.0_r1, plus Android35 SDK source view; not exact emulator image fingerprint or every OEM implementation",
+  "conclusion": "In inspected AOSP implementation, a nonempty fixed-length streamed POST body is not transparently replayed after complete write and lost HTTP response. A later application retry must reserve the batch again.",
+  "minimal_required_controls": [
+    "Keep setFixedLengthStreamingMode(bytes.length) before getOutputStream/connect. A Content-Length header alone is insufficient.",
+    "Keep setInstanceFollowRedirects(false).",
+    "Persistently reserve batch.length event-transmission slots before getOutputStream, conservatively consuming slots even if body transmission fails.",
+    "Do not reset spent/reserved slots on revoke, restart or ACK loss; every explicit retry reserves again."
+  ],
+  "not_sufficient_controls_alone": [
+    "Proxy.NO_PROXY",
+    "Connection: close"
+  ],
+  "limits": [
+    "Connection/TLS/route attempts may retry before a body sink exists; these do not retransmit event bodies.",
+    "This budgets logical HTTP event submissions, not TCP packet retransmissions, DNS/TLS operations, or downstream server/proxy processing.",
+    "ACK loss remains ambiguous: the server may have accepted the first attempt; explicit retries may produce duplicates and must count again.",
+    "No undocumented retry property, hidden-platform API, reflection or new dependency is proposed.",
+    "No PostHog request, Android execution or TLS ACK-loss experiment was performed by this review."
+  ],
+  "sources": [
+    {
+      "name": "HttpURLConnectionImpl",
+      "url": "https://android.googlesource.com/platform/external/okhttp/+/refs/tags/android-15.0.0_r1/okhttp-urlconnection/src/main/java/com/squareup/okhttp/internal/huc/HttpURLConnectionImpl.java",
+      "sha256_decoded_source": "8d376c962ca409d3b0c67b48afc07c9b1ecfb95bf61b0ad0d97ca0136c81ed58",
+      "source_lines": {
+        "356-365": "Fixed-length streaming leaves bufferRequestBody false.",
+        "435-436": "A follow-up requiring the same non-RetryableSink body throws HttpRetryException.",
+        "494-505": "IOException recovery delegates to HttpEngine.recover; otherwise exception propagates.",
+        "628-637": "Both public fixed-length overloads set the same length used by newHttpEngine."
+      }
+    },
+    {
+      "name": "HttpEngine",
+      "url": "https://android.googlesource.com/platform/external/okhttp/+/refs/tags/android-15.0.0_r1/okhttp/src/main/java/com/squareup/okhttp/internal/http/HttpEngine.java",
+      "sha256_decoded_source": null,
+      "source_lines": {
+        "231-251": "Buffered mode creates RetryableSink; streaming mode creates a transport sink.",
+        "367-384": "IOException recovery requires StreamAllocation.recover to accept the body; one-argument overload passes the original requestBodyOut.",
+        "596-609": "Response reading closes the written body; only RetryableSink gets body replay before response reading."
+      }
+    },
+    {
+      "name": "StreamAllocation",
+      "url": "https://android.googlesource.com/platform/external/okhttp/+/refs/tags/android-15.0.0_r1/okhttp/src/main/java/com/squareup/okhttp/internal/http/StreamAllocation.java",
+      "sha256_decoded_source": "ad3caf568d7aba2ce75d0f2708897a70ec21bd4ac03c1b3f050ba6287326d034",
+      "source_lines": {
+        "333-350": "IOException recovery is rejected unless requestBodyOut is null or RetryableSink.",
+        "355-363": "Protocol and interrupted I/O errors are not recovered."
+      }
+    },
+    {
+      "name": "Http1xStream",
+      "url": "https://android.googlesource.com/platform/external/okhttp/+/refs/tags/android-15.0.0_r1/okhttp/src/main/java/com/squareup/okhttp/internal/http/Http1xStream.java",
+      "sha256_decoded_source": "0a18da7c2b42c6b87a8d5bec78334d19ebac5cdcacaa6e2a471f9f72db64e58f",
+      "source_lines": {
+        "93-95": "Known-length streamed bodies use FixedLengthSink."
+      }
+    },
+    {
+      "name": "HttpsURLConnectionImpl",
+      "url": "https://android.googlesource.com/platform/external/okhttp/+/refs/tags/android-15.0.0_r1/okhttp-urlconnection/src/main/java/com/squareup/okhttp/internal/huc/HttpsURLConnectionImpl.java",
+      "sha256_decoded_source": "6396fb5823fadae28b2a7f8e0fd1198ba5048f1bbdb94d010975e4c03ce97c70",
+      "source_lines": {
+        "29-39": "HTTPS delegates to the same HttpURLConnectionImpl implementation."
+      }
+    },
+    {
+      "name": "DelegatingHttpsURLConnection",
+      "url": "https://android.googlesource.com/platform/external/okhttp/+/refs/tags/android-15.0.0_r1/okhttp-urlconnection/src/main/java/com/squareup/okhttp/internal/huc/DelegatingHttpsURLConnection.java",
+      "sha256_decoded_source": null,
+      "source_lines": {
+        "285-286": "The int fixed-length overload used by DirectQueue forwards to its delegate."
+      }
+    },
+    {
+      "name": "Http2xStream",
+      "url": "https://android.googlesource.com/platform/external/okhttp/+/refs/tags/android-15.0.0_r1/okhttp/src/main/java/com/squareup/okhttp/internal/http/Http2xStream.java",
+      "sha256_decoded_source": null,
+      "source_lines": {
+        "122-123": "Streaming HTTP/2 body uses stream.getSink rather than RetryableSink."
+      }
+    }
+  ],
+  "public_documentation": "https://developer.android.com/reference/java/net/HttpURLConnection#setFixedLengthStreamingMode(int)",
+  "android35_https_source": "https://android.googlesource.com/platform/prebuilts/fullsdk/sources/+/refs/heads/androidx-constraintlayout-release/android-35/com/android/okhttp/internal/huc/HttpsURLConnectionImpl.java",
+  "hash_note": "SHA256 is provided only for decoded source bytes whose digest was actually recorded; null means no digest recorded, not a content mismatch."
+}

@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "status": "ANDROID_OFFLINE_PROVISION_VERIFIED_CLOUD_REMAINS_UNAUTHORIZED",
+  "base_head": "219261375c1179cb2ee21e10efb36c6fc7c74b3d",
+  "branch": "experiment/telemetry-runtime-lab",
+  "pr": 5,
+  "user_mandate": "2026-11-05 attachment Per Jarvis.txt; diagnosis/correction offline only.",
+  "profile": {
+    "schemaVersion": 1,
+    "ideaId": "convoy_telemetry_minimum_2026_11_01",
+    "title": "Convoy telemetry isolated evaluation",
+    "summary": "Diagnose and correct the existing isolated LAB installation/private provisioning path using dummy-only configuration and blocked cloud; preserve the exhausted run8 budget.",
+    "stage": "EVALUATION",
+    "domains": [
+      "mobile",
+      "product_analytics"
+    ],
+    "requestedArtifacts": [
+      "research",
+      "prototype"
+    ],
+    "userContext": {
+      "targetUser": "Cama, future voluntary Convoy testers",
+      "environment": "personal",
+      "platforms": [
+        "Android",
+        "Flutter"
+      ],
+      "usageFrequency": "one isolated trial"
+    },
+    "signals": {
+      "requiresCode": true,
+      "interactionLevel": "LOW",
+      "freshResearch": false,
+      "externalData": false,
+      "realWorldIntegration": true,
+      "dataSensitivity": "LOW",
+      "novelty": "LOW",
+      "technicalComplexity": "MEDIUM",
+      "safetyImpact": "LOW",
+      "monetizationIntent": "NONE",
+      "regulatedContext": false,
+      "multiDevice": false,
+      "voiceOrMedia": false
+    },
+    "constraints": [
+      "Existing LAB branch and draft PR only; no app Convoy change.",
+      "Dummy configuration and no cloud ingress; no secrets bound to the diagnostic job.",
+      "Run8 unknown budget retains500conservativeused/0remaining; no refund or new cloud budget.",
+      "No spending, deletion, merge, release, real users or external contact."
+    ],
+    "knownUnknowns": [
+      "Exact install/mkdir/stat failure in run8; no attribution before runtime reproduction."
+    ],
+    "requestedOutcome": "Exact failed stage, minimal causal correction when reproduced, Android provisioning/cleanup proof and independent review.",
+    "humanDecisionRequired": true
+  },
+  "reuse_first": {
+    "preparation_code": 6,
+    "workflow": 5,
+    "evidence": "Reuse existing CloudDevice, own LAB database, pinned APK source, runtime control, existing public runner/workflow; add narrow stage instrumentation and offline probe, no server/SDK/new service."
+  },
+  "governance": {
+    "mode": "DIRECT_CANONICAL_INPUT_CONSULTATION_PARTIAL_PROJECT_CHECKOUT_NO_ENTERPRISE_EXECUTABLE_CHECKOUT",
+    "repository": "Arduino89/Cama-Enterprise",
+    "ref": "main",
+    "inputs": [
+      "AGENTS.md",
+      "00_company/source_of_truth_index.md",
+      "00_company/principles.md",
+      "00_company/operating_model.md",
+      "00_company/project_continuity_protocol.md",
+      "06_training/enterprise_pattern_registry.json",
+      "00_company/jarvis_operations_notebook.md"
+    ],
+    "patterns": [
+      "EP-001-canonical-source-and-artifact-roles",
+      "EP-003-human-sentinel-and-regression",
+      "EP-004-end-to-end-reality-check",
+      "EP-005-bounded-recovery-and-reversibility",
+      "EP-007-minimal-context-and-reuse-first",
+      "EP-009-executable-proof-escalation"
+    ],
+    "notebook_notes": [
+      "JON-2026-08-25-003",
+      "JON-2026-08-25-007",
+      "JON-2026-08-25-009",
+      "JON-2026-08-25-010",
+      "JON-2026-08-25-011",
+      "JON-2026-09-08-001"
+    ],
+    "routing_memory_status": "READ_CURRENT_ADVISORY_ZERO_RULE_EVIDENCE"
+  },
+  "proof_boundary": "Android install/provision/cleanup with no cloud access, no LAB start with private configuration; host tests alone are not runtime proof.",
+  "retry_limit": "One instrumented diagnosis on exact code; stop dependent steps on failure. A later attempt requires a concrete reviewed causal change, not an identical rerun.",
+  "cloud_budget": {
+    "remaining": 0,
+    "prior_run_id": 41993361681,
+    "unknown_consumes_full500": true,
+    "automatic_refund": false
+  },
+  "independent_review": "preparation-offline-source-review.json",
+  "wrapper_failure_ref": "run-42064249734/summary.json",
+  "next_attempt_reason": "Correct the documented line-oriented CLI parser; required shell_v2 and offline predicate unchanged, no CSV fallback.",
+  "current_reproduced_failure_ref": "run-42065607773/summary.json",
+  "causal_correction_ref": "provision-transport-cause.json",
+  "current_independent_review": "preparation-feature-cli-fix-review.json",
+  "last_network_failure_ref": "run-42068243243/summary.json",
+  "bounded_stop": "No identical retry. Stop on an actual unavailable/offline environment or required protocol; no cloud budget.",
+  "last_feature_parser_failure_ref": "run-42070151906/summary.json",
+  "result_ref": "run-42072267635/summary.json",
+  "workflow_restore": "Exact original blob791740f6713090d153a49740ef2271560084a296 in final evidence commit, skip-ci.",
+  "next_cloud_proposal": {
+    "status": "NOT_AUTHORIZED",
+    "additional_rows": 200,
+    "prior_conservative_rows": 500,
+    "proposed_cumulative_ceiling": 700,
+    "nominal_rows": 130,
+    "unique_events": 120,
+    "concrete_gate_still_required": true,
+    "reference": "../../telemetry-minimum-infrastructure.md"
+  },
+  "last_completed_run_number": 13,
+  "runtime_independent_review": "run-42072267635/independent-review.json",
+  "next_gate": "Cama review only; conditional future cloud proposal not authorized."
+}

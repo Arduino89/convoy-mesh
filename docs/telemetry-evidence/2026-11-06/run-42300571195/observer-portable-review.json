@@ -1,0 +1,88 @@
+{
+  "status": "PASS_SYNTHETIC_OBSERVER_EXTRACTION",
+  "scope": "TEMPORARY_SYNTHETIC_END_TO_END_NO_NETWORK",
+  "observer_sha256": "5e0e5e55bb221983b7fae3f2ac2e4cfacde8c7d926358e0245f7233980adb98d",
+  "cases": [
+    {
+      "case": "embedded_pipe_and_duplicate_rows",
+      "expected_success": true,
+      "exit_code": 0,
+      "output_created": true,
+      "raw_count": 2,
+      "rows_preserved": 2,
+      "identical_rows_preserved": true,
+      "embedded_pipe_preserved": true,
+      "scalar_NULL_preserved_as_string": true,
+      "raw_row_hash_matches": true,
+      "raw_count_hash_matches": true,
+      "passed": true
+    },
+    {
+      "case": "duplicate_property_key",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "nonfinite_property_NaN",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "nonfinite_property_Infinity",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "duplicate_outer_key",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "duplicate_inner_key",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "count_mismatch",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "wrong_column_count",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "blank_internal_row",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    },
+    {
+      "case": "unexpected_tail_width",
+      "expected_success": false,
+      "exit_code": 1,
+      "output_created": false,
+      "passed": true
+    }
+  ],
+  "tests_run": 10,
+  "tests_passed": 10,
+  "network_called": false,
+  "runtime_or_repository_source_changed": false
+}

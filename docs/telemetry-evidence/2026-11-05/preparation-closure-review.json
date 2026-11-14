@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "scope": "INDEPENDENT_HOST_ONLY_CLOSURE_TEST_REVIEW_NO_ANDROID_OR_CLOUD",
+  "status": "APPROVE_DOCS_EVIDENCE_AND_WORKFLOW_RESTORATION_WITH_SKIP_CI",
+  "material_blockers": [],
+  "source_sha256": {
+    ".github/workflows/telemetry-runtime-control.yml": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5",
+    "docs/telemetry-evidence/2026-11-05/run-42072267635/workflow-executed.yml": "f6ad935df4eeb4d1583624435a11f336092ad579e4c057cb78729a44120634c9",
+    "tools/telemetry_spike/test_ci_provision_probe.py": "4200f113440476795ac2bb7d775f494b9d853c45a5e5d525fd2075f22bb237fa",
+    "tools/telemetry_spike/ci_cloud_trial.py": "93c0ae66f60d4aa1e8f62a6c883492f208e9344440e4f37ce485ded2ee8f5d78",
+    "tools/telemetry_spike/ci_provision_probe.py": "67622cd3e022e9a9805ba8fd55e67aff3ba709a572bf30b6c9f6e8c02e06f205",
+    "tools/telemetry_spike/run_ci_provision_probe.sh": "4aee380c191912458651e545371ea304a31f3c9ed680f7284978fb6c41206468",
+    "tools/telemetry_spike/test_cloud_preparation.py": "4c1ab1ab644c21dd24dc233452d128b3e2cd98e18b761a8a9b170885e627db83",
+    "tools/telemetry_spike/test_adb_provision_contract.py": "f5e9571bad383f78c333bd1408ce7ea115c1140c7ede5c3a8da44c41c961efbd"
+  },
+  "closure_checks": {
+    "active_diagnostic_job_absent": true,
+    "archived_workflow_exact_executed_sha256": true,
+    "active_workflow_exactly_equals_archive_before_diagnostic_job_with_only_its_temporary_marker_exclusion_removed": true,
+    "original_restoration_reference": "791740, parent-verified; this reviewer independently verifies the exact inverse of the one-shot additions.",
+    "all_five_prior_guard_entry_and_no_secret_assertions_preserved": true,
+    "new_archive_digest_assertion_prevents_fixture_relaxation": true,
+    "wrapper_order_and_abort_tests_unchanged": true,
+    "core_probe_and_native_application_unchanged_since_executed_source": true,
+    "historical_CI_source_test_hash_distinguished_from_new_closure_test_hash": true
+  },
+  "independent_host_validation": {
+    "pattern": "test_ci_provision_probe.py",
+    "tests": 13,
+    "result": "PASS",
+    "log_sha256": "71d6058f3b27909522c383011a587679472127bb3897c249718ad9d3ddad34e4"
+  },
+  "full_host_suite_reported_by_parent": {
+    "tests": 178,
+    "result": "PASS",
+    "independently_reexecuted": false
+  },
+  "evidence_integrity": {
+    "four_original_receipt_files_unchanged": true,
+    "published_script_exact_independent_script": true,
+    "published_review_exact_independent_review": true,
+    "parent_recomputed_output_byte_identical_verified_locally": true,
+    "review_sha256": "cbf84b547bbd36cb63645d8b6e5288318f6a5355909f2eb1b8204a5cff6d7529",
+    "script_sha256": "f99744c3458130941063897cfa41f101a61664a5bfd1602496925ab9b07b9da2"
+  },
+  "test_change_interpretation": "The completed one-shot invocation is checked as immutable historical evidence; a new assertion verifies it is removed from the active workflow. No runtime criterion or existing wrapper regression is weakened.",
+  "limits": [
+    "These are closure host checks, not a new Android or CI run.",
+    "The ordinary restored laboratory workflow still exists; only the temporary diagnostic job is removed.",
+    "A skip-ci documentation/evidence closure does not authorize new cloud sends, budget increases, deletion, merge or production.",
+    "Any proposed additional200 rows or cumulative700 ceiling remains a proposal; existing allowance stays exhausted."
+  ]
+}

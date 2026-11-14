@@ -1,0 +1,234 @@
+{
+  "scope": "INDEPENDENT_RAW_STATE_CHECKPOINT_LIFECYCLE_REVIEW_NOT_NEW_RUNTIME",
+  "workflow_run": 41521892190,
+  "source_commit_claim": "89b3a35d3a55c86d60a1cb5b779cfeba7fd00776",
+  "source_bytes_verified": {
+    "tools/telemetry_spike/direct_trial/AndroidManifest.xml": "9508c27ed88c70a2b50e661124384ad856ebf5ca2150f0a4aeb8b3ccd2a5121b",
+    "tools/telemetry_spike/direct_trial/DirectQueue.java": "b9c841c5a45da37c6e7d0fec9283480e4aca605d613dc7c45e30d4382d40f4a9",
+    "tools/telemetry_spike/direct_trial/MainActivity.java": "72cf0b1cc631af2daf78cfb7b806359655a948d4ab690cee0b327f7f73b2bf3f",
+    "tools/telemetry_spike/direct_trial/build.py": "cd268b5113fd0c8e38b54773f12e208c69c7fc10742fd7ee926881ee8b51bf19",
+    "tools/telemetry_spike/runtime_control/build.py": "0965a5ae2f41015ecca8b8c70236f6f074be57388dcc95d6de3f0e32af08c743"
+  },
+  "cases": {
+    "before-intent": {
+      "state_rows": 29,
+      "pids": [
+        6468,
+        6558
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-6b1995fd-ab62-4dc5-beb1-5cf21af45b3a",
+      "trace_sha256": "ff8efc33214c244ff66cb00e7a81e590779390b6630fbcc4a9f9ba009139a68c",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    },
+    "crash-after-intent": {
+      "state_rows": 45,
+      "pids": [
+        4207,
+        4304
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-2ec4f59b-645f-46db-ac44-1b0ae2072d66",
+      "trace_sha256": "106e42bb68db2fc1391c10326b9ec54d0013fb5bb67f19ed11638ac6ec84486a",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    },
+    "crash-after-purge": {
+      "state_rows": 55,
+      "pids": [
+        5837,
+        5925
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-cfad84c0-5642-4acf-8c62-f867832619b4",
+      "trace_sha256": "0bcc3e027063651163d86f2007401149b9c2944f51a1e2580e7efcecbb037b64",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    },
+    "crash-during-purge": {
+      "state_rows": 52,
+      "pids": [
+        5080,
+        5210
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-4978dc03-1ea2-403b-b0ab-62b5aa3ce10e",
+      "trace_sha256": "7767fe54583cefe1c3d95043ba179f45185b688fa717ec2ea53c983059e1f604",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    },
+    "inflight": {
+      "state_rows": 32,
+      "pids": [
+        8623,
+        8737
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-d6876667-b12f-413d-b2e0-e82fc6c477f0",
+      "trace_sha256": "cf9c395a7032237dc9204bd1bee1aa5540f2b8718192c3e9731c1784f8ad8789",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    },
+    "normal": {
+      "state_rows": 31,
+      "pids": [
+        6872,
+        6951
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-6e777935-afb0-4959-aacb-c9001503834b",
+      "trace_sha256": "79e8af5ce43e3642e032e0ca198018d33f2830c41d1ea1e8c27baac391ad2fce",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    },
+    "overflow": {
+      "state_rows": 30,
+      "pids": [
+        8260
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-3abe8d67-e6ee-4b97-aaa2-dc02a079e5ae",
+      "trace_sha256": "9f639e33eec041a72f7d5b8f87307b0d81010bffbd11e792edce241a15e830e1",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    },
+    "refusal": {
+      "state_rows": 55,
+      "pids": [
+        7290,
+        7355
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-9ac0d423-e044-469d-bec7-66fe5e741b0e",
+      "trace_sha256": "a78c85dddae2af5071df1a07ec63b469a735f6ac3fc18963a1fccaac5fcbf671",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    },
+    "retry": {
+      "state_rows": 30,
+      "pids": [
+        7907
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-c26da05d-4ecb-48ba-96a9-dfde86000d14",
+      "trace_sha256": "73cd02c9d73946efe877cf911a483968656ab8488bea7befbf8f779bd863f85b",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    },
+    "revoke": {
+      "state_rows": 30,
+      "pids": [
+        3244,
+        3476
+      ],
+      "sentinel_variants": 1,
+      "setting_value": "synthetic-setting-6c748b1e-a55f-4f79-b175-7f8b3f567d32",
+      "trace_sha256": "f8fb5bfa11f653b9df969cb12850d93543021cec1e556abf6c633e8ad852b268",
+      "expected_trace_hash_recomputed": true,
+      "all_actions_ok": true
+    }
+  },
+  "cutpoints": {
+    "crash-after-intent": {
+      "checkpoint": {
+        "action_nonce": "2dffb49a593445b58b70ad2eda4b3e8f",
+        "consent": false,
+        "generation": 1,
+        "pid": 4207,
+        "revocation_durable": true,
+        "stage": "after_intent"
+      },
+      "before_pid": 4207,
+      "after_pid": 4304,
+      "denied_empty_observations_before_regrant": 18,
+      "generation": 1,
+      "revoked_count": 20,
+      "requests_started_before_regrant": 0,
+      "local_route_enabled_after_stop": "LIFECYCLE_ROWS_AND_HARNESS_CONTROL_FLOW_BEFORE_BOOTSTRAP",
+      "source_constructor_purges_before_scheduling": true,
+      "successful_revoke_response_before_kill": false
+    },
+    "crash-during-purge": {
+      "checkpoint": {
+        "action_nonce": "e0ff3e19e31245659d77a8ef37c72cdb",
+        "consent": false,
+        "generation": 1,
+        "pid": 5080,
+        "revocation_durable": true,
+        "stage": "during_purge"
+      },
+      "before_pid": 5080,
+      "after_pid": 5210,
+      "denied_empty_observations_before_regrant": 22,
+      "generation": 1,
+      "revoked_count": 20,
+      "requests_started_before_regrant": 0,
+      "local_route_enabled_after_stop": "LIFECYCLE_ROWS_AND_HARNESS_CONTROL_FLOW_BEFORE_BOOTSTRAP",
+      "source_constructor_purges_before_scheduling": true,
+      "successful_revoke_response_before_kill": false
+    },
+    "crash-after-purge": {
+      "checkpoint": {
+        "action_nonce": "cdbcb3f5be524a89a376b2663039eea5",
+        "consent": false,
+        "generation": 1,
+        "pid": 5837,
+        "revocation_durable": true,
+        "stage": "after_purge"
+      },
+      "before_pid": 5837,
+      "after_pid": 5925,
+      "denied_empty_observations_before_regrant": 24,
+      "generation": 1,
+      "revoked_count": 20,
+      "requests_started_before_regrant": 0,
+      "local_route_enabled_after_stop": "LIFECYCLE_ROWS_AND_HARNESS_CONTROL_FLOW_BEFORE_BOOTSTRAP",
+      "source_constructor_purges_before_scheduling": true,
+      "successful_revoke_response_before_kill": false
+    }
+  },
+  "limitations": [
+    "One observed run per deterministic cutpoint; process force-stop, not OS power loss or reboot.",
+    "Offline/online is availability of a local adb reverse route, not airplane-mode or real radio connectivity.",
+    "Lifecycle and states are ordered within files but have no shared clock or total-order identifier; online-before-bootstrap and held-receipt-before-revoke ordering additionally rely on reviewed harness control flow.",
+    "The interrupted before-intent transaction rolls back and all20 old events may be sent: this is explicitly before accepted durable revocation.",
+    "The inflight10 rows were already received when revoke executed according to held-receiver protocol; bytes already received cannot be recalled.",
+    "Sentinels are one generated preference and one generated trace per isolated case; no claim of exhaustive app-data preservation.",
+    "No OS reboot, power loss, hardware filesystem failure or production guarantee established.",
+    "Review uses raw state/checkpoint/lifecycle files; no PASS summary used as oracle. Wire set and gate review delegated to parent."
+  ],
+  "before_intent": {
+    "checkpoint": {
+      "action_nonce": "5bed86a452e64a3aa3627218d50adfa4",
+      "consent": false,
+      "generation": 1,
+      "pid": 6468,
+      "revocation_durable": false,
+      "stage": "before_intent_commit"
+    },
+    "before_pid": 6468,
+    "after_pid": 6558,
+    "recovered_prior_consent": true,
+    "recovered_generation": 0,
+    "recovered_queue_count": 20,
+    "revoked_count": 0,
+    "successful_revocation_must_not_be_claimed": true
+  },
+  "inflight": {
+    "before_pid": 8623,
+    "after_restart_pid": 8737,
+    "in_flight_before_and_at_revoke": 1,
+    "only_wire_request_rows": 10,
+    "only_wire_request_mode": "close_without_response_after_fsync",
+    "requests_started_final": 1,
+    "acknowledged_final": 0,
+    "queue_final": 0,
+    "denied_after_restart": true,
+    "receipt_order_scope": "STATE_ROWS_ATTEST_INFLIGHT_BEFORE_REVOKE; ALREADY_RECEIVED_ORDER_SUPPORTED_BY_HELD_RECEIVER_CONTROL_FLOW_AND_EXPLICIT_VALIDATION_FIELDS_NOT_SHARED_TIMESTAMPS"
+  },
+  "total_state_rows": 389,
+  "unique_state_and_checkpoint_nonces": 393,
+  "postcommit_denied_empty_observations": 64,
+  "anomalies": []
+}

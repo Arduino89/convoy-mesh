@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "utc": "2026-11-02T10:16:34.846329+00:00",
+  "scope": "NATIVE_RUNTIME_CONTROL_ONLY",
+  "telemetry_tested": false,
+  "status": "PASS_NATIVE_RUNTIME_CONTROL",
+  "gate_pass": true,
+  "serial": "emulator-5554",
+  "stages": [
+    {
+      "name": "verify_apk",
+      "pass": true
+    },
+    {
+      "name": "boot_and_package_manager",
+      "pass": true
+    },
+    {
+      "name": "install_verified_control",
+      "pass": true
+    },
+    {
+      "name": "first_resumed_ready",
+      "pass": true,
+      "observation": {
+        "schema_version": 1,
+        "package": "com.cama.telemetry.runtime_control",
+        "nonce": "d01251daf394484895343edc158724c9",
+        "pid": 2024,
+        "launches": 1,
+        "ready": true
+      }
+    },
+    {
+      "name": "force_stop_pid_absent",
+      "pass": true
+    },
+    {
+      "name": "second_resumed_ready",
+      "pass": true,
+      "observation": {
+        "schema_version": 1,
+        "package": "com.cama.telemetry.runtime_control",
+        "nonce": "05f1268b5c514ece94c3f802f8f88161",
+        "pid": 2150,
+        "launches": 2,
+        "ready": true
+      }
+    },
+    {
+      "name": "new_pid_persisted_counter_same_boot",
+      "pass": true
+    },
+    {
+      "name": "control_stopped_data_preserved",
+      "pass": true
+    }
+  ],
+  "apk_sha256": "75ee73b7f6161b347095ea0eeec4b5480f0d63422851f68c0c7f707716dcffdb",
+  "identity": {
+    "package": "com.cama.telemetry.runtime_control",
+    "version_code": 1,
+    "version_name": "1.0",
+    "min_sdk": 24,
+    "target_sdk": 36,
+    "requested_permissions": [],
+    "certificate_sha256": "538a112ef6738d0e171998eab1ad4d80bd24dcb95d6f71c9f489520b00eb100c"
+  },
+  "boot_id": "43d31c29-405e-4cb1-8641-87b543680371",
+  "finished_utc": "2026-11-02T10:16:42.423945+00:00"
+}

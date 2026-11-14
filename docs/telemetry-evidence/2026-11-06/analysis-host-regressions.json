@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "scope": "HOST_ONLY_ANALYZER_LABEL_NOT_NEW_ANDROID_OR_CLOUD",
+  "status": "PASSED",
+  "targeted_test_count": 24,
+  "failed": 0,
+  "red_before": {
+    "case": "partialfailedtransport_retryinterpretation",
+    "failed": 1,
+    "passed": 23
+  },
+  "green_after": {
+    "passed": 24,
+    "failed": 0
+  },
+  "runtime_source_unchanged": "809caf200f6232b162fee009fa2a7c2b484d7855",
+  "new_analyzer_source": "CLOSURE_COMMIT_CONTAINING_THIS_FILE; exactSHA inPR5",
+  "change": "Only incomplete-client retrylabel becomesNOT_ATTESTED; allstatus/counts/thresholdsidentical.",
+  "independent_review": "analysis-label-review.json"
+}

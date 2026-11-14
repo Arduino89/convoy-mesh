@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "reviewer": "/root/ack_independent_review",
+  "checked_at_utc": "2026-11-06T23:23:49.849486+00:00",
+  "scope": "INDEPENDENT_REVIEW_OF_ACTUAL_RUN16_EXPORTED_ANDROID_ACK_FUNCTION_AND_SQLITE_EVIDENCE",
+  "status": "PASS_OFFLINE_ANDROID_ACK_FUNCTIONS_NOT_CLOUD_APPROVAL",
+  "blockers": [],
+  "provenance": {
+    "github_run_and_job_terminal_metadata_fetched_independently": true,
+    "github_job_logs_fetched_independently": true,
+    "terminal": {
+      "run": {
+        "id": 42310498585,
+        "run_number": 16,
+        "run_attempt": 1,
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "8d6c7c023eb404098d77392ef7ed0504d86572f6",
+        "head_branch": "experiment/telemetry-runtime-lab",
+        "path": ".github/workflows/telemetry-runtime-control.yml",
+        "display_title": "Verify offline Android ACK response compatibility (zero ingestion)",
+        "repository_private": false,
+        "html_url": "https://github.com/Arduino89/convoy-mesh/actions/runs/42310498585",
+        "created_at": "2026-11-06T23:14:14Z",
+        "updated_at": "2026-11-06T23:16:44Z"
+      },
+      "jobs": [
+        {
+          "id": 128210433580,
+          "name": "offline-ack-response",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 42310498585,
+          "steps": [
+            {
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check out independently reviewed immutable candidate",
+              "number": 2,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check out verbatim original queue source",
+              "number": 3,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Run actions/setup-java@v5",
+              "number": 4,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify host analysis controls",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Require accelerated host",
+              "number": 6,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Prepare pinned control toolchain",
+              "number": 7,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build tiny native lifecycle control",
+              "number": 8,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Control Android first, then compare permissionless ACK fixtures",
+              "number": 9,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Emit only sanitized offline evidence without artifacts or cache",
+              "number": 10,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Run actions/setup-java@v5",
+              "number": 18,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Check out verbatim original queue source",
+              "number": 19,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Check out independently reviewed immutable candidate",
+              "number": 20,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "number": 21,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    "wrapper_commit": "8d6c7c023eb404098d77392ef7ed0504d86572f6",
+    "wrapper_parent_commit": "d93b3095f78f4924e2cf132d82e4bc041a626f7c",
+    "wrapper_message": "Verify offline Android ACK response compatibility (zero ingestion)",
+    "wrapper_workflow_sha256": "9a08fba8fd0e566e1a95147656512a045c848f8f002d1b789fa41b039d5b90dd",
+    "wrapper_parent_message_and_workflow_bytes_verified_independently_before_run": true,
+    "candidate_checked_out": "d93b3095f78f4924e2cf132d82e4bc041a626f7c",
+    "verbatim_baseline_checked_out": "75b83254c99f20703f8a4ddbcc0da92a41d9990c",
+    "all_nine_reviewed_code_hashes_unchanged_since_source_review": true,
+    "reconstruction": {
+      "export": {
+        "sha256": "83278d90dec731556d8f93580dcec2c44be38ba1b7c64c7c8658d83a932ebeb1",
+        "bytes": 18842,
+        "chunks": 7
+      },
+      "chunks_reconstructed_in_order": 7,
+      "saved_result_byte_identical": true,
+      "control_receipt_original_sha256": "e2527ad4e424cf931ac6fb4aa1113fd7607295257e479462f1a9f849d250ade8",
+      "control_receipt_export_value_identical": true,
+      "host_total": 202,
+      "host_success_summary": "OK",
+      "host_skipped": 0,
+      "private_job_log_sha256": "b608a96f5fa9e3de054fc4bd555de7fa49113892c9a406c57eb9063fe905e851"
+    }
+  },
+  "host_controls_observed_in_actual_job": {
+    "total": 202,
+    "passed": 202,
+    "failed": 0,
+    "skipped": 0,
+    "terminal_summary": "OK",
+    "elapsed_seconds_reported": 5.162,
+    "local_historical_skip_not_present_in_this_ci_run": true
+  },
+  "independent_recomputation": {
+    "script": "verify_runtime_evidence.py",
+    "script_sha256": "6ee3d2ce3a9df70929455c3cf3dd34ab59f77a69c8c0eabf2f95b2a5745ba17b",
+    "uses_python_standard_library_only": true,
+    "producer_modules_or_predicates_imported": false,
+    "command": "python verify_runtime_evidence.py android-result.json",
+    "two_runs_byte_identical": true,
+    "result": {
+      "apk_bytes_independently_downloaded": false,
+      "baseline_documented_ok_rejected": true,
+      "candidate_documented_ok_accepted": true,
+      "candidate_sqlite_cases": {
+        "accepted": 5,
+        "category_counts": {
+          "ACKNOWLEDGED": 5,
+          "HTTP_NOT_ACKNOWLEDGED": 1,
+          "HTTP_REJECTED": 1,
+          "MALFORMED_RESPONSE": 10,
+          "QUOTA_LIMITED": 5,
+          "RESPONSE_TOO_LARGE": 1,
+          "UNRECOGNIZED_RESPONSE": 10
+        },
+        "retained_byte_identical": 28,
+        "total": 33
+      },
+      "cleanup_verified": true,
+      "control": {
+        "eight_stages_passed": true,
+        "finished_before_ack_proofs": true,
+        "fresh_process_persisted_launch_count": true,
+        "same_boot_stage_passed": true
+      },
+      "input_bytes": 18842,
+      "input_sha256": "83278d90dec731556d8f93580dcec2c44be38ba1b7c64c7c8658d83a932ebeb1",
+      "legacy_integer_one_accepted_both": true,
+      "limits": [
+        "Receipt recomputation only; no new Android execution or network access.",
+        "GitHub origin and original control-receipt bytes were independently checked separately.",
+        "APK hashes, signatures and permission reports are CI observations, not a local APK reinspection.",
+        "No TLS/InputStream/cloud delivery/storage/revocation/retry/deduplication or phone proof."
+      ],
+      "offline_snapshots_verified": 3,
+      "permissions_requested_all_three_apks": [],
+      "source_commit": "d93b3095f78f4924e2cf132d82e4bc041a626f7c",
+      "status": "PASS_EXPORTED_OFFLINE_RUNTIME_RECEIPT",
+      "successful_sanitized_command_rows": 34
+    }
+  },
+  "findings": {
+    "baseline_reproduces_documented_Ok_rejection_behavior_RED": true,
+    "candidate_accepts_documented_Ok_behavior_GREEN": true,
+    "legacy_integer_one_accepted_in_both": true,
+    "native_shared_classifier_and_sqlite_ack_helper_used": true,
+    "all_five_accepted_fixtures_delete_only_selected_two_rows_and_increment_once": true,
+    "all_twenty_eight_rejected_fixtures_preserve_three_rows_byte_identically_and_counter_zero": true,
+    "unrelated_tail_preserved_in_all_cases": true,
+    "all_three_apks_report_zero_requested_permissions": true,
+    "control_finished_before_permissionless_ack_proofs": true,
+    "eight_control_stages_including_stop_reopen_persistence_same_boot_passed": true,
+    "before_after_unique_packages_and_source_build_apk_signature_receipt_bindings_checked": true,
+    "no_sender_instantiated_or_transport_invoked_in_fixture_activity": true,
+    "airplane_wifi_data_and_no_active_default_network_barriers_checked": true,
+    "proof_processes_stopped_before_initial_radios_restored": true,
+    "raw_server_response_body_not_recorded": true,
+    "zero_posthog_ingestion_supported_structurally_by_reviewed_workflow_permissions_entrypoint_and_offline_receipt": true,
+    "no_cloud_query_or_ingestion_performed_by_independent_reviewer": true
+  },
+  "limits": [
+    "The failing baseline behavior is reproduced by a passing expected-rejection harness; it is not a failed CI job.",
+    "The candidate proof executes the actual native String response classifier and shared SQLite acknowledgement helper. It does not run sendOnce, an InputStream, UTF-8 decoding, TLS, a server or a cloud endpoint.",
+    "APK hashes, signatures and requested permissions were checked for consistency with immutable-source CI build/runtime receipts; APK bytes were not independently downloaded and reinspected.",
+    "Zero PostHog ingestion is a structural conclusion from the reviewed permissionless fixture route, absence of credentials/cloud configuration, no sender instance and offline barriers; no new PostHog query was made.",
+    "Runner setup downloads and historical host-test loopback requests are outside the PostHog zero-ingestion constraint; this is not a claim of zero network traffic for the whole job.",
+    "No new cloud receipt, durable storage count, revocation/new consent, old20 retry, deduplication, phone consumption or overall privacy proof was performed.",
+    "Runtime15 response body remains unknown. A compatible documented fixture does not identify what Runtime15 actually returned.",
+    "Adoption, merge, app integration, release and real-user activation remain outside this review."
+  ],
+  "workflow_restoration": {
+    "status": "PENDING_SEPARATE_VERIFICATION_AFTER_CLOSURE_COMMIT",
+    "required_original_workflow_sha256": "5e66eb7f83814e4a6bc15accfbc5a5b7f13b4c8e4fc683a83d33d52bff813cc5"
+  }
+}

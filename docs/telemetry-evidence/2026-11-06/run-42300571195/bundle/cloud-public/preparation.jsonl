@@ -1,0 +1,9 @@
+{"error_category": "NONE", "observed_utc": "2026-11-06T22:02:26.845421+00:00", "phase": "INSTALL_APK", "returncode": 0, "schema_version": 1, "stderr_present": true, "stdout_present": true}
+{"error_category": "NONE", "observed_utc": "2026-11-06T22:02:26.885267+00:00", "phase": "INSTALL_VERIFY", "returncode": 0, "schema_version": 1, "stderr_present": false, "stdout_present": true}
+{"error_category": "NONE", "observed_utc": "2026-11-06T22:02:26.956229+00:00", "phase": "PRIVATE_MKDIR", "returncode": 0, "schema_version": 1, "stderr_present": false, "stdout_present": false}
+{"error_category": "NONE", "observed_utc": "2026-11-06T22:02:26.959397+00:00", "phase": "PRIVATE_SHELL_FEATURES", "returncode": 0, "schema_version": 1, "stderr_present": false, "stdout_present": true}
+{"error_category": "NONE", "observed_utc": "2026-11-06T22:02:27.009127+00:00", "phase": "PRIVATE_WRITE", "returncode": 0, "schema_version": 1, "stderr_present": false, "stdout_present": false}
+{"error_category": "NONE", "observed_utc": "2026-11-06T22:02:27.063034+00:00", "phase": "PRIVATE_STAT", "returncode": 0, "schema_version": 1, "stderr_present": false, "stdout_present": true}
+{"error_category": "NONE", "observed_utc": "2026-11-06T22:02:27.111180+00:00", "phase": "PRIVATE_VERIFY", "returncode": 0, "schema_version": 1, "stderr_present": false, "stdout_present": true}
+{"error_category": "NONE", "observed_utc": "2026-11-06T22:04:45.574682+00:00", "phase": "PRIVATE_REMOVE", "returncode": 0, "schema_version": 1, "stderr_present": false, "stdout_present": false}
+{"error_category": "NONE", "observed_utc": "2026-11-06T22:04:45.642310+00:00", "phase": "PRIVATE_REMOVE_VERIFY", "returncode": 0, "schema_version": 1, "stderr_present": false, "stdout_present": false}

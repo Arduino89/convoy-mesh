@@ -1,0 +1,12 @@
+{
+  "previous_script_sha256": "857fc7e3ba6524d566cb27a837e2ec9acdff7bf6322c865fedb1fed9cab5cbb4",
+  "new_script_sha256": "bfff398acc0ceca6bf3c7cc44dbf2ca7bb1edd1c3a7c8ac61f7e6d836632b30f",
+  "changes": [
+    "Exact source/run/job and source verification count updated",
+    "New APK permission and fourteen native result flags checked",
+    "Assert all native states local_loopback and no cloud ledger fields or cloud/private bundle paths",
+    "Nonce count derived from all observations plus four cutpoints instead of previous-run fixed count",
+    "Cloud NOT_RUN and pure-helper coverage made explicit"
+  ],
+  "reconciliation_logic": "Same independent fixed cohorts, raw payload, UUID, sentinel and lifecycle checks; no lab classifier imported"
+}

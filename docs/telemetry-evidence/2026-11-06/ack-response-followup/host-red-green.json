@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "scope": "HOST_ACTUAL_RUN_CASES_FAIL_FAST_REGRESSION_NOT_ANDROID",
+  "baseline_commit": "75b83254c99f20703f8a4ddbcc0da92a41d9990c",
+  "baseline_module_sha256": "130751c6be65bd4e5f47ce9170d9c5f8b0fa1cb7a48a69992d1f5d0ffe6345ba",
+  "candidate_module_sha256": "9f16368404361b2c02591cfec6087aba340e7ed67df25890e79933770027e562",
+  "test_sha256": "540f32f93662b3625d07c32b0078f57ab1796d640512d50f6e3aae44696d5bc5",
+  "network_calls": 0,
+  "before": {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "test_ci_cloud_trial",
+      "-q"
+    ],
+    "total": 23,
+    "failed": 4,
+    "passed": 19,
+    "exit_code": 1
+  },
+  "after": {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "test_ci_cloud_trial",
+      "-q"
+    ],
+    "total": 23,
+    "failed": 0,
+    "passed": 23,
+    "exit_code": 0
+  }
+}
