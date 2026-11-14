@@ -147,6 +147,12 @@ class CloudGates(unittest.TestCase):
         value["budget_authorization"].update(
             prior_rows_conservative_consumed=700,
             additional_rows_authorized=160, total_ceiling=860)
+        value["deletion"]["anonymous_event_deletion"] = {
+            "subject": "anonymous_distinct_id", "request_completed": True,
+            "rows_before": 10, "rows_after": 0,
+            "request_evidence_ref": "synthetic-fixture-request",
+            "readback_evidence_ref": "synthetic-fixture-readback",
+            "readback_checked_at_utc": self.clock.isoformat()}
         self.assertEqual(self.validate(value), 160)
         accounting = budget_accounting(value)
         self.assertEqual(accounting["prior_rows_conservative_consumed"], 700)
@@ -171,6 +177,41 @@ class CloudGates(unittest.TestCase):
         stale["budget_authorization"]["total_ceiling"] = 700
         with self.assertRaises(TrialBlocked):
             self.validate(stale)
+
+    def test_160_requires_real_event_erasure_not_just_person_deletion_or_http202(self):
+        gate = self.additional_gate()
+        gate.update(prior_rows_conservative_consumed=700,
+                    additional_rows_authorized=160, total_ceiling=860, remaining_budget=160)
+        gate["budget_authorization"].update(prior_rows_conservative_consumed=700,
+                                           additional_rows_authorized=160, total_ceiling=860)
+        # Previously, generic deletion.status VERIFIED was sufficient.
+        with self.assertRaisesRegex(TrialBlocked, "CLOUD_ANONYMOUS_EVENT_DELETION_NOT_ATTESTED"):
+            self.validate(gate)
+        gate["deletion"]["anonymous_event_deletion"] = {
+            "subject": "anonymous_distinct_id", "request_completed": True,
+            "rows_before": 10, "rows_after": 0,
+            "request_evidence_ref": "synthetic-fixture-request",
+            "readback_evidence_ref": "synthetic-fixture-readback",
+            "readback_checked_at_utc": self.clock.isoformat()}
+        self.assertEqual(self.validate(gate), 160)
+        cases = [
+            ("no_readback", {"readback_evidence_ref": ""}),
+            ("same_ref", {"readback_evidence_ref": "synthetic-fixture-request"}),
+            ("person_only", {"subject": "person_profile"}),
+            ("only_accepted", {"request_completed": False}),
+            ("unknown", {"request_completed": "VERIFIED"}),
+            ("no_initial", {"rows_before": 0}),
+            ("one_remaining", {"rows_after": 1}),
+            ("fake_zero", {"rows_after": "0"}),
+            ("no_timestamp", {"readback_checked_at_utc": ""}),
+            ("expired", {"readback_checked_at_utc": (self.clock - timedelta(days=2)).isoformat()}),
+        ]
+        for name, change in cases:
+            other = deepcopy(gate)
+            other["deletion"]["anonymous_event_deletion"].update(change)
+            with self.subTest(name=name), self.assertRaisesRegex(
+                    TrialBlocked, "CLOUD_ANONYMOUS_EVENT_DELETION_NOT_ATTESTED"):
+                self.validate(other)
 
     def test_additional_authorization_requires_consistent_explicit_fresh_receipt(self):
         changes = ({"total_ceiling": 500}, {"total_ceiling": 701},

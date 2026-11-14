@@ -30,6 +30,12 @@ class CloudLaunchReview(unittest.TestCase):
         gate["privacy"].update(anonymize_ips=True, session_recording_opt_in=False)
         gate["quota"]["free_plan"] = True
         gate["local_regression"]["source_commit"] = self.source
+        gate["deletion"]["anonymous_event_deletion"] = {
+            "subject": "anonymous_distinct_id", "request_completed": True,
+            "rows_before": 10, "rows_after": 0,
+            "request_evidence_ref": "synthetic-launch-request",
+            "readback_evidence_ref": "synthetic-launch-readback",
+            "readback_checked_at_utc": self.clock.isoformat()}
         gate["budget_authorization"] = {"status": "VERIFIED", "checked_at_utc": self.clock.isoformat(),
             "evidence_ref": "synthetic-host-fixture", "prior_rows_conservative_consumed": 700,
             "additional_rows_authorized": 160, "total_ceiling": 860}

@@ -77,6 +77,34 @@ def budget_accounting(gate):
             "prior_rows_conservative_consumed": prior, "additional_rows_authorized": additional}
 
 
+def verify_anonymous_event_deletion(gate, clock):
+    """Review-scoped evidence contract; this never invokes PostHog deletion.
+
+    Deleting a person profile or merely accepting a request is not evidence
+    that previously ingested anonymous event records are gone.
+    """
+    deletion = gate.get("deletion")
+    proof = deletion.get("anonymous_event_deletion") if isinstance(deletion, dict) else None
+    if not isinstance(proof, dict):
+        raise TrialBlocked("CLOUD_ANONYMOUS_EVENT_DELETION_NOT_ATTESTED")
+    request_ref = proof.get("request_evidence_ref")
+    readback_ref = proof.get("readback_evidence_ref")
+    if (proof.get("subject") != "anonymous_distinct_id" or
+            proof.get("request_completed") is not True or
+            type(proof.get("rows_before")) is not int or proof["rows_before"] < 1 or
+            type(proof.get("rows_after")) is not int or proof["rows_after"] != 0 or
+            not isinstance(request_ref, str) or not 12 <= len(request_ref) <= 2000 or
+            not isinstance(readback_ref, str) or not 12 <= len(readback_ref) <= 2000 or
+            request_ref == readback_ref):
+        raise TrialBlocked("CLOUD_ANONYMOUS_EVENT_DELETION_NOT_ATTESTED")
+    try:
+        checked = iso(proof.get("readback_checked_at_utc"))
+    except (TrialBlocked, ValueError, TypeError) as exc:
+        raise TrialBlocked("CLOUD_ANONYMOUS_EVENT_DELETION_NOT_ATTESTED") from exc
+    if not clock - timedelta(hours=24) <= checked <= clock + timedelta(minutes=5):
+        raise TrialBlocked("CLOUD_ANONYMOUS_EVENT_DELETION_NOT_ATTESTED")
+
+
 def required_controls(gate):
     return CONTROLS + (("budget_authorization",) if gate.get("schema_version") == 2 else ())
 
@@ -115,6 +143,8 @@ def validate_cloud_gate(gate, source, run_id, execution_id, run_attempt, clock=N
             gate["budget_authorization"][key] != gate[key]
             for key in ("prior_rows_conservative_consumed", "additional_rows_authorized", "total_ceiling")):
         raise TrialBlocked("CLOUD_BUDGET_AUTHORIZATION_NOT_ATTESTED")
+    if gate["schema_version"] == 2 and gate["prior_rows_conservative_consumed"] >= 700:
+        verify_anonymous_event_deletion(gate, clock)
     return remaining
 
 
