@@ -12,7 +12,9 @@ Publication reuses native GitHub Releases and the already-verified CI artifact, 
 
 ## Current work
 
-**0.7.7-exp1+9**, [draft PR #4](https://github.com/Arduino89/convoy-mesh/pull/4), branch `experiment/pedestrian-acquisition-v1`. Based on PR #1 application line `c3ef471754d7e1a4b3cf2558e5c2fadbb9d4f0a7`, not old main or PR #3 ledger. **No merge.**
+**Diagnostic beta candidate on this branch:** `0.7.7-diaglab+14` in [draft PR #8](https://github.com/Arduino89/convoy-mesh/pull/8), executable commit `ea6e365dac9f840a392c7de5fc46a400a0e8a693`. [Run #43731235809](https://github.com/Arduino89/convoy-mesh/actions/runs/43731235809) attempt 1 **SUCCESS** in build (Flutter tests, analyze, APK) and Android emulator. New `Test log` expandable panel records tester-declared environment, movement, handset placement, screen state, observed issue and timed markers in private local JSONL; bounded opt-in PostHog batch adds strictly validated enums. Human observations are not sensor measurements. Neither cloud deletion/retention nor field usability on actual phones is certified. **No merge/release or APK handoff for +14 yet.** See [diagnostic study contract](docs/diagnostic-study-contract.md) and [continuity](CONTINUITY.md). Frontend redesign is a separate proposed UX phase, not part of this build.
+
+**Underlying pedestrian baseline:** **0.7.7-exp1+9**, [draft PR #4](https://github.com/Arduino89/convoy-mesh/pull/4), branch `experiment/pedestrian-acquisition-v1`. Based on PR #1 application line `c3ef471754d7e1a4b3cf2558e5c2fadbb9d4f0a7`, not old main or PR #3 ledger. **No merge.**
 
 **149/149 CI tests pass**. The unchanged application baseline plus the same 34 shared regressions passes 122 and fails 19; all 107 original tests pass. [Android run #121](https://github.com/Arduino89/convoy-mesh/actions/runs/37198612027), attempt 1, passed both build and API35 emulator jobs, including signature/package checks and fresh trail growth while asleep. The exact APK bytes and signature have also been independently verified. Ready for the requested experimental two-phone trial; physical validation remains pending.
 
