@@ -5,6 +5,7 @@ import '../services/background_runtime_service.dart';
 import '../services/convoy_mesh_service.dart';
 import '../services/location_fusion_service.dart';
 import '../services/system_intents.dart';
+import 'ble_radar_ui.dart';
 
 class BlePage extends StatelessWidget {
   const BlePage({super.key});
@@ -26,7 +27,7 @@ class BlePage extends StatelessWidget {
                 ? 'Uscita attiva • GPS recente • incertezza stimata ±${fix!.accuracyM!.toStringAsFixed(0)} m'
                 : 'Uscita attiva • posizione non aggiornata • ultima misura ${ConvoyMeshService.ageLabel(fix?.measurementAt)}'
             : mesh.isRunning
-                ? 'Modalità Vicini • rilevo persone con Convoy Mesh aperto; GPS non condiviso finché non avvii l’uscita.'
+                ? 'Modalità Vicini'
                 : 'Ricerca vicini non attiva';
 
         return Scaffold(
@@ -40,23 +41,29 @@ class BlePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Bluetooth: ${mesh.bleStatus.name}',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      BleStatusBanner(
+                        statusName: mesh.bleStatus.name,
+                        onTap: () => _onBluetoothStatusTap(
+                          context, mesh.bleStatus.name, mesh.isScanning),
                       ),
                       Wrap(
                         spacing: 6,
                         children: [
-                          Chip(label: Text(mesh.isScanning ? 'Scan ON' : 'Scan OFF')),
+                          ScanStatusChip(scanning: mesh.isScanning),
                           Chip(label: Text(mesh.isAdvertising ? 'ADV ON' : 'ADV OFF')),
                           Chip(label: Text('Presenti ${mesh.onlinePeerCount}')),
                           Chip(label: Text('Non ricevuti ${mesh.offlinePeerCount}')),
                         ],
                       ),
-                      Text(modeText),
-                      const Text(
-                        'L’incertezza GPS non è la distanza fra i telefoni. Il segnale BLE non misura metri.',
-                      ),
+                      Row(children: [
+                        Expanded(child: Text(modeText,
+                          style: Theme.of(context).textTheme.bodyMedium)),
+                        IconButton(
+                          tooltip: 'Come funzionano Vicini, GPS e segnale BLE',
+                          icon: const Icon(Icons.help_outline),
+                          onPressed: () => _showRadarHelp(context),
+                        ),
+                      ]),
                       if (runtime.isRunning && fix != null)
                         Text(
                           'Filtro: ${fix.gpsDecision} • sensore movimento ${fix.motionReliable ? 'disponibile' : 'non affidabile / GPS-only'}',
@@ -90,7 +97,9 @@ class BlePage extends StatelessWidget {
                           OutlinedButton.icon(
                             onPressed: () => _editName(context, mesh),
                             icon: const Icon(Icons.edit),
-                            label: Text('Nome: ${mesh.myName}'),
+                            label: Text('Nome: ${mesh.myName}',
+                              style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w700)),
                           ),
                         ],
                       ),
@@ -109,7 +118,7 @@ class BlePage extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.all(14),
                     child: Text(
-                      'Nessun partecipante ricevuto. Basta tenere Convoy Mesh aperto su entrambi i telefoni per vedersi nel Radar; “Avvia uscita” serve per condividere posizione, traccia e continuare in background. Non serve l’accoppiamento Bluetooth classico.',
+                      'Nessun partecipante rilevato. Tocca ? per sapere come funziona la ricerca.',
                     ),
                   ),
                 ),
@@ -187,7 +196,8 @@ class BlePage extends StatelessWidget {
           backgroundColor: Color(ConvoyMeshService.colorForUser(peer.userId)),
           child: Icon(online ? Icons.person : Icons.person_off, color: Colors.white),
         ),
-        title: Text('$name • ${online ? 'presente' : 'segnale non ricevuto'}'),
+        title: Text('$name • ${online ? 'presente' : 'segnale non ricevuto'}',
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
         subtitle: Text(
           '$gps\n'
           '${peer.hasFix ? 'Incertezza stimata ±${(peer.accuracyM ?? 0).toStringAsFixed(0)} m\n' : ''}'
@@ -205,6 +215,91 @@ class BlePage extends StatelessWidget {
               ? Colors.green
               : Colors.orange,
         ),
+      ),
+    );
+  }
+
+  Future<void> _onBluetoothStatusTap(
+      BuildContext context, String statusName, bool scanning) async {
+    final view = describeBleStatus(statusName);
+    switch (view.action) {
+      case BleStatusAction.readyInfo:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(scanning
+                ? 'Bluetooth correttamente acceso. Ricerca vicini attiva.'
+                : 'Bluetooth correttamente acceso. Ricerca vicini non attiva.'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      case BleStatusAction.bluetoothSettings:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bluetooth spento: apro le impostazioni.'),
+            duration: Duration(seconds: 2)),
+        );
+        await SystemIntents.openBluetoothSettings();
+      case BleStatusAction.appPermissions:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(
+            'Permessi mancanti: controlla Dispositivi vicini nelle impostazioni dell’app.'),
+            duration: Duration(seconds: 3)),
+        );
+        final opened = await ph.openAppSettings();
+        if (!opened && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text(
+              'Non riesco ad aprire le impostazioni. Fallo dalle impostazioni Android.')),
+          );
+        }
+      case BleStatusAction.locationSettings:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(
+            'Attiva la Posizione dalle impostazioni Android.'),
+            duration: Duration(seconds: 3)),
+        );
+        await SystemIntents.openLocationSettings();
+      case BleStatusAction.explain:
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(view.label),
+            content: Text(view.explanation),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Ho capito'),
+              ),
+            ],
+          ),
+        );
+    }
+  }
+
+  Future<void> _showRadarHelp(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Come funziona il Radar BLE?'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'Modalità Vicini: trova gli altri telefoni che hanno Convoy Mesh '
+            'aperto, senza avviare il GPS continuo. Non serve '
+            'l’accoppiamento Bluetooth classico.\n\n'
+            'Avvia uscita: abilita la raccolta e lo scambio delle posizioni '
+            'GPS e la traccia, anche con schermo spento quando Android '
+            'permette al servizio in primo piano di operare.\n\n'
+            'Un telefono può essere visibile via Bluetooth anche se '
+            'l’ultima posizione GPS è vecchia. Il segnale BLE (RSSI) '
+            'non misura la distanza in metri; l’incertezza GPS '
+            'non è la distanza tra i telefoni.\n\n'
+            'Le mappe di sfondo online non diventano offline per il '
+            'solo fatto che lo scambio BLE funziona senza Internet.',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Chiudi')),
+        ],
       ),
     );
   }

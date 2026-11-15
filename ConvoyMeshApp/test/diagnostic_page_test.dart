@@ -1,5 +1,6 @@
 import 'package:convoy_mesh/pages/diagnostic_page.dart';
 import 'package:convoy_mesh/services/diagnostic_recorder.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,7 +22,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Avvia test • max 4 min'));
+    await tester.tap(find.text('Avvia registrazione diagnostica • max 4 min'));
     await tester.pump();
 
     expect(recorder.isActive, isTrue);
@@ -42,7 +43,33 @@ void main() {
     expect(find.text('Segna il problema'), findsNothing);
     expect(recorder.isActive, isTrue);
 
-    recorder.stop(reason: 'widget_test');
+    // Stopping the recording must not implicitly open Android's share sheet.
+    await tester.tap(find.text('Termina registrazione diagnostica'));
+    await tester.pumpAndSettle();
+    expect(recorder.isActive, isFalse);
+    expect(recorder.hasExport, isTrue);
+    expect(recorder.lastStopReason, 'manual_stop');
+    expect(find.text('Condividi file (manuale)'), findsOneWidget);
+    expect(find.text('Riepilogo tecnico locale'), findsOneWidget);
+    expect(find.textContaining('Invio dettagliato separato'), findsOneWidget);
+    // The new cloud upload card is farther down a lazily built ListView.
+    // Exercise real navigation rather than assuming offscreen children exist.
+    await tester.scrollUntilVisible(
+      find.text('Invio diagnostico PostHog EU — beta chiusa'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Invio diagnostico PostHog EU — beta chiusa'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    final records = recorder.lastContent!.trim().split('\n')
+        .map((line) => jsonDecode(line) as Map<String, dynamic>).toList();
+    expect(records.any((entry) => entry['category'] == 'test' &&
+        entry['event'] == 'context' &&
+        entry['data']['environment'] == 'unknown' &&
+        entry['data']['source'] == 'tester_declared'), isTrue);
+    expect(records.any((entry) => entry['category'] == 'test' &&
+        entry['event'] == 'outcome' &&
+        entry['data']['outcome'] == 'not_checked'), isTrue);
     expect(recorder.lastContent, contains('"event":"marker"'));
     expect(recorder.lastContent, contains('Francesca non vede più Cama'));
   });

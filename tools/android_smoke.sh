@@ -234,7 +234,12 @@ timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 
 # A diagnostic session may begin BEFORE an outing and must span the transition.
 wait_and_tap_text 'Test log' open-test-log
-wait_and_tap_text 'Avvia test • max 4 min' start-diagnostic
+# The start control is deliberately before the explanatory text. Do NOT
+# swipe here: a previous unconditional swipe hid the button above the
+# viewport in actual emulator UI dumps. Capture the pre-tap view to
+# diagnose any future Android UI/permission issues without guessing.
+timeout 15 adb exec-out screencap -p > "$OUT/diagnostic-before-start.png"
+wait_and_tap_text 'Avvia registrazione diagnostica • max 4 min' start-diagnostic
 sleep 2
 capture_diag nearby-test
 grep -q '"category":"session","event":"start"' "$OUT/diag-nearby-test.jsonl"
@@ -253,13 +258,14 @@ for i in 1 2 3 4; do
 done
 assert_no_runtime preview
 capture_diag preview
-python3 - "$OUT/diag-preview.jsonl" "${EXPECTED_BUILD_COMMIT:-}" <<'PY'
+python3 - "$OUT/diag-preview.jsonl" "${EXPECTED_BUILD_COMMIT:-}" "$PACKAGE" <<'PY'
 import json, sys
 rows = [json.loads(line) for line in open(sys.argv[1]) if line.strip()]
 start = next(r['data'] for r in rows if r['category'] == 'session' and r['event'] == 'start')
 if sys.argv[2]:
     assert start['build_commit'] == sys.argv[2], start
-assert start['app_version'] == '0.7.7-exp1+9', start
+expected_version = '0.7.7-diaglab+15' if sys.argv[3] == 'com.example.convoy_mesh.diaglab' else '0.7.7-exp1+9'
+assert start['app_version'] == expected_version, start
 fixes = [r['data'] for r in rows if r['category'] == 'gps' and r['event'] == 'fix']
 assert fixes and any(f['fresh'] for f in fixes), 'Preview did not acquire a real provider fix'
 assert all(not f['record_track'] and not f['track_added'] and f['track_points_total'] == 0 for f in fixes)
