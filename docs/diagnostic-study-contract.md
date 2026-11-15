@@ -8,7 +8,7 @@ Riutilizzare l'unico controllo già presente nella pagina `Test log`:
 - **Avvia registrazione diagnostica** — cattura localmente, senza avviare un'uscita.
 - **Termina registrazione diagnostica** — ferma e conserva il log; limite attuale 4 minuti; nessun invio.
 - **Condividi file (manuale)** — utilizza il pannello Android e invia il JSONL completo solo al destinatario scelto (che potrebbe essere un'app online).
-- **Invia a PostHog** — **futuro pulsante separato**, con anteprima dettagliata e conferma per singola sessione; non è ancora implementato.
+- **Invia a PostHog** — pulsante separato realizzato in PR #8 Diagnostics LAB +13, con anteprima dettagliata e conferma per singola sessione. La ricezione di una sessione reale in PostHog EU è stata osservata il 15 novembre 2026; resta aperto il gate di privacy su cancellazione/retention.
 
 La schermata dà precedenza visiva al pulsante di registrazione rispetto alle spiegazioni, dopo che l'emulatore con risoluzione ridotta non riusciva a raggiungerlo. In Nearby non viene attivato GNSS/foreground service per la sola diagnostica; i fix GPS sono presenti se un componente proprietario li ha effettivamente ottenuti (per esempio l'uscita). Nessuna promessa di campionamento continuo con schermo spento o app terminata.
 
@@ -18,7 +18,7 @@ La schermata dà precedenza visiva al pulsante di registrazione rispetto alle sp
 
 `DiagnosticSummary.fromJsonl` resta un **riepilogo locale aggregato**, con allowlist di numeri/booleani, utile per lettura rapida. Non sostituisce il log dettagliato e, in questa fase, non viene trasmesso. Il ping `cm_lab_ping` di PR #7 è una prova separata, riuscita su un singolo dispositivo.
 
-## Contratto previsto per un upload beta dettagliato — non operativo
+## Contratto dell'upload beta dettagliato — implementazione sperimentale
 
 Una **singola sessione esplicitamente selezionata** potrà produrre un flusso limitato di eventi diagnostici in PostHog EU, non un upload indiscriminato di tutto il JSONL. Conservare solo i campi necessari alla ricostruzione:
 - **Identità di test:** codice sessione, dispositivo mittente, ID del peer e *nickname* quando il partecipante è consenziente. Non inferire che un nickname identifichi univocamente una persona.
@@ -57,3 +57,15 @@ Solo tipi di evento elencati e campi esplicitamente approvati nel codice, inclus
 Solo sessioni interamente chiuse, coerenti per ID/ordine/identità, con <=1200 record e <=750000 byte possono partire; altrimenti rifiuto senza troncamento silenzioso, con file locale preservato. Una sola richiesta HTTP con `upload_id` casuale per correlare una successiva lettura indipendente su PostHog. Non esiste persist/retry; errore o timeout resta esito ambiguo e non autorizza una ripetizione inconsapevole. Il bottone si disabilita dopo un tentativo per l'intera vista; riavvio processo non garantisce idempotenza, dunque leggere `upload_id` prima di re-inviare. HTTP 2xx non è conferma di salvataggio. Revoca del consenso per invii futuri != cancellazione di eventi già conservati.
 
 **Stato di verifica:** sorgente candidato nella PR #8; CI Flutter/Android, test sintetici del nuovo invio, progetto PostHog/retention/deletion e prova manuale sul telefono restano gate espliciti. Non caricare dati reali né inviare log privati al repository per queste prove. PR #5 resta HOLD: la nuova modalità non pretende di riparare la sua coda. Il precedente APK v0.7.7-diaglab+12 non contiene questa funzione e non va rappresentato come aggiornato.
+
+## Contesto dichiarato dal tester — Diagnostics LAB +14 (15 novembre 2026)
+
+**Decisione:** riuso livello 2 di `DiagnosticRecorder.record` e del JSONL esistente per associare condizioni umane alla stessa sessione, senza database, background task o dipendenze. È una nota dichiarata dal tester e **non ground truth certificato**. La registrazione conserva `session_id`, `elapsed_ms` monotono locale e timestamp UTC; gli orologi dei telefoni restano non sincronizzati e la sola scheda non valida l'accuratezza GPS.
+
+La schermata `Test log` presenta un pannello facoltativo, chiuso inizialmente e collocato sotto il comando Start/Stop per non nasconderlo in emulatore. Il tester può dichiarare, scegliendo enum chiusi, ambiente indoor/outdoor/misto/ignoto, proprio movimento, movimento altrui **solo se osservato**, telefono in mano/tasca/zaino/appoggiato, stato dichiarato dello schermo e giudizio finale (nessun problema evidente / problema osservato / non verificato). All'avvio salva `test.context`; eventuali cambi mentre la registrazione è attiva aggiungono nuovi `test.context` con timestamp; marcatori `test.marker` a pulsante segnalano inizio/stop movimento e segnale perso/ritrovato; stop manuale aggiunge `test.outcome`. Se il timer termina automaticamente o il processo è terminato, l'esito finale può mancare: non inventarlo. Modifiche della scheda dopo lo stop riguardano solo la registrazione successiva. Note libere rimangono registrate in `user.marker` **solo localmente**.
+
+PostHog: soltanto `test.context`, `test.marker`, `test.outcome` conformi esattamente agli enum e al campo `source=tester_declared` transitano nella allowlist dell'upload esplicito. Campi extra o valori fuori dominio fanno fallire la preparazione; mai upload automatico o copia indiscriminata di note libere. Sono inclusi nella preview e nel consenso dell'invio; il gate cancellazione/retention degli eventi personali è ancora aperto. **Nessuna prova su telefoni reali di +14** finché APK/build/emulatore e revisione non superano il gate. PR #8 resta draft, nessun merge o release.
+
+### Review UX preliminare, senza cambio di navigazione
+
+Le attuali tre sezioni Radar BLE / Mappa / Test log sono funzionali ma tecnicamente dense: il tema Material 3 usa un seed blue-grey, i controlli sono distribuiti in Card e le diagnostiche appaiono allo stesso livello delle azioni quotidiane. Proposta per una fase separata: uno stato leggibile Vicini/Posizione recente/Posizione vecchia, CTA di uscita facilmente raggiungibile, mappa protagonista, diagnostica a percorso guidato, dettaglio radio avanzato collassabile, contrasto/accessibilità anche all'aperto. Nessun refactor di BLE/GPS o navigazione in questa fase; validare prima su schermi piccoli e prova accessibilità.

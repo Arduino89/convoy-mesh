@@ -122,6 +122,9 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                   const Text('Compila prima o durante il test. I cambi di scelta '
                       'mentre registri vengono annotati col tempo del telefono. '
                       'Se non sai, lascia «Non so».'),
+                  if (!recorder.isActive && recorder.hasExport)
+                    const Text('Il file appena chiuso NON cambia: le nuove '
+                        'scelte valgono per una prossima registrazione.'),
                   _selector('Ambiente', 'environment', _environment,
                       DiagnosticTestContext.environments),
                   _selector('Questo telefono', 'self_movement',

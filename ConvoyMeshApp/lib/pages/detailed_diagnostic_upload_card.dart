@@ -94,7 +94,8 @@ class _DetailedDiagnosticUploadCardState
         content: Text(
           'Invierai a PostHog EU ${payload.recordCount} eventi '
           '(${payload.bytes} byte circa) con ID, nickname, GPS e BLE '
-          'dei partecipanti approvati. '
+          'dei partecipanti approvati e, se presenti, condizioni '
+          'dichiarate durante la prova. '
           'Il file locale non viene cancellato. '
           'Dopo l’invio, annullare un consenso non ritira automaticamente '
           'i dati già ricevuti dal cloud.',
@@ -165,6 +166,8 @@ class _DetailedDiagnosticUploadCardState
                   'dimensione stimata: ${payload.bytes} byte'),
               const Text('I record GPS contengono latitudine e longitudine '
                   'precise. I record BLE contengono ID, sequenze e RSSI. '
+                  'Se registrate, includono anche condizioni e marcatori '
+                  'dichiarati dal tester (NON verificati dai sensori). '
                   'Le note libere e i payload radio grezzi restano locali.'),
               OutlinedButton(
                 onPressed: () => _showPreview(payload),
@@ -174,7 +177,7 @@ class _DetailedDiagnosticUploadCardState
                 contentPadding: EdgeInsets.zero,
                 value: _ownerConsent,
                 title: const Text('Acconsento all’invio dei miei ID, '
-                    'nickname, coordinate e log tecnici a PostHog EU '
+                    'nickname, coordinate, condizioni dichiarate e log tecnici a PostHog EU '
                     'per analisi della beta.'),
                 onChanged: _attempted ? null :
                     (v) => setState(() => _ownerConsent = v == true),
