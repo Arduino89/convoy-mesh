@@ -50,7 +50,8 @@ void main() {
     expect(recorder.lastStopReason, 'manual_stop');
     expect(find.text('Condividi file (manuale)'), findsOneWidget);
     expect(find.text('Riepilogo tecnico locale'), findsOneWidget);
-    expect(find.textContaining('Invio a PostHog non ancora abilitato'), findsOneWidget);
+    expect(find.textContaining('Invio dettagliato separato'), findsOneWidget);
+    expect(find.text('Invio diagnostico PostHog EU — beta chiusa'), findsOneWidget);
     expect(tester.takeException(), isNull);
     expect(recorder.lastContent, contains('"event":"marker"'));
     expect(recorder.lastContent, contains('Francesca non vede più Cama'));

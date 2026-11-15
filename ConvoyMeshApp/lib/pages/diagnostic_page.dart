@@ -4,6 +4,7 @@ import '../services/convoy_mesh_service.dart';
 import '../services/diagnostic_capture_bridge.dart';
 import '../services/diagnostic_recorder.dart';
 import 'manual_ping_card.dart';
+import 'detailed_diagnostic_upload_card.dart';
 
 class DiagnosticPage extends StatelessWidget {
   const DiagnosticPage({super.key, this.deviceIdOverride, this.deviceNameOverride, this.captureNowOverride});
@@ -71,11 +72,16 @@ class DiagnosticPage extends StatelessWidget {
                 for (final field in recorder.lastSummary!.toReviewFields().entries)
                   Text(field.key + ': ' + field.value.toString()),
                 const SizedBox(height: 8),
-                const Text('Invio a PostHog non ancora abilitato: consenso, revoca e dati da inviare devono superare le verifiche.'),
+                const Text('Invio dettagliato separato, manuale e soggetto al consenso di ogni partecipante; nessun invio automatico.'),
               ],
               FilledButton.icon(onPressed: () => _share(context, recorder),
                   icon: const Icon(Icons.share), label: const Text('Condividi file (manuale)')),
             ]),
+            if (!recorder.isActive && recorder.hasExport && recorder.lastContent != null)
+              DetailedDiagnosticUploadCard(
+                key: ValueKey('upload-${recorder.lastFileName}'),
+                jsonl: recorder.lastContent!,
+              ),
             const ManualPingCard(),
             _card([
               const Text('Runtime e capacità hardware', style: TextStyle(fontWeight: FontWeight.bold)),
