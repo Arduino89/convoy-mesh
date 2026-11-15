@@ -56,6 +56,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Invio diagnostico PostHog EU — beta chiusa'),
       200,
+      scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Invio diagnostico PostHog EU — beta chiusa'), findsOneWidget);
     expect(tester.takeException(), isNull);
