@@ -154,6 +154,8 @@ class DetailedDiagnosticUpload {
         r'$process_person_profile': false,
         r'$geoip_disable': true,
         'schema_version': 1, 'upload_id': uploadId,
+        // For PostHog /batch/ distinct_id belongs inside properties.
+        'distinct_id': 'cm-beta-device-$did',
         'session_id': sid, 'device_id': did, 'device_name': nickname,
         'event_index': index, 'captured_ts_utc': timestamp,
         'elapsed_ms': elapsed, 'category': category, 'action': action,
@@ -206,7 +208,7 @@ class DetailedDiagnosticUpload {
         }
       }
       events.add({
-        'event': eventName, 'distinct_id': 'cm-beta-device-$did',
+        'event': eventName,
         'properties': props,
       });
     }

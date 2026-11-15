@@ -78,6 +78,8 @@ void main() {
     final history = batch[4]['properties'] as Map<String, Object?>;
     expect(history['unacked_peer_ids'], [222]);
     expect(batch.every((e) => e['event'] == 'cm_beta_diag_record'), isTrue);
+    expect(batch.every((e) => e.keys.toSet().contains('distinct_id') == false), isTrue);
+    expect(batch.every((e) => (e['properties'] as Map)['distinct_id'] == 'cm-beta-device-123'), isTrue);
     expect(batch.every((e) => (e['properties'] as Map)[r'$process_person_profile'] == false), isTrue);
     expect(batch.every((e) => (e['properties'] as Map)[r'$geoip_disable'] == true), isTrue);
   });
