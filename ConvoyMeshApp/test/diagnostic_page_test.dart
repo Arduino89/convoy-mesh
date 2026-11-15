@@ -51,6 +51,12 @@ void main() {
     expect(find.text('Condividi file (manuale)'), findsOneWidget);
     expect(find.text('Riepilogo tecnico locale'), findsOneWidget);
     expect(find.textContaining('Invio dettagliato separato'), findsOneWidget);
+    // The new cloud upload card is farther down a lazily built ListView.
+    // Exercise real navigation rather than assuming offscreen children exist.
+    await tester.scrollUntilVisible(
+      find.text('Invio diagnostico PostHog EU — beta chiusa'),
+      200,
+    );
     expect(find.text('Invio diagnostico PostHog EU — beta chiusa'), findsOneWidget);
     expect(tester.takeException(), isNull);
     expect(recorder.lastContent, contains('"event":"marker"'));
