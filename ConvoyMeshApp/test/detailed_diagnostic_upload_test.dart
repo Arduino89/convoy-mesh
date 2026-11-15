@@ -122,6 +122,45 @@ void main() {
       uploadIdOverride: fixedUploadId), throwsFormatException);
   });
 
+  test('human-declared conditions and markers survive exactly as bounded fields', () {
+    final session = [
+      record(0, 'session', 'start', {}),
+      record(1, 'test', 'context', {
+        'source': 'tester_declared', 'environment': 'indoor',
+        'self_movement': 'stationary', 'peers_movement': 'walking',
+        'phone_placement': 'surface', 'screen_reported': 'mixed',
+      }),
+      record(2, 'test', 'marker', {
+        'source': 'tester_declared', 'marker': 'movement_started',
+      }),
+      record(3, 'test', 'outcome', {
+        'source': 'tester_declared', 'outcome': 'no_obvious_issue',
+      }),
+      record(4, 'session', 'stop', {}),
+    ];
+    final selection = DetailedDiagnosticUpload.fromJsonl(session.join('\n'),
+      uploadIdOverride: fixedUploadId);
+    final context = selection.events[1]['properties'] as Map<String, Object?>;
+    expect(context['source'], 'tester_declared');
+    expect(context['environment'], 'indoor');
+    expect(context['peers_movement'], 'walking');
+    expect((selection.events[2]['properties'] as Map)['marker'], 'movement_started');
+    expect((selection.events[3]['properties'] as Map)['outcome'], 'no_obvious_issue');
+
+    final altered = jsonDecode(session[1]) as Map<String, dynamic>;
+    for (final replacement in ['indoors;my address', 'inside Luca home', 'indoor/private']) {
+      (altered['data'] as Map)['environment'] = replacement;
+      session[1] = jsonEncode(altered);
+      expect(() => DetailedDiagnosticUpload.fromJsonl(session.join('\n'),
+        uploadIdOverride: fixedUploadId), throwsFormatException);
+    }
+    (altered['data'] as Map)['environment'] = 'indoor';
+    (altered['data'] as Map)['free_note'] = 'my secret location';
+    session[1] = jsonEncode(altered);
+    expect(() => DetailedDiagnosticUpload.fromJsonl(session.join('\n'),
+      uploadIdOverride: fixedUploadId), throwsFormatException);
+  });
+
   test('fails closed rather than truncating large sessions', () {
     final records = <String>[record(0, 'session', 'start', {})];
     for (var i = 1; i <= DetailedDiagnosticUpload.maxRecords; i++) {

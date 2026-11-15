@@ -1,5 +1,6 @@
 import 'package:convoy_mesh/pages/diagnostic_page.dart';
 import 'package:convoy_mesh/services/diagnostic_recorder.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -60,6 +61,15 @@ void main() {
     );
     expect(find.text('Invio diagnostico PostHog EU — beta chiusa'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    final records = recorder.lastContent!.trim().split('\n')
+        .map((line) => jsonDecode(line) as Map<String, dynamic>).toList();
+    expect(records.any((entry) => entry['category'] == 'test' &&
+        entry['event'] == 'context' &&
+        entry['data']['environment'] == 'unknown' &&
+        entry['data']['source'] == 'tester_declared'), isTrue);
+    expect(records.any((entry) => entry['category'] == 'test' &&
+        entry['event'] == 'outcome' &&
+        entry['data']['outcome'] == 'not_checked'), isTrue);
     expect(recorder.lastContent, contains('"event":"marker"'));
     expect(recorder.lastContent, contains('Francesca non vede più Cama'));
   });

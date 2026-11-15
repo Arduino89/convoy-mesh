@@ -264,7 +264,7 @@ rows = [json.loads(line) for line in open(sys.argv[1]) if line.strip()]
 start = next(r['data'] for r in rows if r['category'] == 'session' and r['event'] == 'start')
 if sys.argv[2]:
     assert start['build_commit'] == sys.argv[2], start
-expected_version = '0.7.7-diaglab+13' if sys.argv[3] == 'com.example.convoy_mesh.diaglab' else '0.7.7-exp1+9'
+expected_version = '0.7.7-diaglab+14' if sys.argv[3] == 'com.example.convoy_mesh.diaglab' else '0.7.7-exp1+9'
 assert start['app_version'] == expected_version, start
 fixes = [r['data'] for r in rows if r['category'] == 'gps' and r['event'] == 'fix']
 assert fixes and any(f['fresh'] for f in fixes), 'Preview did not acquire a real provider fix'

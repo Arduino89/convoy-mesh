@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'manual_ping_service.dart';
+import 'diagnostic_test_context.dart';
 
 /// Explicit one-request beta diagnostics. No SDK, queue, retry or raw JSONL upload.
 class DetailedDiagnosticUpload {
@@ -19,6 +20,10 @@ class DetailedDiagnosticUpload {
     'session.start': ['schema_version', 'app_version', 'build_commit',
       'max_duration_ms', 'disk_buffer_max_ms', 'persistent_storage'],
     'session.stop': ['reason', 'events', 'dropped_events'],
+    'test.context': ['source', 'environment', 'self_movement',
+      'peers_movement', 'phone_placement', 'screen_reported'],
+    'test.marker': ['source', 'marker'],
+    'test.outcome': ['source', 'outcome'],
     'ble.status': ['status', 'mode'],
     'ble.nearby_started': [],
     'ble.nearby_stopped': [],
@@ -150,6 +155,9 @@ class DetailedDiagnosticUpload {
         throw const FormatException('Dati record non validi');
       }
       final data = source is Map ? source : const <String, Object?>{};
+      if (category == 'test' && !DiagnosticTestContext.validate(action, data)) {
+        throw const FormatException('Contesto dichiarato dal tester non valido');
+      }
       final props = <String, Object?>{
         r'$process_person_profile': false,
         r'$geoip_disable': true,
