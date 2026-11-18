@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../design_tokens.dart';
+import '../outdoor_components.dart';
 import '../radar/radar_components.dart';
 
-/// Token-driven bottom controls (Outing action + navigation bar) used when
-/// a non-classic direction is active. Preserves the exact action labels and
-/// destination semantics of `AppShell`.
+/// Bottom controls (Outing action + navigation bar) styled for Outdoor Premium.
+///
+/// Preserves the exact navigation destinations and accessibility / smoke-test
+/// semantics labels (`Radar BLE`, `Mappa`, `Test log`, `Avvia uscita`,
+/// `Uscita attiva • Termina uscita`).
 class DesignedBottomDock extends StatelessWidget {
   const DesignedBottomDock({
     super.key,
@@ -29,18 +32,8 @@ class DesignedBottomDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = tokens;
-    final hud = t.layoutStyle == RadarLayoutStyle.hud;
-    final editorial = t.layoutStyle == RadarLayoutStyle.editorial;
-
-    final outingBg = outingActive
-        ? (hud ? t.critical.withValues(alpha: 0.16) : t.critical)
-        : t.accent;
-    final outingFg = outingActive
-        ? (hud ? t.critical : Colors.white)
-        : t.onAccent;
-    final outingBorder = outingActive && hud
-        ? BorderSide(color: t.critical, width: 1.5)
-        : BorderSide.none;
+    final outingBg = outingActive ? t.critical : t.accent;
+    final outingFg = outingActive ? Colors.white : t.onAccent;
 
     final buttonLabel = busy
         ? 'Preparazione…'
@@ -48,10 +41,8 @@ class DesignedBottomDock extends StatelessWidget {
             ? 'Uscita attiva • Termina uscita'
             : 'Avvia uscita';
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: t.surface,
-        border: Border(top: BorderSide(color: t.outline, width: t.borderWidth)),
         boxShadow: t.elevated
             ? [
                 BoxShadow(
@@ -62,84 +53,109 @@ class DesignedBottomDock extends StatelessWidget {
               ]
             : const [],
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(t.space(3.5), t.space(2.5), t.space(3.5), t.space(1.5)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (error != null)
-                Container(
-                  margin: EdgeInsets.only(bottom: t.space(2)),
-                  padding: EdgeInsets.symmetric(horizontal: t.space(3), vertical: t.space(2)),
-                  decoration: BoxDecoration(
-                    color: t.critical.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(t.radiusSmall),
-                    border: Border.all(color: t.critical.withValues(alpha: 0.4)),
-                  ),
-                  child: Text(
-                    error!,
-                    style: t.body(12.5, color: t.critical, weight: FontWeight.w600),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+      child: Material(
+        color: t.surface,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Divider(
+              height: t.borderWidth,
+              thickness: t.borderWidth,
+              color: t.outline,
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  t.space(3.5) * t.screenPaddingScale,
+                  t.space(2.25),
+                  t.space(3.5) * t.screenPaddingScale,
+                  t.space(1.5),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+              if (error != null) ...[
+                OutdoorCallout(
+                  tokens: t,
+                  icon: Icons.error_outline,
+                  text: error!,
+                  tone: OutdoorTone.critical,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: t.space(3),
+                    vertical: t.space(1.75),
                   ),
                 ),
-              Material(
-                color: busy ? t.outline : outingBg,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(editorial ? t.radiusLarge : t.radiusMedium),
-                  side: outingBorder,
-                ),
-                child: InkWell(
-                  key: const Key('designed-outing-toggle'),
-                  borderRadius: BorderRadius.circular(editorial ? t.radiusLarge : t.radiusMedium),
-                  onTap: busy ? null : onToggleOuting,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: t.minTouchTarget),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: t.space(4), vertical: t.space(2)),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (outingActive && !busy) ...[
-                            LiveDot(active: true, color: outingFg, size: 7),
-                            SizedBox(width: t.space(1.5)),
-                          ] else
-                            Padding(
-                              padding: EdgeInsets.only(right: t.space(2)),
-                              child: Icon(
-                                busy
-                                    ? Icons.hourglass_top_rounded
-                                    : outingActive
-                                        ? Icons.stop_circle_outlined
-                                        : Icons.play_circle_outline,
-                                color: busy ? t.inkMuted : outingFg,
-                                size: 22,
+                SizedBox(height: t.space(2)),
+              ],
+              Semantics(
+                container: true,
+                excludeSemantics: true,
+                button: true,
+                label: buttonLabel,
+                child: Material(
+                  color: busy ? t.outline : outingBg,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(t.radiusMedium),
+                  ),
+                  child: InkWell(
+                    key: const Key('designed-outing-toggle'),
+                    borderRadius: BorderRadius.circular(t.radiusMedium),
+                    onTap: busy ? null : onToggleOuting,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: t.minTouchTarget),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: t.space(4), vertical: t.space(2)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (outingActive && !busy) ...[
+                              LiveDot(
+                                active: true,
+                                pulseEnabled: t.shouldPulseLive,
+                                color: outingFg,
+                                size: 7,
+                              ),
+                              SizedBox(width: t.space(1.5)),
+                            ] else
+                              Padding(
+                                padding: EdgeInsets.only(right: t.space(2)),
+                                child: Icon(
+                                  busy
+                                      ? Icons.hourglass_top_rounded
+                                      : outingActive
+                                          ? Icons.stop_circle_outlined
+                                          : Icons.play_circle_outline,
+                                  color: busy ? t.inkMuted : outingFg,
+                                  size: t.iconSize(21),
+                                ),
+                              ),
+                            Flexible(
+                              child: Text(
+                                t.label(buttonLabel),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: t
+                                    .body(
+                                      14.5,
+                                      color: busy ? t.inkMuted : outingFg,
+                                      weight: FontWeight.w800,
+                                    )
+                                    .copyWith(
+                                        letterSpacing:
+                                            t.uppercaseLabels ? 0.9 : 0),
                               ),
                             ),
-                          Flexible(
-                            child: Text(
-                              t.label(buttonLabel),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: t
-                                  .body(
-                                    14.5,
-                                    color: busy ? t.inkMuted : outingFg,
-                                    weight: FontWeight.w800,
-                                  )
-                                  .copyWith(letterSpacing: t.uppercaseLabels ? 0.9 : 0),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: t.space(2)),
+              SizedBox(height: t.space(1.75)),
               Row(children: [
                 _navItem(
                   index: 0,
@@ -166,6 +182,9 @@ class DesignedBottomDock extends StatelessWidget {
           ),
         ),
       ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -177,17 +196,11 @@ class DesignedBottomDock extends StatelessWidget {
     required bool selected,
   }) {
     final t = tokens;
-    final hud = t.layoutStyle == RadarLayoutStyle.hud;
-    final editorial = t.layoutStyle == RadarLayoutStyle.editorial;
-    final activeBg = hud
-        ? t.accent.withValues(alpha: 0.14)
-        : editorial
-            ? t.highlight.withValues(alpha: 0.12)
-            : t.accent.withValues(alpha: 0.12);
-    final activeColor = hud ? t.accent : (editorial ? t.highlight : t.accent);
-
+    final activeBg = t.accent.withValues(alpha: 0.12);
     return Expanded(
       child: Semantics(
+        container: true,
+        excludeSemantics: true,
         button: true,
         selected: selected,
         label: label,
@@ -195,23 +208,23 @@ class DesignedBottomDock extends StatelessWidget {
           borderRadius: BorderRadius.circular(t.radiusMedium),
           onTap: () => onSelectIndex(index),
           child: AnimatedContainer(
-            duration: t.motionFast,
+            duration: t.effectiveMotionFast,
             curve: t.motionCurve,
-            padding: EdgeInsets.symmetric(vertical: t.space(2), horizontal: t.space(1.5)),
+            padding: EdgeInsets.symmetric(
+              vertical: t.space(1.75),
+              horizontal: t.space(1.5),
+            ),
             decoration: BoxDecoration(
               color: selected ? activeBg : Colors.transparent,
               borderRadius: BorderRadius.circular(t.radiusMedium),
-              border: hud && selected
-                  ? Border(top: BorderSide(color: t.accent, width: 2))
-                  : null,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   selected ? (activeIcon ?? icon) : icon,
-                  size: 22,
-                  color: selected ? activeColor : t.inkMuted,
+                  size: t.iconSize(22),
+                  color: selected ? t.accent : t.inkMuted,
                 ),
                 SizedBox(height: t.space(0.75)),
                 Text(
@@ -220,7 +233,7 @@ class DesignedBottomDock extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: t.bodyFamily,
-                    fontSize: 11.5,
+                    fontSize: t.sp(11.5),
                     fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                     letterSpacing: t.uppercaseLabels ? 0.8 : 0,
                     color: selected ? t.ink : t.inkMuted,

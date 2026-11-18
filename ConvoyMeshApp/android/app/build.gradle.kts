@@ -10,6 +10,7 @@ plugins {
 val convoyExperimental = providers.gradleProperty("convoyExperimental").orNull == "true"
 val convoyPingLab = providers.gradleProperty("convoyPingLab").orNull == "true"
 val convoyDiagnosticLab = providers.gradleProperty("convoyDiagnosticLab").orNull == "true"
+val convoyOutdoorLab = providers.gradleProperty("convoyOutdoorLab").orNull == "true"
 
 android {
     namespace = "com.example.convoy_mesh"
@@ -27,7 +28,9 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = if (convoyDiagnosticLab) {
+        applicationId = if (convoyOutdoorLab) {
+            "com.example.convoy_mesh.outdoor"
+        } else if (convoyDiagnosticLab) {
             "com.example.convoy_mesh.diaglab"
         } else if (convoyPingLab) {
             "com.example.convoy_mesh.pinglab2"
@@ -37,7 +40,8 @@ android {
             "com.example.convoy_mesh"
         }
         manifestPlaceholders["convoyAppLabel"] =
-            if (convoyDiagnosticLab) "Convoy Diagnostics LAB"
+            if (convoyOutdoorLab) "Convoy Outdoor LAB"
+            else if (convoyDiagnosticLab) "Convoy Diagnostics LAB"
             else if (convoyPingLab) "Convoy Ping LAB 2"
             else if (convoyExperimental) "Convoy Mesh Exp" else "Convoy Mesh"
         // You can update the following values to match your application needs.

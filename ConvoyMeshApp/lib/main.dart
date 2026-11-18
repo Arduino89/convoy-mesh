@@ -5,7 +5,6 @@ import 'package:permission_handler/permission_handler.dart' as ph;
 
 import 'ble/ble_page.dart';
 import 'design/design_controller.dart';
-import 'design/design_presets.dart';
 import 'design/design_theme.dart';
 import 'design/design_tokens.dart';
 import 'design/shell/designed_app_shell.dart';
@@ -32,12 +31,13 @@ class ConvoyMeshApp extends StatelessWidget {
     return AnimatedBuilder(
       animation: design,
       builder: (context, _) {
-        final theme = design.isClassic
+        final tokens = design.activeTokens;
+        final theme = tokens == null
             ? ThemeData(
                 colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
                 useMaterial3: true,
               )
-            : buildConvoyTheme(DesignPresets.of(design.direction));
+            : buildConvoyTheme(tokens);
         return MaterialApp(
           title: 'Convoy Mesh',
           debugShowCheckedModeBanner: false,

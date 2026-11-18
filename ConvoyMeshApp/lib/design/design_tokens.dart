@@ -2,51 +2,38 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 
-/// Visual directions explored by the Frontend Design Studio.
+import 'outdoor_copy.dart';
+
+/// Supported UI modes.
 ///
-/// [classic] is the original, unmodified Convoy Mesh look and remains the
-/// default: selecting it renders exactly the pre-existing widgets.
-enum DesignDirection { classic, outdoorPremium, tacticalExplorer, minimalAdventure }
+/// The chosen visual direction is [outdoorPremium]. [classic] preserves the
+/// pre-redesign Material 3 UI (`LAB +15`) so testers can switch back anytime.
+/// Previous exploratory variants (Tactical Explorer, Minimal Adventure) are
+/// preserved untouched in GitHub checkpoint `5dbdedf`.
+enum DesignDirection { classic, outdoorPremium }
 
 extension DesignDirectionLabels on DesignDirection {
   String get label => switch (this) {
-        DesignDirection.classic => 'Originale',
+        DesignDirection.classic => 'Originale (LAB +15)',
         DesignDirection.outdoorPremium => 'Outdoor Premium',
-        DesignDirection.tacticalExplorer => 'Tactical Explorer',
-        DesignDirection.minimalAdventure => 'Minimal Adventure',
       };
 
   String get tagline => switch (this) {
-        DesignDirection.classic => 'Interfaccia attuale (LAB +15)',
-        DesignDirection.outdoorPremium => 'Carta, pino e curve di livello',
-        DesignDirection.tacticalExplorer => 'HUD notturno, dati in monospazio',
-        DesignDirection.minimalAdventure => 'Bianco, nero e arancio sicurezza',
+        DesignDirection.classic => 'Interfaccia diagnostica classica',
+        DesignDirection.outdoorPremium =>
+          'Carta calda, pino alpino e curve di livello personalizzabili',
       };
 
   /// Stable storage id (never localised).
   String get storageId => name;
 }
 
-/// How the radar hero is drawn. Purely decorative; it never changes which
-/// peers are shown or how their state is computed.
-enum RadarScopeStyle {
-  /// Irregular topographic contour rings with a soft rotating light.
-  contour,
-
-  /// Rotating sweep wedge with bezel ticks and blip afterglow.
-  sweep,
-
-  /// Thin concentric rings with outward pulse waves (tester-chosen #4 motif).
-  pulse,
-}
-
-/// Layout composition of the redesigned Radar screen.
-enum RadarLayoutStyle { heroCard, hud, editorial }
-
-/// Single source of truth for every customisable visual value.
+/// Single source of truth for every customisable visual value across
+/// Convoy Mesh when **Outdoor Premium** is active.
 ///
-/// Changing a preset in `design_presets.dart` (or calling [copyWith]) is the
-/// only step needed to restyle colours, type, shapes, spacing and motion.
+/// Built by `DesignPresets.buildOutdoor(OutdoorCustomConfig)` from user/team
+/// customisation settings so colours, typography, dimensions, spacing,
+/// animations and visual copy remain completely separate from business logic.
 @immutable
 class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
   const ConvoyDesignTokens({
@@ -74,26 +61,36 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
     required this.displayWeight,
     required this.displayLetterSpacing,
     required this.labelLetterSpacing,
+    required this.fontScale,
     required this.uppercaseLabels,
     required this.radiusSmall,
     required this.radiusMedium,
     required this.radiusLarge,
     required this.borderWidth,
     required this.spaceUnit,
+    required this.screenPaddingScale,
+    required this.cardPaddingScale,
+    required this.sectionGapScale,
     required this.minTouchTarget,
+    required this.avatarSize,
+    required this.iconScale,
+    required this.radarScopeScale,
     required this.elevated,
+    required this.animationsEnabled,
+    required this.radarRotationEnabled,
+    required this.livePulseEnabled,
+    required this.showTopoContours,
     required this.motionFast,
     required this.motionMedium,
     required this.radarPeriod,
     required this.motionCurve,
-    required this.radarStyle,
-    required this.layoutStyle,
+    this.copy = OutdoorCopyTokens.defaults,
   });
 
   final DesignDirection direction;
   final Brightness brightness;
 
-  // ── Palette ────────────────────────────────────────────────────────────
+  // ── 1. Palette ─────────────────────────────────────────────────────────
   final Color canvas;
   final Color surface;
   final Color surfaceRaised;
@@ -111,59 +108,82 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
   final Color radarGrid;
   final Color radarSweep;
 
-  // ── Typography ─────────────────────────────────────────────────────────
-  /// Bundled font family names (see pubspec `fonts:`). Null = platform font.
+  // ── 2. Typography ──────────────────────────────────────────────────────
   final String? displayFamily;
   final String? bodyFamily;
   final String? dataFamily;
   final FontWeight displayWeight;
   final double displayLetterSpacing;
   final double labelLetterSpacing;
+  final double fontScale;
   final bool uppercaseLabels;
 
-  // ── Shape & spacing ────────────────────────────────────────────────────
+  // ── 3. Dimensions ──────────────────────────────────────────────────────
   final double radiusSmall;
   final double radiusMedium;
   final double radiusLarge;
   final double borderWidth;
-  final double spaceUnit;
-
-  /// Minimum interactive height; outdoor presets use ≥ 52 dp for gloves.
   final double minTouchTarget;
+  final double avatarSize;
+  final double iconScale;
+  final double radarScopeScale;
   final bool elevated;
 
-  // ── Motion ─────────────────────────────────────────────────────────────
+  // ── 4. Spacing ─────────────────────────────────────────────────────────
+  final double spaceUnit;
+  final double screenPaddingScale;
+  final double cardPaddingScale;
+  final double sectionGapScale;
+
+  // ── 5. Motion ──────────────────────────────────────────────────────────
+  final bool animationsEnabled;
+  final bool radarRotationEnabled;
+  final bool livePulseEnabled;
+  final bool showTopoContours;
   final Duration motionFast;
   final Duration motionMedium;
   final Duration radarPeriod;
   final Curve motionCurve;
-  final RadarScopeStyle radarStyle;
-  final RadarLayoutStyle layoutStyle;
+
+  // ── 6. Copy ────────────────────────────────────────────────────────────
+  final OutdoorCopyTokens copy;
 
   double space(double multiplier) => spaceUnit * multiplier;
+  double get hPad => space(4.5) * screenPaddingScale;
+  double get cardPad => space(4) * cardPaddingScale;
+  double get sectionTop => space(5.5) * sectionGapScale;
+  double iconSize(double base) => (base * iconScale).clamp(12.0, 48.0);
+  double sp(double base) => base * fontScale;
+
+  Duration get effectiveMotionFast =>
+      animationsEnabled ? motionFast : Duration.zero;
+  Duration get effectiveMotionMedium =>
+      animationsEnabled ? motionMedium : Duration.zero;
+  bool get shouldRotateRadar => animationsEnabled && radarRotationEnabled;
+  bool get shouldPulseLive => animationsEnabled && livePulseEnabled;
 
   String label(String text) => uppercaseLabels ? text.toUpperCase() : text;
 
   TextStyle display(double size, {Color? color}) => TextStyle(
         fontFamily: displayFamily,
-        fontSize: size,
+        fontSize: sp(size),
         fontWeight: displayWeight,
         letterSpacing: displayLetterSpacing,
-        height: 1.08,
+        height: 1.10,
         color: color ?? ink,
       );
 
   TextStyle body(double size, {Color? color, FontWeight? weight}) => TextStyle(
         fontFamily: bodyFamily,
-        fontSize: size,
+        fontSize: sp(size),
         fontWeight: weight ?? FontWeight.w400,
-        height: 1.35,
+        height: 1.38,
         color: color ?? ink,
       );
 
-  TextStyle caption({Color? color}) => TextStyle(
+  TextStyle caption({Color? color, double? size}) => TextStyle(
         fontFamily: dataFamily ?? bodyFamily,
-        fontSize: 11.5,
+        fontSize: sp(size ?? 11.5),
         fontWeight: FontWeight.w600,
         letterSpacing: labelLetterSpacing,
         color: color ?? inkMuted,
@@ -171,7 +191,7 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
 
   TextStyle data(double size, {Color? color, FontWeight? weight}) => TextStyle(
         fontFamily: dataFamily ?? bodyFamily,
-        fontSize: size,
+        fontSize: sp(size),
         fontWeight: weight ?? FontWeight.w700,
         fontFeatures: const [FontFeature.tabularFigures()],
         color: color ?? ink,
@@ -180,12 +200,14 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
   List<BoxShadow> get shadow => elevated
       ? [
           BoxShadow(
-            color: ink.withValues(alpha: brightness == Brightness.dark ? 0.5 : 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: ink.withValues(
+                alpha: brightness == Brightness.dark ? 0.45 : 0.07),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: ink.withValues(alpha: brightness == Brightness.dark ? 0.3 : 0.04),
+            color: ink.withValues(
+                alpha: brightness == Brightness.dark ? 0.25 : 0.03),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
@@ -219,20 +241,30 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
     FontWeight? displayWeight,
     double? displayLetterSpacing,
     double? labelLetterSpacing,
+    double? fontScale,
     bool? uppercaseLabels,
     double? radiusSmall,
     double? radiusMedium,
     double? radiusLarge,
     double? borderWidth,
     double? spaceUnit,
+    double? screenPaddingScale,
+    double? cardPaddingScale,
+    double? sectionGapScale,
     double? minTouchTarget,
+    double? avatarSize,
+    double? iconScale,
+    double? radarScopeScale,
     bool? elevated,
+    bool? animationsEnabled,
+    bool? radarRotationEnabled,
+    bool? livePulseEnabled,
+    bool? showTopoContours,
     Duration? motionFast,
     Duration? motionMedium,
     Duration? radarPeriod,
     Curve? motionCurve,
-    RadarScopeStyle? radarStyle,
-    RadarLayoutStyle? layoutStyle,
+    OutdoorCopyTokens? copy,
   }) =>
       ConvoyDesignTokens(
         direction: direction,
@@ -257,22 +289,34 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
         bodyFamily: bodyFamily ?? this.bodyFamily,
         dataFamily: dataFamily ?? this.dataFamily,
         displayWeight: displayWeight ?? this.displayWeight,
-        displayLetterSpacing: displayLetterSpacing ?? this.displayLetterSpacing,
+        displayLetterSpacing:
+            displayLetterSpacing ?? this.displayLetterSpacing,
         labelLetterSpacing: labelLetterSpacing ?? this.labelLetterSpacing,
+        fontScale: fontScale ?? this.fontScale,
         uppercaseLabels: uppercaseLabels ?? this.uppercaseLabels,
         radiusSmall: radiusSmall ?? this.radiusSmall,
         radiusMedium: radiusMedium ?? this.radiusMedium,
         radiusLarge: radiusLarge ?? this.radiusLarge,
         borderWidth: borderWidth ?? this.borderWidth,
         spaceUnit: spaceUnit ?? this.spaceUnit,
+        screenPaddingScale: screenPaddingScale ?? this.screenPaddingScale,
+        cardPaddingScale: cardPaddingScale ?? this.cardPaddingScale,
+        sectionGapScale: sectionGapScale ?? this.sectionGapScale,
         minTouchTarget: minTouchTarget ?? this.minTouchTarget,
+        avatarSize: avatarSize ?? this.avatarSize,
+        iconScale: iconScale ?? this.iconScale,
+        radarScopeScale: radarScopeScale ?? this.radarScopeScale,
         elevated: elevated ?? this.elevated,
+        animationsEnabled: animationsEnabled ?? this.animationsEnabled,
+        radarRotationEnabled:
+            radarRotationEnabled ?? this.radarRotationEnabled,
+        livePulseEnabled: livePulseEnabled ?? this.livePulseEnabled,
+        showTopoContours: showTopoContours ?? this.showTopoContours,
         motionFast: motionFast ?? this.motionFast,
         motionMedium: motionMedium ?? this.motionMedium,
         radarPeriod: radarPeriod ?? this.radarPeriod,
         motionCurve: motionCurve ?? this.motionCurve,
-        radarStyle: radarStyle ?? this.radarStyle,
-        layoutStyle: layoutStyle ?? this.layoutStyle,
+        copy: copy ?? this.copy,
       );
 
   @override
@@ -304,22 +348,33 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
       bodyFamily: discrete.bodyFamily,
       dataFamily: discrete.dataFamily,
       displayWeight: FontWeight.lerp(displayWeight, other.displayWeight, t)!,
-      displayLetterSpacing: d(displayLetterSpacing, other.displayLetterSpacing),
+      displayLetterSpacing:
+          d(displayLetterSpacing, other.displayLetterSpacing),
       labelLetterSpacing: d(labelLetterSpacing, other.labelLetterSpacing),
+      fontScale: d(fontScale, other.fontScale),
       uppercaseLabels: discrete.uppercaseLabels,
       radiusSmall: d(radiusSmall, other.radiusSmall),
       radiusMedium: d(radiusMedium, other.radiusMedium),
       radiusLarge: d(radiusLarge, other.radiusLarge),
       borderWidth: d(borderWidth, other.borderWidth),
       spaceUnit: d(spaceUnit, other.spaceUnit),
+      screenPaddingScale: d(screenPaddingScale, other.screenPaddingScale),
+      cardPaddingScale: d(cardPaddingScale, other.cardPaddingScale),
+      sectionGapScale: d(sectionGapScale, other.sectionGapScale),
       minTouchTarget: d(minTouchTarget, other.minTouchTarget),
+      avatarSize: d(avatarSize, other.avatarSize),
+      iconScale: d(iconScale, other.iconScale),
+      radarScopeScale: d(radarScopeScale, other.radarScopeScale),
       elevated: discrete.elevated,
+      animationsEnabled: discrete.animationsEnabled,
+      radarRotationEnabled: discrete.radarRotationEnabled,
+      livePulseEnabled: discrete.livePulseEnabled,
+      showTopoContours: discrete.showTopoContours,
       motionFast: discrete.motionFast,
       motionMedium: discrete.motionMedium,
       radarPeriod: discrete.radarPeriod,
       motionCurve: discrete.motionCurve,
-      radarStyle: discrete.radarStyle,
-      layoutStyle: discrete.layoutStyle,
+      copy: discrete.copy,
     );
   }
 }

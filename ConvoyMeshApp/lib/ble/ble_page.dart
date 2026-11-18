@@ -3,7 +3,8 @@ import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../design/design_controller.dart';
 import '../design/design_direction_picker.dart';
-import '../design/design_presets.dart';
+import '../design/design_tokens.dart';
+import '../design/outdoor_components.dart';
 import '../design/radar/designed_radar_view.dart';
 import '../design/radar/radar_actions.dart';
 import '../design/radar/radar_live_adapter.dart';
@@ -27,7 +28,7 @@ class BlePage extends StatelessWidget {
       builder: (context, _) {
         if (!design.isClassic) {
           return DesignedRadarView(
-            tokens: DesignPresets.of(design.direction),
+            tokens: design.outdoorTokens,
             data: RadarLiveAdapter.read(
               mesh: mesh,
               location: location,
@@ -301,11 +302,19 @@ class BlePage extends StatelessWidget {
         );
         await SystemIntents.openLocationSettings();
       case BleStatusAction.explain:
+        final t = ConvoyDesignTokens.maybeOf(context);
         await showDialog<void>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: Text(view.label),
-            content: Text(view.explanation),
+            title: t != null
+                ? OutdoorDialogTitle(
+                    tokens: t,
+                    icon: Icons.bluetooth_searching,
+                    title: view.label,
+                    tone: OutdoorTone.warning,
+                  )
+                : Text(view.label),
+            content: Text(view.explanation, style: t?.body(14)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
@@ -318,11 +327,18 @@ class BlePage extends StatelessWidget {
   }
 
   Future<void> _showRadarHelp(BuildContext context) async {
+    final t = ConvoyDesignTokens.maybeOf(context);
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Come funziona il Radar BLE?'),
-        content: const SingleChildScrollView(
+        title: t != null
+            ? OutdoorDialogTitle(
+                tokens: t,
+                icon: Icons.explore_outlined,
+                title: 'Come funziona il Radar BLE?',
+              )
+            : const Text('Come funziona il Radar BLE?'),
+        content: SingleChildScrollView(
           child: Text(
             'Modalità Vicini: trova gli altri telefoni che hanno Convoy Mesh '
             'aperto, senza avviare il GPS continuo. Non serve '
@@ -336,22 +352,32 @@ class BlePage extends StatelessWidget {
             'non è la distanza tra i telefoni.\n\n'
             'Le mappe di sfondo online non diventano offline per il '
             'solo fatto che lo scambio BLE funziona senza Internet.',
+            style: t?.body(14),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Chiudi')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Chiudi'),
+          ),
         ],
       ),
     );
   }
 
   Future<void> _editName(BuildContext context, ConvoyMeshService mesh) async {
+    final t = ConvoyDesignTokens.maybeOf(context);
     var name = mesh.myName;
     final value = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Imposta nome'),
+        title: t != null
+            ? OutdoorDialogTitle(
+                tokens: t,
+                icon: Icons.badge_outlined,
+                title: 'Imposta nome',
+              )
+            : const Text('Imposta nome'),
         content: TextFormField(
           initialValue: name,
           maxLength: 10,
@@ -374,12 +400,21 @@ class BlePage extends StatelessWidget {
   }
 
   Future<void> _regenerate(BuildContext context, ConvoyMeshService mesh) async {
+    final t = ConvoyDesignTokens.maybeOf(context);
     final yes = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cambiare identità?'),
-        content: const Text(
+        title: t != null
+            ? OutdoorDialogTitle(
+                tokens: t,
+                icon: Icons.fingerprint,
+                title: 'Cambiare identità?',
+                tone: OutdoorTone.warning,
+              )
+            : const Text('Cambiare identità?'),
+        content: Text(
           'Gli altri telefoni manterranno il vecchio ID come non ricevuto finché non verrà rimosso.',
+          style: t?.body(14),
         ),
         actions: [
           TextButton(

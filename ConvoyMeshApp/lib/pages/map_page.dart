@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -227,14 +229,30 @@ class _MapPageState extends State<MapPage> {
               Align(
                 alignment: Alignment.bottomRight,
                 child: Padding(
-                  padding: EdgeInsets.only(bottom: tokens != null ? 132 : 0, right: tokens != null ? 14 : 0),
-                  child: const ColoredBox(
-                    color: Colors.white,
-                    child: Padding(
-                      padding: EdgeInsets.all(3),
-                      child: Text(
-                        '© OpenStreetMap contributors',
-                        style: TextStyle(fontSize: 10, color: Colors.black87),
+                  padding: EdgeInsets.only(
+                    bottom: tokens != null
+                        ? math.max(138.0, tokens.minTouchTarget + 94.0)
+                        : 0,
+                    right: tokens != null ? tokens.hPad * 0.78 : 0,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: tokens != null
+                          ? tokens.surface.withValues(alpha: 0.92)
+                          : Colors.white,
+                      borderRadius: tokens != null
+                          ? BorderRadius.circular((tokens.radiusSmall * 0.5).clamp(4, 8))
+                          : BorderRadius.zero,
+                      border: tokens != null
+                          ? Border.all(color: tokens.outline, width: 0.8)
+                          : null,
+                    ),
+                    child: Text(
+                      '© OpenStreetMap contributors',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: tokens != null ? tokens.inkMuted : Colors.black87,
                       ),
                     ),
                   ),

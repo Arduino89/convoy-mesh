@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../location/gps_visual_state.dart';
 import '../design_tokens.dart';
+import '../outdoor_components.dart';
 
-/// Purely visual wrapper and controls for the Map screen when one of the
-/// redesigned directions is active. All map data, trails, circles and markers
-/// stay owned by `MapPage`.
+/// Purely visual wrapper and controls for the Map screen in Outdoor Premium.
+/// All map data, trails, circles and markers remain owned by `MapPage`.
 class DesignedMapScaffold extends StatelessWidget {
   const DesignedMapScaffold({
     super.key,
@@ -40,20 +40,20 @@ class DesignedMapScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = tokens;
     final dark = t.brightness == Brightness.dark;
-    final hud = t.layoutStyle == RadarLayoutStyle.hud;
+    final sidePad = t.hPad * 0.78;
 
     return Scaffold(
       backgroundColor: t.canvas,
       body: Stack(children: [
-        // Offline vector/grid cartographic surface sits beneath FlutterMap so
-        // offline sessions look intentional and legible even without tiles.
+        // Offline vector/topographic surface sits beneath FlutterMap so offline
+        // sessions remain crisp and readable without network tiles.
         Positioned.fill(
           child: CustomPaint(
             painter: _OfflineCartoPainter(tokens: t),
           ),
         ),
         Positioned.fill(child: mapChild),
-        // Top floating status bar
+        // Top floating GPS status bar + Customise trigger
         Positioned(
           top: 0,
           left: 0,
@@ -61,7 +61,7 @@ class DesignedMapScaffold extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(t.space(3.5), t.space(2.5), t.space(3.5), 0),
+              padding: EdgeInsets.fromLTRB(sidePad, t.space(2.5), sidePad, 0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -79,7 +79,7 @@ class DesignedMapScaffold extends StatelessWidget {
                     key: const Key('map-open-design-btn'),
                     tokens: t,
                     icon: Icons.palette_outlined,
-                    tooltip: 'Stili UI e Design Studio',
+                    tooltip: 'Personalizza Outdoor Premium o torna a Originale',
                     onTap: onChooseDesign,
                   ),
                 ],
@@ -89,14 +89,14 @@ class DesignedMapScaffold extends StatelessWidget {
         ),
         // Bottom one-handed thumb dock
         Positioned(
-          left: t.space(3.5),
-          right: t.space(3.5),
-          bottom: t.space(3.5),
+          left: sidePad,
+          right: sidePad,
+          bottom: t.space(3),
           child: Container(
             padding: EdgeInsets.all(t.space(2.5)),
             decoration: BoxDecoration(
               color: t.surface.withValues(alpha: dark ? 0.94 : 0.96),
-              borderRadius: BorderRadius.circular(hud ? t.radiusMedium : t.radiusLarge),
+              borderRadius: BorderRadius.circular(t.radiusLarge),
               border: Border.all(color: t.outline, width: t.borderWidth),
               boxShadow: t.elevated ? t.shadow : const [],
             ),
@@ -132,7 +132,7 @@ class DesignedMapScaffold extends StatelessWidget {
                 Row(children: [
                   Icon(
                     onlineBasemap ? Icons.public : Icons.layers_clear_outlined,
-                    size: 16,
+                    size: t.iconSize(16),
                     color: onlineBasemap ? t.accent : t.inkMuted,
                   ),
                   SizedBox(width: t.space(2)),
@@ -166,32 +166,40 @@ class DesignedMapScaffold extends StatelessWidget {
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: EdgeInsets.fromLTRB(t.space(5), 0, t.space(5), t.space(5)),
+          padding: EdgeInsets.fromLTRB(t.hPad, 0, t.hPad, t.space(5)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Legenda mappa', style: t.display(22)),
-              SizedBox(height: t.space(3)),
+              OutdoorCardHeader(
+                tokens: t,
+                icon: Icons.map_outlined,
+                title: 'Legenda mappa',
+                subtitle: 'Cosa indicano marker, cerchi e tracce',
+              ),
+              SizedBox(height: t.space(3.5)),
               _legendRow(
                 icon: Icons.radio_button_unchecked,
                 color: t.accent,
                 title: 'Cerchi = incertezza GPS stimata',
-                subtitle: 'La sovrapposizione dei cerchi non dimostra posizione identica.',
+                subtitle:
+                    'La sovrapposizione dei cerchi non dimostra posizione identica.',
               ),
               SizedBox(height: t.space(2.5)),
               _legendRow(
                 icon: Icons.more_horiz,
                 color: t.highlight,
                 title: 'Tratteggio = percorso recuperato',
-                subtitle: 'Punti di traccia ricevuti via HISTORY dopo una riconnessione BLE.',
+                subtitle:
+                    'Punti di traccia ricevuti via HISTORY dopo una riconnessione BLE.',
               ),
               SizedBox(height: t.space(2.5)),
               _legendRow(
                 icon: Icons.cloud_off_outlined,
                 color: t.inkMuted,
                 title: 'Sfondo cartografico online',
-                subtitle: 'Senza rete restano coordinate, marker e tracce; non sono mappe offline scaricate.',
+                subtitle:
+                    'Senza rete restano coordinate, marker e tracce; non sono mappe offline scaricate.',
               ),
             ],
           ),
@@ -208,7 +216,15 @@ class DesignedMapScaffold extends StatelessWidget {
   }) {
     final t = tokens;
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(icon, color: color, size: 22),
+      Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(t.radiusSmall),
+        ),
+        child: Icon(icon, color: color, size: t.iconSize(19)),
+      ),
       SizedBox(width: t.space(3)),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -221,12 +237,19 @@ class DesignedMapScaffold extends StatelessWidget {
   }
 
   Future<void> _confirmClearTrail(BuildContext context) async {
+    final t = tokens;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cancellare la tua traccia?'),
-        content: const Text(
+        title: OutdoorDialogTitle(
+          tokens: t,
+          icon: Icons.delete_outline,
+          title: 'Cancellare la tua traccia?',
+          tone: OutdoorTone.critical,
+        ),
+        content: Text(
           'Verranno rimossi i punti della tua traccia visibili in mappa e invalidati eventuali pacchetti HISTORY in coda.',
+          style: t.body(14),
         ),
         actions: [
           TextButton(
@@ -234,6 +257,10 @@ class DesignedMapScaffold extends StatelessWidget {
             child: const Text('Annulla'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: t.critical,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Cancella traccia'),
           ),
@@ -244,7 +271,7 @@ class DesignedMapScaffold extends StatelessWidget {
   }
 }
 
-/// Marker widget adapted to the active aesthetic direction.
+/// Marker widget styled for Outdoor Premium.
 class DesignedMapMarker extends StatelessWidget {
   const DesignedMapMarker({
     super.key,
@@ -264,10 +291,9 @@ class DesignedMapMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = tokens;
-    final hud = t.layoutStyle == RadarLayoutStyle.hud;
     final dark = t.brightness == Brightness.dark;
     return Opacity(
-      opacity: fresh ? 1 : 0.62,
+      opacity: fresh ? 1 : 0.65,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -276,8 +302,7 @@ class DesignedMapMarker extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               color: colour,
-              shape: hud ? BoxShape.rectangle : BoxShape.circle,
-              borderRadius: hud ? BorderRadius.circular(6) : null,
+              shape: BoxShape.circle,
               border: Border.all(
                 color: dark ? t.canvas : Colors.white,
                 width: 2.5,
@@ -300,10 +325,14 @@ class DesignedMapMarker extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
-              color: dark ? t.surface.withValues(alpha: 0.92) : const Color(0xE6141816),
-              borderRadius: BorderRadius.circular(hud ? 4 : 10),
+              color: dark
+                  ? t.surface.withValues(alpha: 0.94)
+                  : const Color(0xE817211B),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: dark ? colour.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.22),
+                color: dark
+                    ? colour.withValues(alpha: 0.6)
+                    : Colors.white.withValues(alpha: 0.22),
               ),
             ),
             child: Text(
@@ -313,7 +342,7 @@ class DesignedMapMarker extends StatelessWidget {
               style: TextStyle(
                 fontFamily: t.dataFamily ?? t.bodyFamily,
                 color: Colors.white,
-                fontSize: 10.5,
+                fontSize: t.sp(10.5),
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -354,7 +383,8 @@ class _GpsStatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(t.radiusMedium),
         onTap: onTap,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: t.space(3.5), vertical: t.space(2.5)),
+          padding: EdgeInsets.symmetric(
+              horizontal: t.space(3.5), vertical: t.space(2.5)),
           child: Row(children: [
             Container(
               width: 34,
@@ -370,7 +400,7 @@ class _GpsStatusPill extends StatelessWidget {
                         ? Icons.gps_not_fixed
                         : Icons.gps_fixed,
                 color: tone,
-                size: 19,
+                size: t.iconSize(19),
               ),
             ),
             SizedBox(width: t.space(2.5)),
@@ -397,11 +427,12 @@ class _GpsStatusPill extends StatelessWidget {
             if (peerCountWithFix > 0) ...[
               SizedBox(width: t.space(2)),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: t.space(2), vertical: t.space(1)),
+                padding: EdgeInsets.symmetric(
+                    horizontal: t.space(2), vertical: t.space(1)),
                 decoration: BoxDecoration(
                   color: t.surfaceRaised,
                   borderRadius: BorderRadius.circular(t.radiusSmall),
-                  border: Border.all(color: t.outline),
+                  border: Border.all(color: t.outline, width: t.borderWidth),
                 ),
                 child: Text(
                   '$peerCountWithFix peer',
@@ -430,10 +461,17 @@ class _PrimaryLocateButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = tokens;
-    final hud = t.layoutStyle == RadarLayoutStyle.hud;
-    final tone = gpsVisual.isGreen ? t.accent : (hud ? t.accent : t.ink);
-    final fg = t.brightness == Brightness.dark ? t.onAccent : Colors.white;
+    final tone = gpsVisual.isGreen ? t.accent : t.ink;
+    final fg = gpsVisual.isGreen
+        ? t.onAccent
+        : (t.brightness == Brightness.dark ? t.canvas : Colors.white);
+    final labelText = gpsVisual.mode == GpsVisualMode.off
+        ? t.copy.mapSearchCta
+        : t.copy.mapRecenterCta;
+
     return Semantics(
+      container: true,
+      excludeSemantics: true,
       button: true,
       label: '${gpsVisual.label} • tocca per localizzarti',
       child: Material(
@@ -445,17 +483,16 @@ class _PrimaryLocateButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(t.radiusMedium),
           onTap: onTap,
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: t.minTouchTarget - 4),
+            constraints: BoxConstraints(
+                minHeight: (t.minTouchTarget - 4).clamp(44, 62)),
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: t.space(3.5)),
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.my_location, color: fg, size: 19),
+                Icon(Icons.my_location, color: fg, size: t.iconSize(19)),
                 SizedBox(width: t.space(2)),
                 Flexible(
                   child: Text(
-                    t.label(
-                      gpsVisual.mode == GpsVisualMode.off ? 'Cerca GPS' : 'Centra su di me',
-                    ),
+                    t.label(labelText),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: t.body(14, color: fg, weight: FontWeight.w800),
@@ -490,7 +527,7 @@ class _DockIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = tokens;
-    final s = t.minTouchTarget - 4;
+    final s = (t.minTouchTarget - 4).clamp(44.0, 62.0);
     final fg = !enabled
         ? t.inkMuted.withValues(alpha: 0.4)
         : destructive
@@ -507,7 +544,11 @@ class _DockIconButton extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(t.radiusMedium),
           onTap: enabled ? onTap : null,
-          child: SizedBox(width: s, height: s, child: Icon(icon, color: fg, size: 21)),
+          child: SizedBox(
+            width: s,
+            height: s,
+            child: Icon(icon, color: fg, size: t.iconSize(21)),
+          ),
         ),
       ),
     );
@@ -531,23 +572,29 @@ class _FloatingCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = tokens;
-    final s = t.minTouchTarget - 6;
+    final s = (t.minTouchTarget - 6).clamp(42.0, 60.0);
     return Tooltip(
       message: tooltip,
       child: Material(
         color: t.surface.withValues(alpha: 0.95),
-        shape: CircleBorder(side: BorderSide(color: t.outline, width: t.borderWidth)),
+        shape: CircleBorder(
+          side: BorderSide(color: t.outline, width: t.borderWidth),
+        ),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
-          child: SizedBox(width: s, height: s, child: Icon(icon, color: t.ink, size: 20)),
+          child: SizedBox(
+            width: s,
+            height: s,
+            child: Icon(icon, color: t.ink, size: t.iconSize(20)),
+          ),
         ),
       ),
     );
   }
 }
 
-/// Topographic / tactical / minimal offline backdrop grid drawn behind the map.
+/// Topographic offline grid drawn beneath FlutterMap in Outdoor Premium.
 class _OfflineCartoPainter extends CustomPainter {
   _OfflineCartoPainter({required this.tokens});
   final ConvoyDesignTokens tokens;
@@ -557,7 +604,8 @@ class _OfflineCartoPainter extends CustomPainter {
     final t = tokens;
     canvas.drawRect(Offset.zero & size, Paint()..color = t.canvas);
 
-    final gridColor = t.outline.withValues(alpha: t.brightness == Brightness.dark ? 0.45 : 0.65);
+    final gridColor =
+        t.outline.withValues(alpha: t.brightness == Brightness.dark ? 0.45 : 0.65);
     final minorPaint = Paint()
       ..color = gridColor.withValues(alpha: 0.45)
       ..strokeWidth = 0.8;
@@ -567,21 +615,29 @@ class _OfflineCartoPainter extends CustomPainter {
 
     const step = 36.0;
     for (var x = 0.0, i = 0; x <= size.width; x += step, i++) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), i % 4 == 0 ? majorPaint : minorPaint);
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        i % 4 == 0 ? majorPaint : minorPaint,
+      );
     }
     for (var y = 0.0, j = 0; y <= size.height; y += step, j++) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), j % 4 == 0 ? majorPaint : minorPaint);
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        j % 4 == 0 ? majorPaint : minorPaint,
+      );
     }
 
-    if (t.radarStyle == RadarScopeStyle.contour) {
-      // Soft topographic contour bands for offline Outdoor Premium feel.
+    if (t.showTopoContours) {
       final center = Offset(size.width * 0.56, size.height * 0.44);
       for (var k = 1; k <= 5; k++) {
         final r = 55.0 * k;
         final path = Path();
         for (var i = 0; i <= 90; i++) {
           final a = i / 90 * 2 * math.pi;
-          final rr = r * (1 + 0.09 * math.sin(2 * a + k) + 0.04 * math.cos(3 * a - k));
+          final rr =
+              r * (1 + 0.09 * math.sin(2 * a + k) + 0.04 * math.cos(3 * a - k));
           final p = center + Offset(rr * math.cos(a), rr * 0.72 * math.sin(a));
           if (i == 0) {
             path.moveTo(p.dx, p.dy);

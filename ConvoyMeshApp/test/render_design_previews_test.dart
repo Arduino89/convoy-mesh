@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -5,15 +6,20 @@ import 'package:convoy_mesh/design/design_controller.dart';
 import 'package:convoy_mesh/design/design_presets.dart';
 import 'package:convoy_mesh/design/design_theme.dart';
 import 'package:convoy_mesh/design/design_tokens.dart';
-import 'package:convoy_mesh/design/diagnostic/designed_diagnostic_header.dart';
 import 'package:convoy_mesh/design/map/designed_map_chrome.dart';
+import 'package:convoy_mesh/design/outdoor_components.dart';
+import 'package:convoy_mesh/design/outdoor_config.dart';
 import 'package:convoy_mesh/design/radar/designed_radar_view.dart';
 import 'package:convoy_mesh/design/radar/radar_actions.dart';
 import 'package:convoy_mesh/design/shell/designed_app_shell.dart';
 import 'package:convoy_mesh/design/studio/frontend_design_studio_page.dart';
 import 'package:convoy_mesh/design/studio/original_radar_preview.dart';
 import 'package:convoy_mesh/design/studio/synthetic_radar_fixtures.dart';
+import 'package:convoy_mesh/pages/detailed_diagnostic_upload_card.dart';
+import 'package:convoy_mesh/pages/diagnostic_page.dart';
+import 'package:convoy_mesh/pages/manual_ping_card.dart';
 import 'package:convoy_mesh/services/convoy_mesh_service.dart';
+import 'package:convoy_mesh/services/diagnostic_recorder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -54,18 +60,9 @@ Future<void> _loadAllFonts() async {
     'assets/fonts/Manrope-600.ttf',
     'assets/fonts/Manrope-800.ttf',
   ]);
-  await _loadFont('SpaceGrotesk', [
-    'assets/fonts/SpaceGrotesk-500.ttf',
-    'assets/fonts/SpaceGrotesk-700.ttf',
-  ]);
   await _loadFont('JetBrainsMono', [
     'assets/fonts/JetBrainsMono-500.ttf',
     'assets/fonts/JetBrainsMono-700.ttf',
-  ]);
-  await _loadFont('PlusJakartaSans', [
-    'assets/fonts/PlusJakartaSans-400.ttf',
-    'assets/fonts/PlusJakartaSans-600.ttf',
-    'assets/fonts/PlusJakartaSans-800.ttf',
   ]);
   if (_flutterSdkRoot.isNotEmpty) {
     final mat = '$_flutterSdkRoot/bin/cache/artifacts/material_fonts';
@@ -118,6 +115,24 @@ Widget _phoneFrame({
   );
 }
 
+String _synthJsonlLine(
+  int i,
+  String category,
+  String event,
+  Map<String, Object?> data,
+) =>
+    jsonEncode({
+      'ts_utc': '2026-11-18T08:00:00.000Z',
+      'elapsed_ms': i * 1000,
+      'session_id': 'CM-outdoor-preview',
+      'device_id': 4096,
+      'device_name': 'Chiara M.',
+      'event_index': i,
+      'category': category,
+      'event': event,
+      'data': data,
+    });
+
 void main() {
   if (!_renderPreviews) {
     test('preview renderer skips when RENDER_PREVIEWS is not enabled', () {
@@ -126,7 +141,8 @@ void main() {
     return;
   }
 
-  testWidgets('render real Flutter PNG previews across original and 3 directions',
+  testWidgets(
+      'render real Flutter PNG previews across Original and full Outdoor Premium',
       (tester) async {
     await tester.runAsync(_loadAllFonts);
     SharedPreferences.setMockInitialValues({});
@@ -135,10 +151,9 @@ void main() {
     addTearDown(tester.view.reset);
 
     final data = SyntheticRadarFixtures.of(SyntheticScenario.groupHike);
-    final outingData = SyntheticRadarFixtures.of(SyntheticScenario.activeOuting);
     final actions = RadarActions.recording((_) {});
 
-    // 1. Original (LAB +15) Radar
+    // 1. Original (LAB +15) Radar comparison baseline
     {
       final key = GlobalKey();
       await tester.pumpWidget(
@@ -170,7 +185,8 @@ void main() {
                   destinations: const [
                     NavigationDestination(icon: Icon(Icons.radar), label: 'Radar BLE'),
                     NavigationDestination(icon: Icon(Icons.map), label: 'Mappa'),
-                    NavigationDestination(icon: Icon(Icons.bug_report_outlined), label: 'Test log'),
+                    NavigationDestination(
+                        icon: Icon(Icons.bug_report_outlined), label: 'Test log'),
                   ],
                 ),
               ],
@@ -182,7 +198,7 @@ void main() {
       await _captureBoundary(tester, key, '01_original_radar.png');
     }
 
-    // 2. Outdoor Premium (Radar Hero) + scrolled peers view
+    // 2 & 3. Outdoor Premium (Pino & Carta) Radar Hero + Scrolled Peers
     {
       final key = GlobalKey();
       const tokens = DesignPresets.outdoorPremium;
@@ -205,76 +221,34 @@ void main() {
         ),
       );
       await tester.pump(const Duration(milliseconds: 520));
-      await _captureBoundary(tester, key, '02_outdoor_premium_radar.png');
+      await _captureBoundary(tester, key, '02_outdoor_radar.png');
 
-      await tester.drag(find.byKey(const Key('designed-radar-list')), const Offset(0, -470));
+      await tester.drag(
+          find.byKey(const Key('designed-radar-list')), const Offset(0, -470));
       await tester.pump(const Duration(milliseconds: 520));
-      await _captureBoundary(tester, key, '03_outdoor_premium_peers.png');
+      await _captureBoundary(tester, key, '03_outdoor_peers.png');
     }
 
-    // 3. Tactical Explorer (HUD + Sweep)
-    {
-      final key = GlobalKey();
-      const tokens = DesignPresets.tacticalExplorer;
-      await tester.pumpWidget(
-        _phoneFrame(
-          boundaryKey: key,
-          theme: buildConvoyTheme(tokens),
-          child: Scaffold(
-            body: DesignedRadarView(tokens: tokens, data: outingData, actions: actions),
-            bottomNavigationBar: DesignedBottomDock(
-              tokens: tokens,
-              selectedIndex: 0,
-              onSelectIndex: (_) {},
-              outingActive: true,
-              busy: false,
-              error: null,
-              onToggleOuting: () {},
-            ),
-          ),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 900));
-      await _captureBoundary(tester, key, '04_tactical_explorer_radar.png');
-    }
-
-    // 4. Minimal Adventure (Editorial + Pulse)
-    {
-      final key = GlobalKey();
-      const tokens = DesignPresets.minimalAdventure;
-      await tester.pumpWidget(
-        _phoneFrame(
-          boundaryKey: key,
-          theme: buildConvoyTheme(tokens),
-          child: Scaffold(
-            body: DesignedRadarView(tokens: tokens, data: data, actions: actions),
-            bottomNavigationBar: DesignedBottomDock(
-              tokens: tokens,
-              selectedIndex: 0,
-              onSelectIndex: (_) {},
-              outingActive: false,
-              busy: false,
-              error: null,
-              onToggleOuting: () {},
-            ),
-          ),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 620));
-      await _captureBoundary(tester, key, '05_minimal_adventure_radar.png');
-    }
-
-    // 5. Redesigned Map views (Outdoor Premium & Tactical Explorer)
+    // 4 & 5. Outdoor Premium Maps: Cresta Alba (daylight) & Abete Notturno (dark)
     for (final entry in [
-      (DesignPresets.outdoorPremium, '06_map_outdoor_premium.png', true),
-      (DesignPresets.tacticalExplorer, '07_map_tactical_explorer.png', false),
+      (
+        DesignPresets.paletteOf(OutdoorPalettePreset.crestaAlba),
+        '04_outdoor_map_cresta.png',
+        SyntheticScenario.activeOuting,
+        true,
+      ),
+      (
+        DesignPresets.paletteOf(OutdoorPalettePreset.abeteNotturno),
+        '05_outdoor_map_abete_notturno.png',
+        SyntheticScenario.groupHike,
+        false,
+      ),
     ]) {
       final key = GlobalKey();
       final tokens = entry.$1;
       final file = entry.$2;
-      final outing = entry.$3;
-      final scenario =
-          outing ? SyntheticScenario.activeOuting : SyntheticScenario.groupHike;
+      final scenario = entry.$3;
+      final outing = entry.$4;
       await tester.pumpWidget(
         _phoneFrame(
           boundaryKey: key,
@@ -305,72 +279,114 @@ void main() {
           ),
         ),
       );
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 350));
       await _captureBoundary(tester, key, file);
     }
 
-    // 6. Redesigned Diagnostic view (Outdoor Premium)
+    // 6. Real DiagnosticPage recording active in Outdoor Premium
     {
+      final recorder = DiagnosticRecorder.instance;
+      if (recorder.isActive) recorder.stop(reason: 'preview_reset');
+      recorder.start(deviceId: 4096, deviceName: 'Chiara M.');
+      recorder.record('gps', 'fix', data: {'fresh': true, 'accuracy_m': 8.2});
+      recorder.record('runtime', 'snapshot', data: {
+        'outing_active': true,
+        'foreground_service': true,
+      });
+
+      final design = DesignDirectionController.instance;
+      await design.select(DesignDirection.outdoorPremium);
+      final tokens = design.outdoorTokens;
       final key = GlobalKey();
-      const tokens = DesignPresets.outdoorPremium;
+
       await tester.pumpWidget(
         _phoneFrame(
           boundaryKey: key,
           theme: buildConvoyTheme(tokens),
           child: Scaffold(
-            appBar: AppBar(
-              title: const Text('Test diagnostico'),
-              actions: const [
-                Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: Icon(Icons.palette_outlined),
-                ),
-              ],
+            body: DiagnosticPage(
+              deviceIdOverride: 4096,
+              deviceNameOverride: 'Chiara M.',
+              captureNowOverride: () {},
             ),
+            bottomNavigationBar: DesignedBottomDock(
+              tokens: tokens,
+              selectedIndex: 2,
+              onSelectIndex: (_) {},
+              outingActive: true,
+              busy: false,
+              error: null,
+              onToggleOuting: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 350));
+      await _captureBoundary(tester, key, '06_outdoor_diagnostic_top.png');
+      recorder.stop(reason: 'manual_stop');
+    }
+
+    // 7. Outdoor Premium Diagnostic Summary + PostHog Upload Opt-In + Ping Card
+    {
+      final key = GlobalKey();
+      const tokens = DesignPresets.outdoorPremium;
+      final synthSession = [
+        _synthJsonlLine(0, 'session', 'start', {}),
+        _synthJsonlLine(1, 'runtime', 'snapshot', {
+          'peers': [
+            {'id': 1042, 'name': 'Marco R.', 'lat': 45.81, 'lon': 11.21},
+          ],
+        }),
+        _synthJsonlLine(2, 'gps', 'fix', {'raw_lat': 45.81, 'raw_lon': 11.21}),
+        _synthJsonlLine(3, 'session', 'stop', {}),
+      ].join('\n');
+
+      await tester.pumpWidget(
+        _phoneFrame(
+          boundaryKey: key,
+          theme: buildConvoyTheme(tokens),
+          child: Scaffold(
+            backgroundColor: tokens.canvas,
+            appBar: AppBar(title: const Text('Test diagnostico')),
             body: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(tokens.hPad),
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        DesignedDiagnosticStatusStrip(
-                          tokens: tokens,
-                          active: true,
-                          ready: true,
-                          persistent: true,
-                          elapsed: const Duration(minutes: 1, seconds: 24),
-                          remaining: const Duration(minutes: 2, seconds: 36),
-                          eventCount: 48,
-                          droppedEvents: 0,
-                        ),
-                        Builder(
-                          builder: (ctx) => Text(
-                            'Registrazione locale in corso',
-                            style: Theme.of(ctx).textTheme.titleLarge,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text('Telefono: Chiara M. • ID 4096'),
-                        const Text('Registrazione diagnostica: massimo 4 minuti'),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.flag_outlined),
-                          label: const Text('Segna qui un problema'),
-                        ),
-                        const SizedBox(height: 8),
-                        FilledButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.stop_circle_outlined),
-                          label: const Text('Termina registrazione diagnostica'),
-                        ),
-                      ],
-                    ),
+                OutdoorCard(
+                  tokens: tokens,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      OutdoorCardHeader(
+                        tokens: tokens,
+                        icon: Icons.summarize_outlined,
+                        title: 'Riepilogo tecnico locale',
+                        subtitle: 'Chiusura: manual_stop',
+                        tone: OutdoorTone.positive,
+                      ),
+                      SizedBox(height: tokens.space(2)),
+                      OutdoorSpecRow(
+                          tokens: tokens, label: 'Durata', value: '01m 24s'),
+                      OutdoorSpecRow(
+                        tokens: tokens,
+                        label: 'Fix GPS validi',
+                        value: '18 (ottimi 16)',
+                        valueColor: tokens.positive,
+                      ),
+                      OutdoorSpecRow(
+                        tokens: tokens,
+                        label: 'Punti traccia locale',
+                        value: '14',
+                        showDivider: false,
+                      ),
+                    ],
                   ),
                 ),
+                DetailedDiagnosticUploadCard(
+                  jsonl: synthSession,
+                  configuredOverride: true,
+                  senderOverride: (_) async => 200,
+                ),
+                const ManualPingCard(configuredOverride: true),
               ],
             ),
             bottomNavigationBar: DesignedBottomDock(
@@ -385,29 +401,28 @@ void main() {
           ),
         ),
       );
-      await tester.pump(const Duration(milliseconds: 300));
-      await _captureBoundary(tester, key, '08_diagnostic_outdoor_premium.png');
+      await tester.pump(const Duration(milliseconds: 350));
+      await _captureBoundary(tester, key, '07_outdoor_diagnostic_summary_cloud.png');
     }
 
-    // 7. Interactive Design Studio screen
+    // 8. Interactive Outdoor Studio Customizer
     {
       final key = GlobalKey();
-      final ctrl = DesignDirectionController.forTest(DesignDirection.minimalAdventure);
+      final ctrl = DesignDirectionController.forTest(
+        DesignDirection.outdoorPremium,
+      );
       await tester.pumpWidget(
         _phoneFrame(
           boundaryKey: key,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-            useMaterial3: true,
-          ),
+          theme: buildConvoyTheme(ctrl.outdoorTokens),
           child: FrontendDesignStudioPage(
             controller: ctrl,
-            initialDirection: DesignDirection.minimalAdventure,
+            initialCustomizeTab: true,
           ),
         ),
       );
-      await tester.pump(const Duration(milliseconds: 620));
-      await _captureBoundary(tester, key, '09_design_studio.png');
+      await tester.pump(const Duration(milliseconds: 450));
+      await _captureBoundary(tester, key, '08_outdoor_studio_customizer.png');
     }
   });
 }

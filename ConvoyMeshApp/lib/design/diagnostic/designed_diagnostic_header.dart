@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../services/diagnostic_recorder.dart';
 import '../design_tokens.dart';
+import '../outdoor_components.dart';
 import '../radar/radar_components.dart';
 
-/// Visual enhancement for the active/idle diagnostic recording card when one of
-/// the redesigned directions is active. Adds a 4-minute progress bar and
-/// tabular counters while leaving all underlying strings and controls intact.
+/// Visual status header for the diagnostic recording card when Outdoor Premium
+/// is active. Keeps idle height compact so the Start CTA remains above the fold.
 class DesignedDiagnosticStatusStrip extends StatelessWidget {
   const DesignedDiagnosticStatusStrip({
     super.key,
@@ -33,7 +33,8 @@ class DesignedDiagnosticStatusStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = tokens;
     final totalMs = DiagnosticRecorder.maxDuration.inMilliseconds;
-    final fraction = totalMs <= 0 ? 0.0 : (elapsed.inMilliseconds / totalMs).clamp(0.0, 1.0);
+    final fraction =
+        totalMs <= 0 ? 0.0 : (elapsed.inMilliseconds / totalMs).clamp(0.0, 1.0);
     final statusColor = active
         ? t.highlight
         : ready
@@ -41,18 +42,29 @@ class DesignedDiagnosticStatusStrip extends StatelessWidget {
             : t.warning;
 
     return Container(
-      margin: EdgeInsets.only(bottom: t.space(3)),
-      padding: EdgeInsets.all(t.space(3)),
+      margin: EdgeInsets.only(bottom: t.space(1.75)),
+      padding: EdgeInsets.symmetric(
+        horizontal: t.space(2.75),
+        vertical: active ? t.space(2) : t.space(1.4),
+      ),
       decoration: BoxDecoration(
         color: t.surfaceRaised,
         borderRadius: BorderRadius.circular(t.radiusSmall),
-        border: Border.all(color: active ? statusColor.withValues(alpha: 0.6) : t.outline),
+        border: Border.all(
+          color: active ? statusColor.withValues(alpha: 0.65) : t.outline,
+          width: t.borderWidth,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            LiveDot(active: active, color: statusColor, size: 8),
+            LiveDot(
+              active: active,
+              pulseEnabled: t.shouldPulseLive,
+              color: statusColor,
+              size: 7.5,
+            ),
             SizedBox(width: t.space(1.5)),
             Expanded(
               child: Text(
@@ -65,25 +77,18 @@ class DesignedDiagnosticStatusStrip extends StatelessWidget {
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: t.caption(color: statusColor),
+                style: t.caption(color: statusColor, size: 11),
               ),
             ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: t.space(2), vertical: 2),
-              decoration: BoxDecoration(
-                color: persistent
-                    ? t.positive.withValues(alpha: 0.14)
-                    : t.warning.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(t.radiusSmall),
-              ),
-              child: Text(
-                t.label(persistent ? 'File locale' : 'Solo memoria'),
-                style: t.caption(color: persistent ? t.positive : t.warning).copyWith(fontSize: 10.5),
-              ),
+            SizedBox(width: t.space(1.5)),
+            OutdoorStatusBadge(
+              tokens: t,
+              label: persistent ? 'File locale' : 'Solo memoria',
+              tone: persistent ? OutdoorTone.positive : OutdoorTone.warning,
             ),
           ]),
           if (active) ...[
-            SizedBox(height: t.space(2.5)),
+            SizedBox(height: t.space(2.25)),
             ClipRRect(
               borderRadius: BorderRadius.circular(t.radiusSmall),
               child: LinearProgressIndicator(
@@ -93,7 +98,7 @@ class DesignedDiagnosticStatusStrip extends StatelessWidget {
                 valueColor: AlwaysStoppedAnimation<Color>(t.highlight),
               ),
             ),
-            SizedBox(height: t.space(2.5)),
+            SizedBox(height: t.space(2.25)),
             Row(children: [
               _stat('Trascorso', DiagnosticRecorder.formatDuration(elapsed)),
               _stat('Restante', DiagnosticRecorder.formatDuration(remaining)),
@@ -110,10 +115,12 @@ class DesignedDiagnosticStatusStrip extends StatelessWidget {
     final t = tokens;
     return Expanded(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(t.label(label),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: t.caption().copyWith(fontSize: 10)),
+        Text(
+          t.label(label),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: t.caption(size: 10),
+        ),
         SizedBox(height: t.space(0.5)),
         FittedBox(
           fit: BoxFit.scaleDown,
