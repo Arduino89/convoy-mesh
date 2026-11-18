@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import 'ble/ble_page.dart';
+import 'design/design_controller.dart';
+import 'design/design_presets.dart';
+import 'design/design_theme.dart';
+import 'design/design_tokens.dart';
+import 'design/shell/designed_app_shell.dart';
 import 'pages/diagnostic_page.dart';
 import 'pages/map_page.dart';
 import 'services/app_lifecycle_coordinator.dart';
@@ -22,15 +27,26 @@ class ConvoyMeshApp extends StatelessWidget {
   const ConvoyMeshApp({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Convoy Mesh',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-          useMaterial3: true,
-        ),
-        home: const AppShell(),
-      );
+  Widget build(BuildContext context) {
+    final design = DesignDirectionController.instance;
+    return AnimatedBuilder(
+      animation: design,
+      builder: (context, _) {
+        final theme = design.isClassic
+            ? ThemeData(
+                colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
+                useMaterial3: true,
+              )
+            : buildConvoyTheme(DesignPresets.of(design.direction));
+        return MaterialApp(
+          title: 'Convoy Mesh',
+          debugShowCheckedModeBanner: false,
+          theme: theme,
+          home: const AppShell(),
+        );
+      },
+    );
+  }
 }
 
 class AppShell extends StatefulWidget {
@@ -75,6 +91,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   Future<void> _boot() async {
+    unawaited(DesignDirectionController.instance.load());
     await DiagnosticRecorder.instance.initialize();
     if (mounted) await _ensureNearby();
   }
@@ -211,59 +228,72 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: IndexedStack(
-          index: _index,
-          children: const [BlePage(), MapPage(), DiagnosticPage()],
-        ),
-        bottomNavigationBar: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _busy
-                      ? null
-                      : _runtime.isRunning
-                          ? _stopOuting
-                          : _startOuting,
-                  icon: Icon(
-                    _runtime.isRunning
-                        ? Icons.stop_circle_outlined
-                        : Icons.play_circle_outline,
-                  ),
-                  label: Text(
-                    _busy
-                        ? 'Preparazione…'
-                        : _runtime.isRunning
-                            ? 'Uscita attiva • Termina uscita'
-                            : 'Avvia uscita',
-                  ),
-                ),
-              ),
-            ),
-            NavigationBar(
+  Widget build(BuildContext context) {
+    final tokens = ConvoyDesignTokens.maybeOf(context);
+    return Scaffold(
+      body: IndexedStack(
+        index: _index,
+        children: const [BlePage(), MapPage(), DiagnosticPage()],
+      ),
+      bottomNavigationBar: tokens != null
+          ? DesignedBottomDock(
+              tokens: tokens,
               selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              destinations: const [
-                NavigationDestination(icon: Icon(Icons.radar), label: 'Radar BLE'),
-                NavigationDestination(icon: Icon(Icons.map), label: 'Mappa'),
-                NavigationDestination(icon: Icon(Icons.bug_report_outlined), label: 'Test log'),
+              onSelectIndex: (i) => setState(() => _index = i),
+              outingActive: _runtime.isRunning,
+              busy: _busy,
+              error: _error,
+              onToggleOuting: _runtime.isRunning ? _stopOuting : _startOuting,
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : _runtime.isRunning
+                              ? _stopOuting
+                              : _startOuting,
+                      icon: Icon(
+                        _runtime.isRunning
+                            ? Icons.stop_circle_outlined
+                            : Icons.play_circle_outline,
+                      ),
+                      label: Text(
+                        _busy
+                            ? 'Preparazione…'
+                            : _runtime.isRunning
+                                ? 'Uscita attiva • Termina uscita'
+                                : 'Avvia uscita',
+                      ),
+                    ),
+                  ),
+                ),
+                NavigationBar(
+                  selectedIndex: _index,
+                  onDestinationSelected: (i) => setState(() => _index = i),
+                  destinations: const [
+                    NavigationDestination(icon: Icon(Icons.radar), label: 'Radar BLE'),
+                    NavigationDestination(icon: Icon(Icons.map), label: 'Mappa'),
+                    NavigationDestination(icon: Icon(Icons.bug_report_outlined), label: 'Test log'),
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
-      );
+    );
+  }
 }

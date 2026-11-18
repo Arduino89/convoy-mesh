@@ -3,6 +3,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
+import '../design/design_direction_picker.dart';
+import '../design/design_tokens.dart';
+import '../design/map/designed_map_chrome.dart';
 import '../location/gps_visual_state.dart';
 import '../services/convoy_mesh_service.dart';
 import '../services/location_fusion_service.dart';
@@ -152,21 +155,31 @@ class _MapPageState extends State<MapPage> {
           }
         }
 
-        addOwnTrail(mesh.myTrail, Colors.blue);
+        final tokens = ConvoyDesignTokens.maybeOf(context);
+        final selfColor = tokens != null ? tokens.accent : Colors.blue;
+        addOwnTrail(mesh.myTrail, selfColor);
         if (mePos != null) {
-          circle(mePos, me!.accuracyM, Colors.blue, myFresh);
+          circle(mePos, me!.accuracyM, selfColor, myFresh);
           markers.add(Marker(
             point: mePos,
-            width: 110,
+            width: 132,
             height: 60,
-            child: _marker(Colors.blue, myFresh ? 'Io' : 'Io • ultima nota', myFresh),
+            child: _marker(
+              tokens,
+              selfColor,
+              myFresh ? 'Io' : 'Io • ultima nota',
+              myFresh,
+              isSelf: true,
+            ),
           ));
         }
 
+        var peerWithFixCount = 0;
         for (final p in mesh.peers.values) {
           final colour = Color(ConvoyMeshService.colorForUser(p.userId));
           addPeerTrail(p.trail, colour);
           if (!p.hasFix) continue;
+          peerWithFixCount++;
           final position = LatLng(p.lat!, p.lon!);
           final fresh = p.hasFreshFix && p.lastFixMeasuredAt != null;
           circle(position, p.accuracyM, colour, fresh);
@@ -178,7 +191,12 @@ class _MapPageState extends State<MapPage> {
             point: position,
             width: 150,
             height: 60,
-            child: _marker(colour, fresh ? name : '$name • $age', fresh),
+            child: _marker(
+              tokens,
+              colour,
+              fresh ? name : '$name • $age',
+              fresh,
+            ),
           ));
         }
 
@@ -188,6 +206,58 @@ class _MapPageState extends State<MapPage> {
           GpsVisualMode.stable => '${gpsVisual.label}. Incertezza ±${(me?.accuracyM ?? 0).toStringAsFixed(0)} m.',
           GpsVisualMode.unstable => '${gpsVisual.label}. Incertezza ±${(me?.accuracyM ?? 0).toStringAsFixed(0)} m.',
         };
+
+        final flutterMap = FlutterMap(
+          mapController: _map,
+          options: MapOptions(
+            initialCenter: centre,
+            initialZoom: 15,
+            backgroundColor: tokens != null ? Colors.transparent : const Color(0xFFE0E0E0),
+          ),
+          children: [
+            if (_onlineBasemap)
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.convoy_mesh',
+              ),
+            if (circles.isNotEmpty) CircleLayer(circles: circles),
+            if (lines.isNotEmpty) PolylineLayer(polylines: lines),
+            if (markers.isNotEmpty) MarkerLayer(markers: markers),
+            if (_onlineBasemap)
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: tokens != null ? 132 : 0, right: tokens != null ? 14 : 0),
+                  child: const ColoredBox(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: EdgeInsets.all(3),
+                      child: Text(
+                        '© OpenStreetMap contributors',
+                        style: TextStyle(fontSize: 10, color: Colors.black87),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+
+        if (tokens != null) {
+          return DesignedMapScaffold(
+            tokens: tokens,
+            gpsVisual: gpsVisual,
+            gpsStatusText: gpsText,
+            onlineBasemap: _onlineBasemap,
+            peerCountWithFix: peerWithFixCount,
+            hasOwnTrail: mesh.myTrail.isNotEmpty,
+            mapChild: flutterMap,
+            onLocate: () => _locate(mesh, loc),
+            onToggleBasemap: (v) => setState(() => _onlineBasemap = v),
+            onClearTrail: mesh.clearMyTrail,
+            onChooseDesign: () => showDesignDirectionPicker(context),
+          );
+        }
 
         return Scaffold(
           appBar: AppBar(
@@ -223,36 +293,7 @@ class _MapPageState extends State<MapPage> {
                   style: const TextStyle(fontSize: 12),
                 ),
               ),
-              Expanded(
-                child: FlutterMap(
-                  mapController: _map,
-                  options: MapOptions(initialCenter: centre, initialZoom: 15),
-                  children: [
-                    if (_onlineBasemap)
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.convoy_mesh',
-                      ),
-                    if (circles.isNotEmpty) CircleLayer(circles: circles),
-                    if (lines.isNotEmpty) PolylineLayer(polylines: lines),
-                    if (markers.isNotEmpty) MarkerLayer(markers: markers),
-                    if (_onlineBasemap)
-                      const Align(
-                        alignment: Alignment.bottomRight,
-                        child: ColoredBox(
-                          color: Colors.white,
-                          child: Padding(
-                            padding: EdgeInsets.all(3),
-                            child: Text(
-                              '© OpenStreetMap contributors',
-                              style: TextStyle(fontSize: 10),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              Expanded(child: flutterMap),
             ],
           ),
         );
@@ -260,38 +301,55 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-  Widget _marker(Color colour, String label, bool fresh) => Opacity(
-        opacity: fresh ? 1 : 0.55,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: colour,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: const Icon(Icons.person, color: Colors.white, size: 18),
-            ),
-            const SizedBox(height: 2),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 10),
-              ),
-            ),
-          ],
-        ),
+  Widget _marker(
+    ConvoyDesignTokens? tokens,
+    Color colour,
+    String label,
+    bool fresh, {
+    bool isSelf = false,
+  }) {
+    if (tokens != null) {
+      return DesignedMapMarker(
+        tokens: tokens,
+        colour: colour,
+        label: label,
+        fresh: fresh,
+        isSelf: isSelf,
       );
+    }
+    return Opacity(
+      opacity: fresh ? 1 : 0.55,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: colour,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: const Icon(Icons.person, color: Colors.white, size: 18),
+          ),
+          const SizedBox(height: 2),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 10),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _GpsStatusIcon extends StatefulWidget {

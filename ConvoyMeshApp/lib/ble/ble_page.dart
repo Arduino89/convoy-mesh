@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
+import '../design/design_controller.dart';
+import '../design/design_direction_picker.dart';
+import '../design/design_presets.dart';
+import '../design/radar/designed_radar_view.dart';
+import '../design/radar/radar_actions.dart';
+import '../design/radar/radar_live_adapter.dart';
 import '../services/background_runtime_service.dart';
 import '../services/convoy_mesh_service.dart';
 import '../services/location_fusion_service.dart';
@@ -15,9 +21,35 @@ class BlePage extends StatelessWidget {
     final mesh = ConvoyMeshService.instance;
     final location = LocationFusionService.instance;
     final runtime = BackgroundRuntimeService.instance;
+    final design = DesignDirectionController.instance;
     return AnimatedBuilder(
-      animation: Listenable.merge([mesh, location, runtime]),
+      animation: Listenable.merge([mesh, location, runtime, design]),
       builder: (context, _) {
+        if (!design.isClassic) {
+          return DesignedRadarView(
+            tokens: DesignPresets.of(design.direction),
+            data: RadarLiveAdapter.read(
+              mesh: mesh,
+              location: location,
+              runtime: runtime,
+            ),
+            actions: RadarActions(
+              onStatusTap: () => _onBluetoothStatusTap(
+                context, mesh.bleStatus.name, mesh.isScanning),
+              onHelp: () => _showRadarHelp(context),
+              onEditName: () => _editName(context, mesh),
+              onOpenBluetooth: SystemIntents.openBluetoothSettings,
+              onOpenLocation: SystemIntents.openLocationSettings,
+              onOpenAppPermissions: () => ph.openAppSettings(),
+              onSendName: mesh.spamMyNameNow,
+              onRestartScan: () => mesh.restartScanForDebug(reason: 'manual_button'),
+              onClearOffline: mesh.clearOfflinePeers,
+              onRegenerateId: () => _regenerate(context, mesh),
+              onChooseDesign: () => showDesignDirectionPicker(context),
+            ),
+          );
+        }
+
         final fix = location.last;
         final fresh = fix?.hasFreshFixAt(DateTime.now()) ?? false;
         final peers = mesh.peers.values.toList()
@@ -31,7 +63,17 @@ class BlePage extends StatelessWidget {
                 : 'Ricerca vicini non attiva';
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Radar BLE')),
+          appBar: AppBar(
+            title: const Text('Radar BLE'),
+            actions: [
+              IconButton(
+                key: const Key('radar-open-design-btn'),
+                tooltip: 'Stili UI e Design Studio',
+                icon: const Icon(Icons.palette_outlined),
+                onPressed: () => showDesignDirectionPicker(context),
+              ),
+            ],
+          ),
           body: ListView(
             padding: const EdgeInsets.all(12),
             children: [

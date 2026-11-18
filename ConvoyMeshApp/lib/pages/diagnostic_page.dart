@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../design/design_direction_picker.dart';
+import '../design/design_tokens.dart';
+import '../design/diagnostic/designed_diagnostic_header.dart';
 import '../services/background_runtime_service.dart';
 import '../services/convoy_mesh_service.dart';
 import '../services/diagnostic_capture_bridge.dart';
@@ -73,9 +76,33 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
         final id = widget.deviceIdOverride ?? mesh!.myId;
         final name = widget.deviceNameOverride ?? mesh!.myName;
         final ready = id > 0 && (overrides || mesh!.isRunning);
-        return Scaffold(appBar: AppBar(title: const Text('Test diagnostico')),
+        final tokens = ConvoyDesignTokens.maybeOf(context);
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Test diagnostico'),
+            actions: tokens == null
+                ? null
+                : [
+                    IconButton(
+                      tooltip: 'Stili UI e Design Studio',
+                      icon: const Icon(Icons.palette_outlined),
+                      onPressed: () => showDesignDirectionPicker(context),
+                    ),
+                  ],
+          ),
           body: ListView(padding: const EdgeInsets.all(16), children: [
             _card([
+              if (tokens != null)
+                DesignedDiagnosticStatusStrip(
+                  tokens: tokens,
+                  active: recorder.isActive,
+                  ready: ready,
+                  persistent: recorder.isPersistent,
+                  elapsed: recorder.elapsed,
+                  remaining: recorder.remaining,
+                  eventCount: recorder.eventCount,
+                  droppedEvents: recorder.droppedEvents,
+                ),
               Text(recorder.isActive ? 'Registrazione locale in corso' : 'Registrazione diagnostica locale',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
