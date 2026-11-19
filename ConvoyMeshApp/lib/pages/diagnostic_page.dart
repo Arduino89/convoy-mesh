@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../design/design_controller.dart';
 import '../design/design_direction_picker.dart';
 import '../design/design_tokens.dart';
 import '../design/diagnostic/designed_diagnostic_header.dart';
@@ -30,12 +29,55 @@ class DiagnosticPage extends StatefulWidget {
 }
 
 class _DiagnosticPageState extends State<DiagnosticPage> {
+  static const _privacyLead =
+      'Registrazione indipendente dall’uscita; non attiva GPS o servizi extra.';
+  static const _privacyDetail =
+      'Start/Stop non inviano dati. Il file locale può contenere nomi, ID e coordinate: condividilo solo con destinatari scelti.';
+  static const _recoveredWarning =
+      'File recuperato: può essere parziale se il processo è stato interrotto.';
+  static const _uploadPrivacyNote =
+      'Invio dettagliato separato, manuale e soggetto al consenso di ogni partecipante; nessun invio automatico.';
+  static const _runtimeDisclaimer =
+      'Presenza BLE e posizione GPS recente sono stati distinti. Non sono garanzie di sicurezza.';
+  static const _guideBullets = [
+    'TX richiesto, esito del plugin, pacchetto ricevuto e decisione GPS sono registrati separatamente.',
+    'UTC permette il confronto fra telefoni; il tempo monotono conserva l’ordine locale. Orologi diversi richiedono verifica.',
+    'Dopo uno stop o un riavvio puoi condividere l’ultimo file senza rifare il test.',
+  ];
+
   String _environment = 'unknown';
   String _selfMovement = 'unknown';
   String _peersMovement = 'unknown';
   String _placement = 'unknown';
   String _screen = 'unknown';
   String _outcome = 'not_checked';
+  late Listenable _mergedListenable;
+
+  bool get _hasDeviceOverrides =>
+      widget.deviceIdOverride != null && widget.deviceNameOverride != null;
+
+  Listenable _buildListenable() {
+    final recorder = DiagnosticRecorder.instance;
+    final runtime = BackgroundRuntimeService.instance;
+    final mesh = _hasDeviceOverrides ? null : ConvoyMeshService.instance;
+    return Listenable.merge([recorder, runtime, if (mesh != null) mesh]);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _mergedListenable = _buildListenable();
+  }
+
+  @override
+  void didUpdateWidget(DiagnosticPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final hadOverrides = oldWidget.deviceIdOverride != null &&
+        oldWidget.deviceNameOverride != null;
+    if (hadOverrides != _hasDeviceOverrides) {
+      _mergedListenable = _buildListenable();
+    }
+  }
 
   Map<String, Object> _contextData() => DiagnosticTestContext.context(
         environment: _environment,
@@ -108,13 +150,10 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
   Widget build(BuildContext context) {
     final recorder = DiagnosticRecorder.instance;
     final runtime = BackgroundRuntimeService.instance;
-    final design = DesignDirectionController.instance;
-    final overrides =
-        widget.deviceIdOverride != null && widget.deviceNameOverride != null;
+    final overrides = _hasDeviceOverrides;
     final mesh = overrides ? null : ConvoyMeshService.instance;
     return AnimatedBuilder(
-      animation: Listenable.merge(
-          [recorder, runtime, design, if (mesh != null) mesh]),
+      animation: _mergedListenable,
       builder: (context, _) {
         final id = widget.deviceIdOverride ?? mesh!.myId;
         final name = widget.deviceNameOverride ?? mesh!.myName;
@@ -124,17 +163,14 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
           backgroundColor: t?.canvas,
           appBar: AppBar(
             title: Text(t != null ? t.copy.diagnosticTitle : 'Test diagnostico'),
-            actions: t == null
-                ? null
-                : [
-                    IconButton(
-                      key: const Key('diag-open-design-btn'),
-                      tooltip:
-                          'Personalizza Outdoor Premium o torna a Originale',
-                      icon: const Icon(Icons.palette_outlined),
-                      onPressed: () => showDesignDirectionPicker(context),
-                    ),
-                  ],
+            actions: [
+              IconButton(
+                key: const Key('diag-open-design-btn'),
+                tooltip: 'Personalizza Outdoor Premium o torna a Originale',
+                icon: const Icon(Icons.palette_outlined),
+                onPressed: () => showDesignDirectionPicker(context),
+              ),
+            ],
           ),
           body: ListView(
             padding: EdgeInsets.fromLTRB(
@@ -251,13 +287,9 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                   ),
                 ],
                 SizedBox(height: t?.space(2) ?? 8),
-                if (t == null) ...[
-                  const Text(
-                    'Registrazione indipendente dall’uscita; non attiva GPS o servizi extra.',
-                  ),
-                  const Text(
-                    'Start/Stop non inviano dati. Il file locale può contenere nomi, ID e coordinate: condividilo solo con destinatari scelti.',
-                  ),
+                if (t == null) ...const [
+                  Text(_privacyLead),
+                  Text(_privacyDetail),
                 ] else ...[
                   Container(
                     padding: EdgeInsets.symmetric(
@@ -342,9 +374,7 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                   OutdoorCallout(
                     tokens: t,
                     icon: Icons.privacy_tip_outlined,
-                    text:
-                        'Registrazione indipendente dall’uscita; non attiva GPS o servizi extra.\n'
-                        'Start/Stop non inviano dati. Il file locale può contenere nomi, ID e coordinate: condividilo solo con destinatari scelti.',
+                    text: '$_privacyLead\n$_privacyDetail',
                   ),
                 ],
               ]),
@@ -513,15 +543,12 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                       'recovered_file_check_session_stop') ...[
                     if (t != null) SizedBox(height: t.space(1.5)),
                     if (t == null)
-                      const Text(
-                        'File recuperato: può essere parziale se il processo è stato interrotto.',
-                      )
+                      const Text(_recoveredWarning)
                     else
                       OutdoorCallout(
                         tokens: t,
                         icon: Icons.restore,
-                        text:
-                            'File recuperato: può essere parziale se il processo è stato interrotto.',
+                        text: _recoveredWarning,
                         tone: OutdoorTone.warning,
                       ),
                   ],
@@ -543,56 +570,15 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                       'Conteggi dei campioni osservati, non tempi di disponibilità né errore GPS reale.',
                       style: t?.body(12, color: t.inkMuted),
                     ),
-                    if (t == null)
-                      for (final field
-                          in recorder.lastSummary!.toReviewFields().entries)
-                        Text(field.key + ': ' + field.value.toString())
-                    else ...[
-                      SizedBox(height: t.space(1.75)),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: t.space(3),
-                          vertical: t.space(1),
-                        ),
-                        decoration: BoxDecoration(
-                          color: t.surfaceRaised,
-                          borderRadius: BorderRadius.circular(t.radiusSmall),
-                          border: Border.all(
-                              color: t.outline, width: t.borderWidth),
-                        ),
-                        child: Column(
-                          children: [
-                            for (final e in recorder.lastSummary!
-                                .toReviewFields()
-                                .entries
-                                .toList()
-                                .asMap()
-                                .entries)
-                              OutdoorSpecRow(
-                                tokens: t,
-                                label: e.value.key,
-                                value: e.value.value.toString(),
-                                showDivider: e.key <
-                                    recorder.lastSummary!
-                                            .toReviewFields()
-                                            .length -
-                                        1,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ..._buildReviewSummary(t, recorder.lastSummary!.toReviewFields()),
                     SizedBox(height: t?.space(2) ?? 8),
                     if (t == null)
-                      const Text(
-                        'Invio dettagliato separato, manuale e soggetto al consenso di ogni partecipante; nessun invio automatico.',
-                      )
+                      const Text(_uploadPrivacyNote)
                     else
                       OutdoorCallout(
                         tokens: t,
                         icon: Icons.verified_user_outlined,
-                        text:
-                            'Invio dettagliato separato, manuale e soggetto al consenso di ogni partecipante; nessun invio automatico.',
+                        text: _uploadPrivacyNote,
                       ),
                   ],
                   SizedBox(height: t?.space(2) ?? 4),
@@ -624,8 +610,7 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                   if (runtime.lastError != null)
                     Text(runtime.lastError!,
                         style: const TextStyle(color: Colors.red)),
-                  const Text(
-                      'Presenza BLE e posizione GPS recente sono stati distinti. Non sono garanzie di sicurezza.'),
+                  const Text(_runtimeDisclaimer),
                 ] else ...[
                   OutdoorCardHeader(
                     tokens: t,
@@ -672,21 +657,15 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                   OutdoorCallout(
                     tokens: t,
                     icon: Icons.info_outline,
-                    text:
-                        'Presenza BLE e posizione GPS recente sono stati distinti. Non sono garanzie di sicurezza.',
+                    text: _runtimeDisclaimer,
                   ),
                 ],
               ]),
               _card(t, [
-                if (t == null) ...const [
-                  Text('Lettura dei log',
+                if (t == null) ...[
+                  const Text('Lettura dei log',
                       style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(
-                      'TX richiesto, esito del plugin, pacchetto ricevuto e decisione GPS sono registrati separatamente.'),
-                  Text(
-                      'UTC permette il confronto fra telefoni; il tempo monotono conserva l’ordine locale. Orologi diversi richiedono verifica.'),
-                  Text(
-                      'Dopo uno stop o un riavvio puoi condividere l’ultimo file senza rifare il test.'),
+                  for (final bullet in _guideBullets) Text(bullet),
                 ] else ...[
                   OutdoorCardHeader(
                     tokens: t,
@@ -694,18 +673,7 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                     title: t.copy.diagnosticGuideTitle,
                   ),
                   SizedBox(height: t.space(2.25)),
-                  _guideBullet(
-                    t,
-                    'TX richiesto, esito del plugin, pacchetto ricevuto e decisione GPS sono registrati separatamente.',
-                  ),
-                  _guideBullet(
-                    t,
-                    'UTC permette il confronto fra telefoni; il tempo monotono conserva l’ordine locale. Orologi diversi richiedono verifica.',
-                  ),
-                  _guideBullet(
-                    t,
-                    'Dopo uno stop o un riavvio puoi condividere l’ultimo file senza rifare il test.',
-                  ),
+                  for (final bullet in _guideBullets) _guideBullet(t, bullet),
                 ],
               ]),
             ],
@@ -737,6 +705,43 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
       ),
       child: DropdownButtonHideUnderline(child: dropdown),
     );
+  }
+
+  List<Widget> _buildReviewSummary(
+    ConvoyDesignTokens? t,
+    Map<String, Object?> fields,
+  ) {
+    final entries = fields.entries.toList(growable: false);
+    if (t == null) {
+      return [
+        for (final field in entries) Text('${field.key}: ${field.value}'),
+      ];
+    }
+    return [
+      SizedBox(height: t.space(1.75)),
+      Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: t.space(3),
+          vertical: t.space(1),
+        ),
+        decoration: BoxDecoration(
+          color: t.surfaceRaised,
+          borderRadius: BorderRadius.circular(t.radiusSmall),
+          border: Border.all(color: t.outline, width: t.borderWidth),
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < entries.length; i++)
+              OutdoorSpecRow(
+                tokens: t,
+                label: entries[i].key,
+                value: entries[i].value.toString(),
+                showDivider: i < entries.length - 1,
+              ),
+          ],
+        ),
+      ),
+    ];
   }
 
   Widget _guideBullet(ConvoyDesignTokens t, String text) => Padding(

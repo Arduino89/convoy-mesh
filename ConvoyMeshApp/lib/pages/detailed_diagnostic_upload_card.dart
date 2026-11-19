@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -13,11 +14,15 @@ class DetailedDiagnosticUploadCard extends StatefulWidget {
     required this.jsonl,
     this.senderOverride,
     this.configuredOverride,
+    this.temporarilyDisabledOverride,
+    this.attemptStoreOverride,
   });
 
   final String jsonl;
   final Future<int> Function(DetailedDiagnosticUpload payload)? senderOverride;
   final bool? configuredOverride;
+  final bool? temporarilyDisabledOverride;
+  final DetailedDiagnosticUploadAttemptStore? attemptStoreOverride;
 
   @override
   State<DetailedDiagnosticUploadCard> createState() =>
@@ -25,39 +30,125 @@ class DetailedDiagnosticUploadCard extends StatefulWidget {
 }
 
 class _DetailedDiagnosticUploadCardState
-    extends State<DetailedDiagnosticUploadCard> {
+    extends State<DetailedDiagnosticUploadCard>
+    with AutomaticKeepAliveClientMixin<DetailedDiagnosticUploadCard> {
+  static const _title = 'Invio diagnostico PostHog EU — beta chiusa';
+  static const _introText =
+      'Opzionale. Nessun invio durante la registrazione, '
+      'all’avvio o allo stop. Invia SOLO la sessione mostrata, '
+      'con una richiesta e senza retry o coda.';
+  static const _privacyNote =
+      'I record GPS contengono latitudine e longitudine precise. '
+      'I record BLE contengono ID, sequenze e RSSI. '
+      'Se registrate, includono anche condizioni e marcatori '
+      'dichiarati dal tester (NON verificati dai sensori). '
+      'Le note libere e i payload radio grezzi restano locali.';
+  static const _temporarilyDisabledText =
+      'Invio a PostHog temporaneamente disattivato in questa build Outdoor LAB: '
+      'nessun dato viene trasmesso al cloud. Puoi comunque registrare e '
+      'condividere il file locale.';
+  static const _unconfiguredText =
+      'Token di sola acquisizione PostHog non configurato: invio disabilitato.';
+
+  late DetailedDiagnosticUploadAttemptStore _store;
   DetailedDiagnosticUpload? _payload;
-  String? _prepareError, _status;
+  String? _sessionKey;
+  String? _prepareError;
   bool _ownerConsent = false, _ackStoredData = false;
   final Set<int> _approvedPeers = {};
-  bool _attempted = false, _busy = false;
+  bool _dialogOpen = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  bool get _temporarilyDisabled =>
+      widget.temporarilyDisabledOverride ??
+      (widget.configuredOverride != null
+          ? false
+          : DetailedDiagnosticUploadSender.temporarilyDisabled);
+
+  bool get _configured =>
+      !_temporarilyDisabled &&
+      (widget.configuredOverride ?? DetailedDiagnosticUploadSender.configured);
+
+  DetailedDiagnosticUploadAttemptRecord? get _record =>
+      _sessionKey == null ? null : _store.recordFor(_sessionKey!);
 
   @override
   void initState() {
     super.initState();
+    _store =
+        widget.attemptStoreOverride ?? DetailedDiagnosticUploadSender.attemptStore;
+    _store.addListener(_onStoreChanged);
     _prepare();
   }
 
   @override
   void didUpdateWidget(DetailedDiagnosticUploadCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.jsonl != widget.jsonl) {
+    final nextStore =
+        widget.attemptStoreOverride ?? DetailedDiagnosticUploadSender.attemptStore;
+    final storeChanged = !identical(nextStore, _store);
+    if (storeChanged) {
+      _store.removeListener(_onStoreChanged);
+      _store = nextStore;
+      _store.addListener(_onStoreChanged);
+    }
+    if (oldWidget.jsonl != widget.jsonl || storeChanged) {
       _ownerConsent = false;
       _ackStoredData = false;
       _approvedPeers.clear();
-      _attempted = false;
-      _busy = false;
-      _status = null;
       _prepare();
     }
   }
 
+  @override
+  void dispose() {
+    _store.removeListener(_onStoreChanged);
+    super.dispose();
+  }
+
+  void _onStoreChanged() {
+    final record = _record;
+    if (record != null && record.attempted) {
+      _ownerConsent = record.ownerConsent;
+      _ackStoredData = record.ackStoredData;
+      _approvedPeers
+        ..clear()
+        ..addAll(record.approvedPeers);
+    }
+    if (mounted) setState(() {});
+  }
+
   void _prepare() {
     try {
-      _payload = DetailedDiagnosticUpload.fromJsonl(widget.jsonl);
+      var parsed = DetailedDiagnosticUpload.fromJsonl(widget.jsonl);
+      final key = DetailedDiagnosticUploadAttemptStore.fingerprintFor(
+        parsed.sessionId,
+        widget.jsonl,
+      );
+      final existing = _store.recordFor(key);
+      if (existing != null) {
+        if (existing.uploadId != parsed.uploadId) {
+          parsed = DetailedDiagnosticUpload.fromJsonl(
+            widget.jsonl,
+            uploadIdOverride: existing.uploadId,
+          );
+        }
+        if (existing.attempted) {
+          _ownerConsent = existing.ownerConsent;
+          _ackStoredData = existing.ackStoredData;
+          _approvedPeers
+            ..clear()
+            ..addAll(existing.approvedPeers);
+        }
+      }
+      _payload = parsed;
+      _sessionKey = key;
       _prepareError = null;
     } catch (e) {
       _payload = null;
+      _sessionKey = null;
       _prepareError = e.toString();
     }
   }
@@ -67,120 +158,142 @@ class _DetailedDiagnosticUploadCardState
     final exact = const JsonEncoder.withIndent('  ').convert(payload.preview);
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: t != null
-            ? OutdoorDialogTitle(
-                tokens: t,
-                icon: Icons.data_object,
-                title: 'Anteprima dati PostHog',
-              )
-            : const Text('Anteprima dati PostHog'),
-        content: SizedBox(
-          width: 680,
-          height: 460,
-          child: t == null
-              ? SingleChildScrollView(child: SelectableText(exact))
-              : Container(
-                  padding: EdgeInsets.all(t.space(3)),
-                  decoration: BoxDecoration(
-                    color: t.surfaceRaised,
-                    borderRadius: BorderRadius.circular(t.radiusSmall),
-                    border:
-                        Border.all(color: t.outline, width: t.borderWidth),
-                  ),
-                  child: SingleChildScrollView(
-                    child: SelectableText(
-                      exact,
-                      style: t.data(12, weight: FontWeight.w500),
+      builder: (dialogContext) {
+        final size = MediaQuery.sizeOf(dialogContext);
+        final maxWidth = math.min(680.0, size.width * 0.9);
+        final maxHeight = math.min(460.0, size.height * 0.55);
+        return AlertDialog(
+          title: t != null
+              ? OutdoorDialogTitle(
+                  tokens: t,
+                  icon: Icons.data_object,
+                  title: 'Anteprima dati PostHog',
+                )
+              : const Text('Anteprima dati PostHog'),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth,
+              maxHeight: maxHeight,
+            ),
+            child: t == null
+                ? SingleChildScrollView(child: SelectableText(exact))
+                : Container(
+                    padding: EdgeInsets.all(t.space(3)),
+                    decoration: BoxDecoration(
+                      color: t.surfaceRaised,
+                      borderRadius: BorderRadius.circular(t.radiusSmall),
+                      border:
+                          Border.all(color: t.outline, width: t.borderWidth),
+                    ),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        exact,
+                        style: t.data(12, weight: FontWeight.w500),
+                      ),
                     ),
                   ),
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Chiudi'),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Chiudi'),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Future<void> _send(DetailedDiagnosticUpload payload) async {
-    if (_busy ||
-        _attempted ||
+    final key = _sessionKey;
+    final record = _record;
+    if (key == null ||
+        _dialogOpen ||
+        (record?.inFlight ?? false) ||
+        (record?.attempted ?? false) ||
         !_ownerConsent ||
         !_ackStoredData ||
         _approvedPeers.length != payload.peerLabels.length) {
       return;
     }
-    if (!(widget.configuredOverride ??
-        DetailedDiagnosticUploadSender.configured)) {
+    if (!_configured) {
       return;
     }
     final t = ConvoyDesignTokens.maybeOf(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: t != null
-            ? OutdoorDialogTitle(
-                tokens: t,
-                icon: Icons.cloud_upload_outlined,
-                title: 'Confermi invio dettagliato?',
-                tone: OutdoorTone.warning,
-              )
-            : const Text('Confermi invio dettagliato?'),
-        content: Text(
-          'Invierai a PostHog EU ${payload.recordCount} eventi '
-          '(${payload.bytes} byte circa) con ID, nickname, GPS e BLE '
-          'dei partecipanti approvati e, se presenti, condizioni '
-          'dichiarate durante la prova. '
-          'Il file locale non viene cancellato. '
-          'Dopo l’invio, annullare un consenso non ritira automaticamente '
-          'i dati già ricevuti dal cloud.',
-          style: t?.body(14),
+    _dialogOpen = true;
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: t != null
+              ? OutdoorDialogTitle(
+                  tokens: t,
+                  icon: Icons.cloud_upload_outlined,
+                  title: 'Confermi invio dettagliato?',
+                  tone: OutdoorTone.warning,
+                )
+              : const Text('Confermi invio dettagliato?'),
+          content: SingleChildScrollView(
+            child: Text(
+              'Invierai a PostHog EU ${payload.recordCount} eventi '
+              '(${payload.bytes} byte circa) con ID, nickname, GPS e BLE '
+              'dei partecipanti approvati e, se presenti, condizioni '
+              'dichiarate durante la prova. '
+              'Il file locale non viene cancellato. '
+              'Dopo l’invio, annullare un consenso non ritira automaticamente '
+              'i dati già ricevuti dal cloud.',
+              style: t?.body(14),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annulla'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Confermo invio a PostHog EU'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annulla'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confermo invio a PostHog EU'),
-          ),
-        ],
-      ),
-    );
+      );
+    } finally {
+      _dialogOpen = false;
+    }
     if (!mounted || confirmed != true) return;
-    // One attempt per mounted session, including after a timeout:
-    // an ambiguous HTTP result may already have been ingested.
-    setState(() {
-      _attempted = true;
-      _busy = true;
-      _status = 'Un unico invio HTTPS in corso…';
-    });
+    // One attempt per session fingerprint in this launch, including after
+    // ListView eviction, style switches, mid-flight unmounts, or ambiguous
+    // HTTP timeouts where the cloud may already have ingested the batch.
+    final store = _store;
+    if (!store.beginAttempt(
+      key,
+      uploadId: payload.uploadId,
+      ownerConsent: _ownerConsent,
+      ackStoredData: _ackStoredData,
+      approvedPeers: _approvedPeers,
+    )) {
+      return;
+    }
     try {
       final code = await (widget.senderOverride?.call(payload) ??
           DetailedDiagnosticUploadSender.sendOnce(payload));
-      if (!mounted) return;
-      setState(() {
-        _status = code >= 200 && code < 300
+      store.completeAttempt(
+        key,
+        code >= 200 && code < 300
             ? 'HTTP $code: PostHog ha accettato la richiesta. '
                 'Archiviazione ancora da verificare cercando upload_id '
                 '${payload.uploadId}. Nessun retry.'
             : 'HTTP $code: archiviazione NON confermata. '
-                'Nessun retry automatico. upload_id ${payload.uploadId}.';
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(
-        () => _status = 'Connessione fallita o esito incerto. '
-            'Il cloud potrebbe aver ricevuto i dati: niente retry. '
-            'upload_id ${payload.uploadId}.',
+                'Nessun retry automatico. upload_id ${payload.uploadId}.',
       );
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    } catch (_) {
+      store.completeAttempt(
+        key,
+        'Connessione fallita o esito incerto. '
+        'Il cloud potrebbe aver ricevuto i dati: niente retry. '
+        'upload_id ${payload.uploadId}.',
+      );
     }
   }
 
@@ -219,39 +332,58 @@ class _DetailedDiagnosticUploadCardState
     );
   }
 
+  Widget _classicInfoNotice(BuildContext context, String text) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 18, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final t = ConvoyDesignTokens.maybeOf(context);
     final payload = _payload;
-    final configured =
-        widget.configuredOverride ?? DetailedDiagnosticUploadSender.configured;
+    final record = _record;
+    final attempted = record?.attempted ?? false;
+    final busy = record?.inFlight ?? false;
+    final status = record?.status;
+    final temporarilyDisabled = _temporarilyDisabled;
+    final configured = _configured;
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (t == null) ...const [
-          Text(
-            'Invio diagnostico PostHog EU — beta chiusa',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          Text(_title, style: TextStyle(fontWeight: FontWeight.bold)),
           SizedBox(height: 8),
-          Text(
-            'Opzionale. Nessun invio durante la registrazione, '
-            'all’avvio o allo stop. Invia SOLO la sessione mostrata, '
-            'con una richiesta e senza retry o coda.',
-          ),
+          Text(_introText),
         ] else ...[
           OutdoorCardHeader(
             tokens: t,
             icon: Icons.cloud_upload_outlined,
-            title: 'Invio diagnostico PostHog EU — beta chiusa',
+            title: _title,
           ),
           SizedBox(height: t.space(2)),
-          Text(
-            'Opzionale. Nessun invio durante la registrazione, '
-            'all’avvio o allo stop. Invia SOLO la sessione mostrata, '
-            'con una richiesta e senza retry o coda.',
-            style: t.body(13, color: t.inkMuted),
-          ),
+          Text(_introText, style: t.body(13, color: t.inkMuted)),
           SizedBox(height: t.space(2.25)),
         ],
         if (payload == null)
@@ -276,13 +408,7 @@ class _DetailedDiagnosticUploadCardState
               'esclusi per sicurezza: ${payload.excludedRecords} • '
               'dimensione stimata: ${payload.bytes} byte',
             ),
-            const Text(
-              'I record GPS contengono latitudine e longitudine '
-              'precise. I record BLE contengono ID, sequenze e RSSI. '
-              'Se registrate, includono anche condizioni e marcatori '
-              'dichiarati dal tester (NON verificati dai sensori). '
-              'Le note libere e i payload radio grezzi restano locali.',
-            ),
+            const Text(_privacyNote),
           ] else ...[
             Container(
               padding: EdgeInsets.symmetric(
@@ -325,20 +451,21 @@ class _DetailedDiagnosticUploadCardState
             OutdoorCallout(
               tokens: t,
               icon: Icons.shield_outlined,
-              text:
-                  'I record GPS contengono latitudine e longitudine precise. I record BLE contengono ID, sequenze e RSSI. '
-                  'Se registrate, includono anche condizioni e marcatori dichiarati dal tester (NON verificati dai sensori). '
-                  'Le note libere e i payload radio grezzi restano locali.',
+              text: _privacyNote,
             ),
             SizedBox(height: t.space(2)),
           ],
-          OutlinedButton.icon(
-            onPressed: () => _showPreview(payload),
-            icon: t != null
-                ? Icon(Icons.data_object, size: t.iconSize(18))
-                : const SizedBox.shrink(),
-            label: const Text('Mostra JSON integrale da inviare'),
-          ),
+          if (t == null)
+            OutlinedButton(
+              onPressed: () => _showPreview(payload),
+              child: const Text('Mostra JSON integrale da inviare'),
+            )
+          else
+            OutlinedButton.icon(
+              onPressed: () => _showPreview(payload),
+              icon: Icon(Icons.data_object, size: t.iconSize(18)),
+              label: const Text('Mostra JSON integrale da inviare'),
+            ),
           if (t != null) SizedBox(height: t.space(2.25)),
           _consentTile(
             t,
@@ -349,7 +476,7 @@ class _DetailedDiagnosticUploadCardState
               'per analisi della beta.',
               style: t?.body(13),
             ),
-            onChanged: _attempted
+            onChanged: attempted
                 ? null
                 : (v) => setState(() => _ownerConsent = v == true),
           ),
@@ -371,7 +498,7 @@ class _DetailedDiagnosticUploadCardState
                   '${p.value} • ID ${p.key}',
                   style: t?.body(13.5, weight: FontWeight.w700),
                 ),
-                onChanged: _attempted
+                onChanged: attempted
                     ? null
                     : (v) => setState(() {
                           if (v == true) {
@@ -392,23 +519,33 @@ class _DetailedDiagnosticUploadCardState
               'sono operazioni distinte.',
               style: t?.body(13),
             ),
-            onChanged: _attempted
+            onChanged: attempted
                 ? null
                 : (v) => setState(() => _ackStoredData = v == true),
           ),
-          if (!configured) ...[
+          if (temporarilyDisabled) ...[
+            if (t == null)
+              _classicInfoNotice(context, _temporarilyDisabledText)
+            else ...[
+              OutdoorCallout(
+                tokens: t,
+                icon: Icons.info_outline,
+                text: _temporarilyDisabledText,
+                tone: OutdoorTone.neutral,
+              ),
+              SizedBox(height: t.space(2)),
+            ],
+          ] else if (!configured) ...[
             if (t == null)
               const Text(
-                'Token di sola acquisizione PostHog non configurato: '
-                'invio disabilitato.',
+                _unconfiguredText,
                 style: TextStyle(color: Colors.red),
               )
             else ...[
               OutdoorCallout(
                 tokens: t,
                 icon: Icons.lock_outline,
-                text:
-                    'Token di sola acquisizione PostHog non configurato: invio disabilitato.',
+                text: _unconfiguredText,
                 tone: OutdoorTone.critical,
               ),
               SizedBox(height: t.space(2)),
@@ -416,8 +553,8 @@ class _DetailedDiagnosticUploadCardState
           ],
           FilledButton.icon(
             onPressed: configured &&
-                    !_attempted &&
-                    !_busy &&
+                    !attempted &&
+                    !busy &&
                     _ownerConsent &&
                     _ackStoredData &&
                     _approvedPeers.length == payload.peerLabels.length
@@ -446,23 +583,23 @@ class _DetailedDiagnosticUploadCardState
               ),
             ),
         ],
-        if (_status != null) ...[
+        if (status != null) ...[
           if (t != null) SizedBox(height: t.space(2)),
           if (t == null)
-            Text(_status!)
+            Text(status)
           else
             OutdoorCallout(
               tokens: t,
-              icon: _status!.startsWith('HTTP 2')
+              icon: status.startsWith('HTTP 2')
                   ? Icons.cloud_done_outlined
                   : Icons.info_outline,
-              text: _status!,
-              tone: _status!.startsWith('HTTP 2')
+              text: status,
+              tone: status.startsWith('HTTP 2')
                   ? OutdoorTone.positive
                   : OutdoorTone.warning,
             ),
         ],
-        if (_attempted) ...[
+        if (attempted) ...[
           if (t != null) SizedBox(height: t.space(1.5)),
           Text(
             'Un tentativo eseguito. Non riprovare alla cieca: '

@@ -55,58 +55,96 @@ class DesignedDiagnosticStatusStrip extends StatelessWidget {
           width: t.borderWidth,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            LiveDot(
-              active: active,
-              pulseEnabled: t.shouldPulseLive,
-              color: statusColor,
-              size: 7.5,
-            ),
-            SizedBox(width: t.space(1.5)),
-            Expanded(
-              child: Text(
-                t.label(
-                  active
-                      ? 'Acquisizione locale attiva'
-                      : ready
-                          ? 'Pronto per registrare'
-                          : 'In attesa di modalità Vicini',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 250;
+          final statusLine = Row(
+            mainAxisSize: narrow ? MainAxisSize.min : MainAxisSize.max,
+            children: [
+              LiveDot(
+                active: active,
+                pulseEnabled: t.shouldPulseLive,
+                color: statusColor,
+                size: 7.5,
+              ),
+              SizedBox(width: t.space(1.5)),
+              Flexible(
+                child: Text(
+                  t.label(
+                    active
+                        ? 'Acquisizione locale attiva'
+                        : ready
+                            ? 'Pronto per registrare'
+                            : 'In attesa di modalità Vicini',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.caption(color: statusColor, size: 11),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: t.caption(color: statusColor, size: 11),
               ),
-            ),
-            SizedBox(width: t.space(1.5)),
-            OutdoorStatusBadge(
-              tokens: t,
-              label: persistent ? 'File locale' : 'Solo memoria',
-              tone: persistent ? OutdoorTone.positive : OutdoorTone.warning,
-            ),
-          ]),
-          if (active) ...[
-            SizedBox(height: t.space(2.25)),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(t.radiusSmall),
-              child: LinearProgressIndicator(
-                value: fraction,
-                minHeight: 7,
-                backgroundColor: t.outline.withValues(alpha: 0.4),
-                valueColor: AlwaysStoppedAnimation<Color>(t.highlight),
-              ),
-            ),
-            SizedBox(height: t.space(2.25)),
-            Row(children: [
-              _stat('Trascorso', DiagnosticRecorder.formatDuration(elapsed)),
-              _stat('Restante', DiagnosticRecorder.formatDuration(remaining)),
-              _stat('Eventi', '$eventCount'),
-              _stat('Scartati', '$droppedEvents'),
-            ]),
-          ],
-        ],
+            ],
+          );
+          final storageBadge = OutdoorStatusBadge(
+            tokens: t,
+            label: persistent ? 'File locale' : 'Solo memoria',
+            tone: persistent ? OutdoorTone.positive : OutdoorTone.warning,
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (narrow) ...[
+                statusLine,
+                SizedBox(height: t.space(1)),
+                storageBadge,
+              ] else
+                Row(children: [
+                  Expanded(child: statusLine),
+                  SizedBox(width: t.space(1.5)),
+                  Flexible(flex: 0, child: storageBadge),
+                ]),
+              if (active) ...[
+                SizedBox(height: t.space(2.25)),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(t.radiusSmall),
+                  child: LinearProgressIndicator(
+                    value: fraction,
+                    minHeight: 7,
+                    backgroundColor: t.outline.withValues(alpha: 0.4),
+                    valueColor: AlwaysStoppedAnimation<Color>(t.highlight),
+                  ),
+                ),
+                SizedBox(height: t.space(2.25)),
+                if (narrow) ...[
+                  Row(children: [
+                    _stat(
+                        'Trascorso', DiagnosticRecorder.formatDuration(elapsed)),
+                    SizedBox(width: t.space(2)),
+                    _stat('Restante',
+                        DiagnosticRecorder.formatDuration(remaining)),
+                  ]),
+                  SizedBox(height: t.space(1.5)),
+                  Row(children: [
+                    _stat('Eventi', '$eventCount'),
+                    SizedBox(width: t.space(2)),
+                    _stat('Scartati', '$droppedEvents'),
+                  ]),
+                ] else
+                  Row(children: [
+                    _stat(
+                        'Trascorso', DiagnosticRecorder.formatDuration(elapsed)),
+                    SizedBox(width: t.space(1.5)),
+                    _stat('Restante',
+                        DiagnosticRecorder.formatDuration(remaining)),
+                    SizedBox(width: t.space(1.5)),
+                    _stat('Eventi', '$eventCount'),
+                    SizedBox(width: t.space(1.5)),
+                    _stat('Scartati', '$droppedEvents'),
+                  ]),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
