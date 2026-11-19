@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../design_presets.dart';
 import '../design_tokens.dart';
 import 'radar_view_data.dart';
 
@@ -27,6 +28,7 @@ class DesignBleStatusPill extends StatelessWidget {
     final t = tokens;
     final tone = ready ? t.positive : t.critical;
     final dark = t.brightness == Brightness.dark;
+    final lightHeroInk = t.heroInk.computeLuminance() > 0.5;
     final Color bg;
     final Color fg;
     if (onHero) {
@@ -61,7 +63,7 @@ class DesignBleStatusPill extends StatelessWidget {
           onTap: onTap,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-                minHeight: (t.minTouchTarget - 8).clamp(40, 60)),
+                minHeight: (t.minTouchTarget - 4).clamp(48.0, 62.0)),
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: t.space(3.5)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -69,7 +71,7 @@ class DesignBleStatusPill extends StatelessWidget {
                   width: 9,
                   height: 9,
                   decoration: BoxDecoration(
-                    color: onHero
+                    color: onHero && lightHeroInk
                         ? (ready
                             ? const Color(0xFF9BE2B4)
                             : const Color(0xFFFF9C8F))
@@ -129,6 +131,9 @@ class _LiveDotState extends State<LiveDot> with SingleTickerProviderStateMixin {
     duration: const Duration(milliseconds: 1400),
   );
 
+  bool get _reduceMotion =>
+      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -142,8 +147,7 @@ class _LiveDotState extends State<LiveDot> with SingleTickerProviderStateMixin {
   }
 
   void _sync() {
-    final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    if (widget.active && widget.pulseEnabled && !reduce) {
+    if (widget.active && widget.pulseEnabled && !_reduceMotion) {
       if (!_c.isAnimating) _c.repeat();
     } else {
       _c.stop();
@@ -160,32 +164,34 @@ class _LiveDotState extends State<LiveDot> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final s = widget.size;
-    final showRing = widget.active && widget.pulseEnabled;
-    return SizedBox(
-      width: s * 2.2,
-      height: s * 2.2,
-      child: AnimatedBuilder(
-        animation: _c,
-        builder: (context, _) => Stack(alignment: Alignment.center, children: [
-          if (showRing)
+    final showRing = widget.active && widget.pulseEnabled && !_reduceMotion;
+    return RepaintBoundary(
+      child: SizedBox(
+        width: s * 2.2,
+        height: s * 2.2,
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (context, _) => Stack(alignment: Alignment.center, children: [
+            if (showRing)
+              Container(
+                width: s + s * 1.2 * _c.value,
+                height: s + s * 1.2 * _c.value,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.color.withValues(alpha: 0.45 * (1 - _c.value)),
+                ),
+              ),
             Container(
-              width: s + s * 1.2 * _c.value,
-              height: s + s * 1.2 * _c.value,
+              width: s,
+              height: s,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: widget.color.withValues(alpha: 0.45 * (1 - _c.value)),
+                color: widget.active ? widget.color : Colors.transparent,
+                border: Border.all(color: widget.color, width: 1.6),
               ),
             ),
-          Container(
-            width: s,
-            height: s,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: widget.active ? widget.color : Colors.transparent,
-              border: Border.all(color: widget.color, width: 1.6),
-            ),
-          ),
-        ]),
+          ]),
+        ),
       ),
     );
   }
@@ -245,6 +251,7 @@ class PeerAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = _size ?? tokens.avatarSize;
     final color = Color(peer.color);
+    final onlineFg = DesignPresets.contrastingInkOn(color);
     return Stack(clipBehavior: Clip.none, children: [
       AnimatedContainer(
         duration: tokens.effectiveMotionMedium,
@@ -264,9 +271,12 @@ class PeerAvatar extends StatelessWidget {
           peer.initials,
           style: TextStyle(
             fontFamily: tokens.bodyFamily,
-            fontWeight: FontWeight.w800,
+            fontWeight: ConvoyDesignTokens.resolveWeight(
+              tokens.bodyFamily,
+              FontWeight.w800,
+            ),
             fontSize: s * 0.36,
-            color: peer.online ? Colors.white : tokens.inkMuted,
+            color: peer.online ? onlineFg : tokens.inkMuted,
           ),
         ),
       ),
@@ -352,10 +362,10 @@ class SectionHeader extends StatelessWidget {
           spacing: t.space(2),
           runSpacing: t.space(1),
           children: [
-            Text(t.label(title), style: t.display(22)),
+            Text(t.label(title), style: t.display(22, color: t.inkOnCanvas)),
             if (trailing != null)
               Text(trailing!,
-                  style: t.caption(color: t.inkMuted, size: 12.5)),
+                  style: t.caption(color: t.inkMutedOnCanvas, size: 12.5)),
           ],
         ),
       ),

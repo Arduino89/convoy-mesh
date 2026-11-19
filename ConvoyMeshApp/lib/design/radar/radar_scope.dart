@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../design_presets.dart';
 import '../design_tokens.dart';
 import 'radar_view_data.dart';
 
@@ -52,7 +53,7 @@ class _RadarScopeState extends State<RadarScope>
       AnimationController(vsync: this, duration: widget.tokens.radarPeriod);
 
   bool get _reduceMotion =>
-      MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
   @override
   void didChangeDependencies() {
@@ -89,6 +90,8 @@ class _RadarScopeState extends State<RadarScope>
   Widget build(BuildContext context) {
     final t = widget.tokens;
     final online = widget.peers.where((p) => p.online).length;
+    final rotateLight =
+        widget.scanning && t.shouldRotateRadar && !_reduceMotion;
     return Semantics(
       label: 'Radar dei partecipanti: $online presenti, '
           '${widget.peers.length - online} non ricevuti. '
@@ -100,28 +103,44 @@ class _RadarScopeState extends State<RadarScope>
           child: LayoutBuilder(builder: (context, box) {
             final size = box.biggest.shortestSide;
             final radius = math.max(24.0, size / 2 - 20.0);
-            return RepaintBoundary(
-              child: Stack(clipBehavior: Clip.none, children: [
+            return Stack(clipBehavior: Clip.none, children: [
+              // Animated radar sweep sits in its own RepaintBoundary so the
+              // 60fps shader pass never invalidates the static contour rings or
+              // participant dots.
+              if (rotateLight)
                 Positioned.fill(
-                  child: AnimatedBuilder(
-                    animation: _ctrl,
-                    builder: (context, _) => CustomPaint(
-                      painter: _ContourScopePainter(
-                        tokens: t,
-                        progress: _ctrl.value,
-                        rotateLight:
-                            widget.scanning && t.shouldRotateRadar && !_reduceMotion,
-                        showContours: t.showTopoContours,
-                        radiusInset: 20.0,
+                  child: RepaintBoundary(
+                    child: AnimatedBuilder(
+                      animation: _ctrl,
+                      builder: (context, _) => CustomPaint(
+                        painter: _RadarSweepPainter(
+                          sweepColor: t.radarSweep,
+                          progress: _ctrl.value,
+                          radiusInset: 20.0,
+                        ),
                       ),
                     ),
                   ),
                 ),
-                if (widget.peers.isEmpty) _emptyHint(t, size),
-                _centerMarker(t, size),
-                for (final p in widget.peers) _blip(t, p, size, radius),
-              ]),
-            );
+              // Static contour rings & RSSI bucket guides are raster-cached
+              // once per size/token change instead of recomputing 700+ trig
+              // calls every frame.
+              Positioned.fill(
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: _StaticContourRingsPainter(
+                      radarGrid: t.radarGrid,
+                      heroInk: t.heroInk,
+                      showContours: t.showTopoContours,
+                      radiusInset: 20.0,
+                    ),
+                  ),
+                ),
+              ),
+              if (widget.peers.isEmpty) _emptyHint(t, size),
+              _centerMarker(t, size),
+              for (final p in widget.peers) _blip(t, p, size, radius),
+            ]);
           }),
         ),
       ),
@@ -129,7 +148,9 @@ class _RadarScopeState extends State<RadarScope>
   }
 
   Widget _emptyHint(ConvoyDesignTokens t, double size) {
-    final fg = t.heroInk.withValues(alpha: 0.78);
+    final lightInk = t.heroInk.computeLuminance() > 0.5;
+    final fg = t.heroInk.withValues(alpha: 0.88);
+    final pillBg = (lightInk ? Colors.black : Colors.white).withValues(alpha: 0.24);
     return Positioned(
       left: 16,
       right: 16,
@@ -139,10 +160,10 @@ class _RadarScopeState extends State<RadarScope>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.25),
+              color: pillBg,
               borderRadius: BorderRadius.circular(t.radiusLarge),
               border: Border.all(
-                color: t.heroInk.withValues(alpha: 0.20),
+                color: t.heroInk.withValues(alpha: 0.22),
                 width: t.borderWidth,
               ),
             ),
@@ -162,6 +183,7 @@ class _RadarScopeState extends State<RadarScope>
 
   Widget _centerMarker(ConvoyDesignTokens t, double size) {
     const d = 22.0;
+    final centerFg = DesignPresets.contrastingInkOn(t.heroInk);
     return Positioned(
       left: size / 2 - d / 2,
       top: size / 2 - d / 2,
@@ -185,8 +207,9 @@ class _RadarScopeState extends State<RadarScope>
           style: TextStyle(
             fontFamily: t.bodyFamily,
             fontSize: 7.5,
-            fontWeight: FontWeight.w800,
-            color: t.accent,
+            fontWeight:
+                ConvoyDesignTokens.resolveWeight(t.bodyFamily, FontWeight.w800),
+            color: centerFg,
           ),
         ),
       ),
@@ -206,6 +229,7 @@ class _RadarScopeState extends State<RadarScope>
     final selected = widget.selectedPeerId == p.userId;
     final d = size < 220 ? 26.0 : (selected ? 36.0 : 31.0);
     final userColor = Color(p.color);
+    final onlineFg = DesignPresets.contrastingInkOn(userColor);
 
     final dot = AnimatedContainer(
       duration: t.effectiveMotionFast,
@@ -237,8 +261,9 @@ class _RadarScopeState extends State<RadarScope>
         style: TextStyle(
           fontFamily: t.bodyFamily,
           fontSize: d * 0.36,
-          fontWeight: FontWeight.w800,
-          color: p.online ? Colors.white : t.heroInk,
+          fontWeight:
+              ConvoyDesignTokens.resolveWeight(t.bodyFamily, FontWeight.w800),
+          color: p.online ? onlineFg : t.heroInk,
         ),
       ),
     );
@@ -285,7 +310,12 @@ class _RadarScopeState extends State<RadarScope>
     double width,
     TextAlign align,
   ) {
-    final textColor = p.online ? t.radarSweep : t.warning;
+    final heroColors = t.heroBackground.colors;
+    final sweepLegible = heroColors.every(
+      (bg) => DesignPresets.contrastRatio(t.radarSweep, bg) >= 4.5,
+    );
+    final textColor =
+        p.online ? (sweepLegible ? t.radarSweep : t.heroInk) : t.heroOfflineInk;
     return SizedBox(
       width: width,
       child: Text(
@@ -299,42 +329,63 @@ class _RadarScopeState extends State<RadarScope>
   }
 }
 
-class _ContourScopePainter extends CustomPainter {
-  _ContourScopePainter({
-    required this.tokens,
+/// Lightweight per-frame painter for the rotating radar sweep beam only.
+class _RadarSweepPainter extends CustomPainter {
+  _RadarSweepPainter({
+    required this.sweepColor,
     required this.progress,
-    required this.rotateLight,
+    required this.radiusInset,
+  });
+
+  final Color sweepColor;
+  final double progress;
+  final double radiusInset;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = math.max(24.0, size.shortestSide / 2 - radiusInset);
+    final rot = progress * 2 * math.pi;
+    final light = Paint()
+      ..shader = SweepGradient(
+        colors: [
+          sweepColor.withValues(alpha: 0.0),
+          sweepColor.withValues(alpha: 0.0),
+          sweepColor.withValues(alpha: 0.30),
+          sweepColor.withValues(alpha: 0.0),
+        ],
+        stops: const [0.0, 0.70, 0.97, 1.0],
+        transform: GradientRotation(rot),
+      ).createShader(Rect.fromCircle(center: c, radius: r));
+    canvas.drawCircle(c, r, light);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadarSweepPainter old) =>
+      old.progress != progress ||
+      old.sweepColor != sweepColor ||
+      old.radiusInset != radiusInset;
+}
+
+/// Static contour rings and dotted RSSI quality bucket guides.
+/// Cached in its own RepaintBoundary so it paints only when size or tokens change.
+class _StaticContourRingsPainter extends CustomPainter {
+  _StaticContourRingsPainter({
+    required this.radarGrid,
+    required this.heroInk,
     required this.showContours,
     required this.radiusInset,
   });
 
-  final ConvoyDesignTokens tokens;
-  final double progress;
-  final bool rotateLight;
+  final Color radarGrid;
+  final Color heroInk;
   final bool showContours;
   final double radiusInset;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final t = tokens;
     final c = size.center(Offset.zero);
     final r = math.max(24.0, size.shortestSide / 2 - radiusInset);
-
-    if (rotateLight) {
-      final rot = progress * 2 * math.pi;
-      final light = Paint()
-        ..shader = SweepGradient(
-          colors: [
-            t.radarSweep.withValues(alpha: 0.0),
-            t.radarSweep.withValues(alpha: 0.0),
-            t.radarSweep.withValues(alpha: 0.30),
-            t.radarSweep.withValues(alpha: 0.0),
-          ],
-          stops: const [0.0, 0.70, 0.97, 1.0],
-          transform: GradientRotation(rot),
-        ).createShader(Rect.fromCircle(center: c, radius: r));
-      canvas.drawCircle(c, r, light);
-    }
 
     if (showContours) {
       for (var k = 1; k <= 6; k++) {
@@ -361,7 +412,7 @@ class _ContourScopePainter extends CustomPainter {
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = k == 6 ? 1.6 : (k.isEven ? 1.1 : 0.7)
-            ..color = t.radarGrid
+            ..color = radarGrid
                 .withValues(alpha: k == 6 ? 0.55 : (k.isEven ? 0.45 : 0.28)),
         );
       }
@@ -372,13 +423,13 @@ class _ContourScopePainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.6
-          ..color = t.radarGrid.withValues(alpha: 0.55),
+          ..color = radarGrid.withValues(alpha: 0.55),
       );
     }
 
     // Dotted guides for the four BLE RSSI quality buckets.
     for (final f in RadarScope.ringForLevel.skip(1)) {
-      _dotted(canvas, c, r * f, t.heroInk.withValues(alpha: 0.22), 2.2, 64);
+      _dotted(canvas, c, r * f, heroInk.withValues(alpha: 0.22), 2.2, 64);
     }
   }
 
@@ -399,10 +450,9 @@ class _ContourScopePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ContourScopePainter old) =>
-      old.progress != progress ||
-      old.rotateLight != rotateLight ||
+  bool shouldRepaint(covariant _StaticContourRingsPainter old) =>
       old.showContours != showContours ||
-      old.tokens != tokens ||
+      old.radarGrid != radarGrid ||
+      old.heroInk != heroInk ||
       old.radiusInset != radiusInset;
 }

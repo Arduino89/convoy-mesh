@@ -12,7 +12,7 @@ ThemeData buildConvoyTheme(ConvoyDesignTokens t) {
   final dark = t.brightness == Brightness.dark;
   final onHighlight = DesignPresets.contrastingInkOn(t.highlight);
   final onPositive = DesignPresets.contrastingInkOn(t.positive);
-  final onCritical = DesignPresets.contrastingInkOn(t.critical);
+  final onCritical = t.onCritical;
 
   final scheme = ColorScheme(
     brightness: t.brightness,
@@ -67,11 +67,11 @@ ThemeData buildConvoyTheme(ConvoyDesignTokens t) {
 
   final buttonText = TextStyle(
     fontFamily: t.bodyFamily,
-    fontWeight: FontWeight.w700,
+    fontWeight: ConvoyDesignTokens.resolveWeight(t.bodyFamily, FontWeight.w700),
     fontSize: t.sp(14.5),
     letterSpacing: t.uppercaseLabels ? 0.9 : 0.1,
   );
-  final buttonMin = Size(48, (t.minTouchTarget - 4).clamp(44, 60));
+  final buttonMin = Size(48, t.minTouchTarget.clamp(48.0, 64.0).toDouble());
 
   return base.copyWith(
     scaffoldBackgroundColor: t.canvas,
@@ -83,7 +83,8 @@ ThemeData buildConvoyTheme(ConvoyDesignTokens t) {
       titleMedium: text.titleMedium?.copyWith(
         fontFamily: t.bodyFamily,
         fontSize: t.sp(16),
-        fontWeight: FontWeight.w700,
+        fontWeight:
+            ConvoyDesignTokens.resolveWeight(t.bodyFamily, FontWeight.w700),
         color: t.ink,
       ),
       bodyLarge: t.body(15),
@@ -93,12 +94,12 @@ ThemeData buildConvoyTheme(ConvoyDesignTokens t) {
     extensions: [t],
     appBarTheme: AppBarTheme(
       backgroundColor: t.canvas,
-      foregroundColor: t.ink,
+      foregroundColor: t.inkOnCanvas,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: t.display(22),
+      titleTextStyle: t.display(22, color: t.inkOnCanvas),
     ),
     cardTheme: CardThemeData(
       color: t.surface,
@@ -175,9 +176,20 @@ ThemeData buildConvoyTheme(ConvoyDesignTokens t) {
     checkboxTheme: CheckboxThemeData(
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular((t.radiusSmall * 0.45).clamp(4, 8))),
-      side: BorderSide(color: t.outline, width: t.borderWidth + 0.4),
-      fillColor: WidgetStateProperty.resolveWith((s) =>
-          s.contains(WidgetState.selected) ? t.accent : Colors.transparent),
+      side: WidgetStateBorderSide.resolveWith((states) => BorderSide(
+            color: states.contains(WidgetState.disabled)
+                ? t.outline.withValues(alpha: 0.55)
+                : t.outline,
+            width: t.borderWidth + 0.4,
+          )),
+      fillColor: WidgetStateProperty.resolveWith((s) {
+        if (s.contains(WidgetState.disabled)) {
+          return s.contains(WidgetState.selected)
+              ? t.accent.withValues(alpha: 0.45)
+              : Colors.transparent;
+        }
+        return s.contains(WidgetState.selected) ? t.accent : Colors.transparent;
+      }),
       checkColor: WidgetStatePropertyAll(t.onAccent),
     ),
     dropdownMenuTheme: DropdownMenuThemeData(

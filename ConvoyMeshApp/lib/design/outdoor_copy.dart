@@ -1,17 +1,17 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 /// Customisable visual copy tokens for the **Outdoor Premium** experience.
 ///
 /// Only visual chrome headers, subtitles and non-critical CTA texts live here;
-/// functional/diagnostic protocol labels and CI-verified navigation labels
-/// remain untouched in their widgets.
+/// functional/diagnostic protocol labels, data-interpretation warnings (such as
+/// [radarCaption]), and CI-verified navigation labels remain protected.
 @immutable
 class OutdoorCopyTokens {
   const OutdoorCopyTokens({
     this.appKicker = defaultAppKicker,
     this.radarTitle = defaultRadarTitle,
     this.radarSubtitle = defaultRadarSubtitle,
-    this.radarCaption = defaultRadarCaption,
+    String? radarCaption,
     this.peersSectionTitle = defaultPeersSectionTitle,
     this.toolsSectionTitle = defaultToolsSectionTitle,
     this.bleDiagSectionTitle = defaultBleDiagSectionTitle,
@@ -25,7 +25,7 @@ class OutdoorCopyTokens {
     this.diagnosticContextTitle = defaultDiagnosticContextTitle,
     this.diagnosticRuntimeTitle = defaultDiagnosticRuntimeTitle,
     this.diagnosticGuideTitle = defaultDiagnosticGuideTitle,
-  });
+  }) : _ignoredRadarCaption = radarCaption;
 
   static const defaults = OutdoorCopyTokens();
 
@@ -50,10 +50,55 @@ class OutdoorCopyTokens {
   static const defaultDiagnosticRuntimeTitle = 'Runtime e capacità hardware';
   static const defaultDiagnosticGuideTitle = 'Lettura dei log';
 
+  /// Bounded character limits per editable visual copy field so UI chrome
+  /// stays legible and never overflows on compact phones.
+  static const maxLengths = <String, int>{
+    'appKicker': 28,
+    'radarTitle': 40,
+    'radarSubtitle': 120,
+    'peersSectionTitle': 36,
+    'toolsSectionTitle': 36,
+    'bleDiagSectionTitle': 40,
+    'advancedSectionTitle': 36,
+    'emptyPeersMessage': 140,
+    'mapSearchCta': 28,
+    'mapRecenterCta': 28,
+    'diagnosticTitle': 40,
+    'diagnosticStartTitle': 48,
+    'diagnosticActiveTitle': 48,
+    'diagnosticContextTitle': 48,
+    'diagnosticRuntimeTitle': 48,
+    'diagnosticGuideTitle': 48,
+  };
+
+  static int maxLengthFor(String key) => maxLengths[key] ?? 48;
+
+  static final RegExp _controlChars = RegExp(r'[\x00-\x1F\x7F]+');
+  static final RegExp _multiSpace = RegExp(r'\s{2,}');
+
+  /// Strips newlines/control characters, collapses repeated spaces, clamps
+  /// length by grapheme cluster, and falls back to [fallback] if empty.
+  static String sanitize(
+    String raw, {
+    required String fallback,
+    required int maxLength,
+  }) {
+    final normalized =
+        raw.replaceAll(_controlChars, ' ').replaceAll(_multiSpace, ' ').trim();
+    if (normalized.isEmpty) return fallback;
+    final chars = normalized.characters;
+    if (chars.length <= maxLength) return normalized;
+    final clipped = chars.take(maxLength).toString().trimRight();
+    return clipped.isEmpty ? fallback : clipped;
+  }
+
   final String appKicker;
   final String radarTitle;
   final String radarSubtitle;
-  final String radarCaption;
+  // Kept strictly for const-constructor backwards compatibility; the warning
+  // getter below always returns [defaultRadarCaption].
+  // ignore: unused_field
+  final String? _ignoredRadarCaption;
   final String peersSectionTitle;
   final String toolsSectionTitle;
   final String bleDiagSectionTitle;
@@ -68,11 +113,14 @@ class OutdoorCopyTokens {
   final String diagnosticRuntimeTitle;
   final String diagnosticGuideTitle;
 
+  /// Protected data-interpretation notice: always truthful, never editable.
+  String get radarCaption => defaultRadarCaption;
+
   OutdoorCopyTokens copyWith({
     String? appKicker,
     String? radarTitle,
     String? radarSubtitle,
-    String? radarCaption,
+    String? radarCaption, // Intentionally ignored: protected notice.
     String? peersSectionTitle,
     String? toolsSectionTitle,
     String? bleDiagSectionTitle,
@@ -88,32 +136,93 @@ class OutdoorCopyTokens {
     String? diagnosticGuideTitle,
   }) =>
       OutdoorCopyTokens(
-        appKicker: appKicker ?? this.appKicker,
-        radarTitle: radarTitle ?? this.radarTitle,
-        radarSubtitle: radarSubtitle ?? this.radarSubtitle,
-        radarCaption: radarCaption ?? this.radarCaption,
-        peersSectionTitle: peersSectionTitle ?? this.peersSectionTitle,
-        toolsSectionTitle: toolsSectionTitle ?? this.toolsSectionTitle,
-        bleDiagSectionTitle: bleDiagSectionTitle ?? this.bleDiagSectionTitle,
-        advancedSectionTitle: advancedSectionTitle ?? this.advancedSectionTitle,
-        emptyPeersMessage: emptyPeersMessage ?? this.emptyPeersMessage,
-        mapSearchCta: mapSearchCta ?? this.mapSearchCta,
-        mapRecenterCta: mapRecenterCta ?? this.mapRecenterCta,
-        diagnosticTitle: diagnosticTitle ?? this.diagnosticTitle,
-        diagnosticStartTitle: diagnosticStartTitle ?? this.diagnosticStartTitle,
-        diagnosticActiveTitle:
-            diagnosticActiveTitle ?? this.diagnosticActiveTitle,
-        diagnosticContextTitle:
-            diagnosticContextTitle ?? this.diagnosticContextTitle,
-        diagnosticRuntimeTitle:
-            diagnosticRuntimeTitle ?? this.diagnosticRuntimeTitle,
-        diagnosticGuideTitle:
-            diagnosticGuideTitle ?? this.diagnosticGuideTitle,
+        appKicker: appKicker != null
+            ? sanitize(appKicker,
+                fallback: defaultAppKicker,
+                maxLength: maxLengthFor('appKicker'))
+            : this.appKicker,
+        radarTitle: radarTitle != null
+            ? sanitize(radarTitle,
+                fallback: defaultRadarTitle,
+                maxLength: maxLengthFor('radarTitle'))
+            : this.radarTitle,
+        radarSubtitle: radarSubtitle != null
+            ? sanitize(radarSubtitle,
+                fallback: defaultRadarSubtitle,
+                maxLength: maxLengthFor('radarSubtitle'))
+            : this.radarSubtitle,
+        peersSectionTitle: peersSectionTitle != null
+            ? sanitize(peersSectionTitle,
+                fallback: defaultPeersSectionTitle,
+                maxLength: maxLengthFor('peersSectionTitle'))
+            : this.peersSectionTitle,
+        toolsSectionTitle: toolsSectionTitle != null
+            ? sanitize(toolsSectionTitle,
+                fallback: defaultToolsSectionTitle,
+                maxLength: maxLengthFor('toolsSectionTitle'))
+            : this.toolsSectionTitle,
+        bleDiagSectionTitle: bleDiagSectionTitle != null
+            ? sanitize(bleDiagSectionTitle,
+                fallback: defaultBleDiagSectionTitle,
+                maxLength: maxLengthFor('bleDiagSectionTitle'))
+            : this.bleDiagSectionTitle,
+        advancedSectionTitle: advancedSectionTitle != null
+            ? sanitize(advancedSectionTitle,
+                fallback: defaultAdvancedSectionTitle,
+                maxLength: maxLengthFor('advancedSectionTitle'))
+            : this.advancedSectionTitle,
+        emptyPeersMessage: emptyPeersMessage != null
+            ? sanitize(emptyPeersMessage,
+                fallback: defaultEmptyPeersMessage,
+                maxLength: maxLengthFor('emptyPeersMessage'))
+            : this.emptyPeersMessage,
+        mapSearchCta: mapSearchCta != null
+            ? sanitize(mapSearchCta,
+                fallback: defaultMapSearchCta,
+                maxLength: maxLengthFor('mapSearchCta'))
+            : this.mapSearchCta,
+        mapRecenterCta: mapRecenterCta != null
+            ? sanitize(mapRecenterCta,
+                fallback: defaultMapRecenterCta,
+                maxLength: maxLengthFor('mapRecenterCta'))
+            : this.mapRecenterCta,
+        diagnosticTitle: diagnosticTitle != null
+            ? sanitize(diagnosticTitle,
+                fallback: defaultDiagnosticTitle,
+                maxLength: maxLengthFor('diagnosticTitle'))
+            : this.diagnosticTitle,
+        diagnosticStartTitle: diagnosticStartTitle != null
+            ? sanitize(diagnosticStartTitle,
+                fallback: defaultDiagnosticStartTitle,
+                maxLength: maxLengthFor('diagnosticStartTitle'))
+            : this.diagnosticStartTitle,
+        diagnosticActiveTitle: diagnosticActiveTitle != null
+            ? sanitize(diagnosticActiveTitle,
+                fallback: defaultDiagnosticActiveTitle,
+                maxLength: maxLengthFor('diagnosticActiveTitle'))
+            : this.diagnosticActiveTitle,
+        diagnosticContextTitle: diagnosticContextTitle != null
+            ? sanitize(diagnosticContextTitle,
+                fallback: defaultDiagnosticContextTitle,
+                maxLength: maxLengthFor('diagnosticContextTitle'))
+            : this.diagnosticContextTitle,
+        diagnosticRuntimeTitle: diagnosticRuntimeTitle != null
+            ? sanitize(diagnosticRuntimeTitle,
+                fallback: defaultDiagnosticRuntimeTitle,
+                maxLength: maxLengthFor('diagnosticRuntimeTitle'))
+            : this.diagnosticRuntimeTitle,
+        diagnosticGuideTitle: diagnosticGuideTitle != null
+            ? sanitize(diagnosticGuideTitle,
+                fallback: defaultDiagnosticGuideTitle,
+                maxLength: maxLengthFor('diagnosticGuideTitle'))
+            : this.diagnosticGuideTitle,
       );
 
   static String _pick(Map<String, dynamic> map, String key, String fallback) {
     final raw = map[key];
-    if (raw is String && raw.trim().isNotEmpty) return raw.trim();
+    if (raw is String) {
+      return sanitize(raw, fallback: fallback, maxLength: maxLengthFor(key));
+    }
     return fallback;
   }
 
@@ -123,7 +232,6 @@ class OutdoorCopyTokens {
       appKicker: _pick(json, 'appKicker', defaultAppKicker),
       radarTitle: _pick(json, 'radarTitle', defaultRadarTitle),
       radarSubtitle: _pick(json, 'radarSubtitle', defaultRadarSubtitle),
-      radarCaption: _pick(json, 'radarCaption', defaultRadarCaption),
       peersSectionTitle:
           _pick(json, 'peersSectionTitle', defaultPeersSectionTitle),
       toolsSectionTitle:
@@ -176,7 +284,6 @@ class OutdoorCopyTokens {
       other.appKicker == appKicker &&
       other.radarTitle == radarTitle &&
       other.radarSubtitle == radarSubtitle &&
-      other.radarCaption == radarCaption &&
       other.peersSectionTitle == peersSectionTitle &&
       other.toolsSectionTitle == toolsSectionTitle &&
       other.bleDiagSectionTitle == bleDiagSectionTitle &&
@@ -196,7 +303,6 @@ class OutdoorCopyTokens {
         appKicker,
         radarTitle,
         radarSubtitle,
-        radarCaption,
         peersSectionTitle,
         toolsSectionTitle,
         bleDiagSectionTitle,

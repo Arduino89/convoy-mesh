@@ -86,12 +86,13 @@ class _DesignedRadarViewState extends State<DesignedRadarView> {
                     onPressed: actions.onClearOffline,
                     icon: Icon(
                       Icons.cleaning_services_outlined,
-                      color: t.inkMuted,
+                      color: t.inkMutedOnCanvas,
                       size: t.iconSize(18),
                     ),
                     label: Text(
                       'Rimuovi dalla lista i peer non ricevuti',
-                      style: t.body(14, color: t.ink, weight: FontWeight.w600),
+                      style: t.body(14,
+                          color: t.inkOnCanvas, weight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -190,7 +191,7 @@ class _DesignedRadarViewState extends State<DesignedRadarView> {
             t.label(kicker),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: t.caption(color: t.ink.withValues(alpha: 0.72)).copyWith(
+            style: t.caption(color: t.inkMutedOnCanvas).copyWith(
                   letterSpacing: 1.1,
                 ),
           ),
@@ -229,9 +230,9 @@ class _DesignedRadarViewState extends State<DesignedRadarView> {
     return [
       _topBar(context, kicker: copy.appKicker),
       SizedBox(height: t.space(2.5)),
-      Text(copy.radarTitle, style: t.display(31)),
+      Text(copy.radarTitle, style: t.display(31, color: t.inkOnCanvas)),
       SizedBox(height: t.space(1)),
-      Text(copy.radarSubtitle, style: t.body(14, color: t.inkMuted)),
+      Text(copy.radarSubtitle, style: t.body(14, color: t.inkMutedOnCanvas)),
       SizedBox(height: t.space(3.5)),
       Container(
         decoration: BoxDecoration(
@@ -318,7 +319,7 @@ class _DesignedRadarViewState extends State<DesignedRadarView> {
           Text(
             copy.radarCaption,
             textAlign: TextAlign.center,
-            style: t.body(11.5, color: t.heroInk.withValues(alpha: 0.72)),
+            style: t.body(11.5, color: t.heroInk.withValues(alpha: 0.86)),
           ),
         ]),
       ),
@@ -605,8 +606,8 @@ class _NameChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(t.radiusLarge),
             onTap: onTap,
             child: ConstrainedBox(
-              constraints:
-                  BoxConstraints(minHeight: (t.minTouchTarget - 8).clamp(40, 60)),
+              constraints: BoxConstraints(
+                  minHeight: (t.minTouchTarget - 4).clamp(48.0, 60.0)),
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: t.space(2.5)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -650,7 +651,7 @@ class _RoundIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = tokens;
-    final s = (t.minTouchTarget - 6).clamp(42.0, 60.0);
+    final s = (t.minTouchTarget - 4).clamp(48.0, 56.0);
     return Tooltip(
       message: tooltip,
       child: Material(

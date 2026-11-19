@@ -42,6 +42,7 @@ class ConvoyMeshApp extends StatelessWidget {
           title: 'Convoy Mesh',
           debugShowCheckedModeBanner: false,
           theme: theme,
+          themeAnimationDuration: Duration.zero,
           home: const AppShell(),
         );
       },

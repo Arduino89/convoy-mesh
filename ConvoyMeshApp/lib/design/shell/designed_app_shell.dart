@@ -33,7 +33,7 @@ class DesignedBottomDock extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = tokens;
     final outingBg = outingActive ? t.critical : t.accent;
-    final outingFg = outingActive ? Colors.white : t.onAccent;
+    final outingFg = outingActive ? t.onCritical : t.onAccent;
 
     final buttonLabel = busy
         ? 'Preparazione…'
@@ -46,7 +46,9 @@ class DesignedBottomDock extends StatelessWidget {
         boxShadow: t.elevated
             ? [
                 BoxShadow(
-                  color: t.ink.withValues(alpha: 0.06),
+                  color: Colors.black.withValues(
+                    alpha: t.brightness == Brightness.dark ? 0.30 : 0.06,
+                  ),
                   blurRadius: 16,
                   offset: const Offset(0, -4),
                 )
@@ -210,6 +212,8 @@ class DesignedBottomDock extends StatelessWidget {
           child: AnimatedContainer(
             duration: t.effectiveMotionFast,
             curve: t.motionCurve,
+            constraints: const BoxConstraints(minHeight: 48),
+            alignment: Alignment.center,
             padding: EdgeInsets.symmetric(
               vertical: t.space(1.75),
               horizontal: t.space(1.5),
@@ -231,13 +235,13 @@ class DesignedBottomDock extends StatelessWidget {
                   t.label(label),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: t.bodyFamily,
-                    fontSize: t.sp(11.5),
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    letterSpacing: t.uppercaseLabels ? 0.8 : 0,
-                    color: selected ? t.ink : t.inkMuted,
-                  ),
+                  style: t
+                      .body(
+                        11.5,
+                        color: selected ? t.ink : t.inkMuted,
+                        weight: selected ? FontWeight.w800 : FontWeight.w600,
+                      )
+                      .copyWith(letterSpacing: t.uppercaseLabels ? 0.8 : 0),
                 ),
               ],
             ),

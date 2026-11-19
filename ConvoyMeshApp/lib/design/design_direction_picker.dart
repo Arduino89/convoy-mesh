@@ -24,7 +24,7 @@ Future<void> showDesignDirectionPicker(
         builder: (context, _) {
           final activeTokens = ConvoyDesignTokens.maybeOf(context);
           final pad = activeTokens?.hPad ?? 16.0;
-          return Padding(
+          return SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -122,20 +122,24 @@ class DesignDirectionTile extends StatelessWidget {
         : [t.canvas, t.accent, t.highlight];
     final radius = activeTokens?.radiusMedium ?? 16.0;
     final subtitle = subtitleOverride ?? direction.tagline;
+    final scheme = Theme.of(context).colorScheme;
+    final titleColor = selected
+        ? scheme.onPrimaryContainer
+        : (activeTokens?.ink ?? scheme.onSurface);
+    final subtitleColor = selected
+        ? scheme.onPrimaryContainer.withValues(alpha: 0.82)
+        : (activeTokens?.inkMuted ?? Theme.of(context).textTheme.bodySmall?.color);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
         color: selected
-            ? Theme.of(context).colorScheme.primaryContainer
-            : (activeTokens?.surfaceRaised ??
-                Theme.of(context).colorScheme.surface),
+            ? scheme.primaryContainer
+            : (activeTokens?.surfaceRaised ?? scheme.surface),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
           side: BorderSide(
-            color: selected
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outlineVariant,
+            color: selected ? scheme.primary : scheme.outlineVariant,
             width: selected ? 2 : (activeTokens?.borderWidth ?? 1),
           ),
         ),
@@ -178,13 +182,20 @@ class DesignDirectionTile extends StatelessWidget {
                         direction.label,
                         style: TextStyle(
                           fontFamily: t.displayFamily,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: ConvoyDesignTokens.resolveWeight(
+                            t.displayFamily,
+                            FontWeight.w700,
+                          ),
                           fontSize: 16,
+                          color: titleColor,
                         ),
                       ),
                       Text(
                         subtitle,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: subtitleColor),
                       ),
                     ],
                   ),
@@ -192,7 +203,7 @@ class DesignDirectionTile extends StatelessWidget {
                 if (selected)
                   Icon(
                     Icons.check_circle,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: scheme.primary,
                   ),
               ]),
             ),

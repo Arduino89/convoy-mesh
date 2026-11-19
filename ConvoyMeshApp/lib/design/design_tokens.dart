@@ -45,14 +45,18 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
     required this.outline,
     required this.ink,
     required this.inkMuted,
+    Color? inkOnCanvas,
+    Color? inkMutedOnCanvas,
     required this.accent,
     required this.onAccent,
     required this.highlight,
     required this.positive,
     required this.warning,
     required this.critical,
+    Color? onCritical,
     required this.heroBackground,
     required this.heroInk,
+    Color? heroOfflineInk,
     required this.radarGrid,
     required this.radarSweep,
     required this.displayFamily,
@@ -85,7 +89,10 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
     required this.radarPeriod,
     required this.motionCurve,
     this.copy = OutdoorCopyTokens.defaults,
-  });
+  })  : inkOnCanvas = inkOnCanvas ?? ink,
+        inkMutedOnCanvas = inkMutedOnCanvas ?? inkMuted,
+        onCritical = onCritical ?? Colors.white,
+        heroOfflineInk = heroOfflineInk ?? const Color(0xFFF3CA7E);
 
   final DesignDirection direction;
   final Brightness brightness;
@@ -97,14 +104,25 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
   final Color outline;
   final Color ink;
   final Color inkMuted;
+
+  /// Foreground ink guaranteed to contrast with [canvas] even when [canvas]
+  /// and [surface] have opposite luminance.
+  final Color inkOnCanvas;
+  final Color inkMutedOnCanvas;
   final Color accent;
   final Color onAccent;
   final Color highlight;
   final Color positive;
   final Color warning;
   final Color critical;
+
+  /// Foreground ink guaranteed to contrast with [critical] fills.
+  final Color onCritical;
   final Gradient heroBackground;
   final Color heroInk;
+
+  /// High-contrast offline peer label ink over [heroBackground].
+  final Color heroOfflineInk;
   final Color radarGrid;
   final Color radarSweep;
 
@@ -164,10 +182,25 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
 
   String label(String text) => uppercaseLabels ? text.toUpperCase() : text;
 
+  /// Maps requested weights onto the exact weights bundled in `assets/fonts/`
+  /// (`Manrope`: 400/600/800, `Fraunces` & `JetBrainsMono`: 500/700) so Android
+  /// never falls back to inconsistent synthetic font synthesis.
+  static FontWeight resolveWeight(String? family, FontWeight requested) {
+    if (family == 'Manrope') {
+      if (requested.value <= 450) return FontWeight.w400;
+      if (requested.value <= 650) return FontWeight.w600;
+      return FontWeight.w800;
+    }
+    if (family == 'Fraunces' || family == 'JetBrainsMono') {
+      return requested.value <= 550 ? FontWeight.w500 : FontWeight.w700;
+    }
+    return requested;
+  }
+
   TextStyle display(double size, {Color? color}) => TextStyle(
         fontFamily: displayFamily,
         fontSize: sp(size),
-        fontWeight: displayWeight,
+        fontWeight: resolveWeight(displayFamily, displayWeight),
         letterSpacing: displayLetterSpacing,
         height: 1.10,
         color: color ?? ink,
@@ -176,38 +209,46 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
   TextStyle body(double size, {Color? color, FontWeight? weight}) => TextStyle(
         fontFamily: bodyFamily,
         fontSize: sp(size),
-        fontWeight: weight ?? FontWeight.w400,
+        fontWeight: resolveWeight(bodyFamily, weight ?? FontWeight.w400),
         height: 1.38,
         color: color ?? ink,
       );
 
-  TextStyle caption({Color? color, double? size}) => TextStyle(
-        fontFamily: dataFamily ?? bodyFamily,
-        fontSize: sp(size ?? 11.5),
-        fontWeight: FontWeight.w600,
-        letterSpacing: labelLetterSpacing,
-        color: color ?? inkMuted,
-      );
+  TextStyle caption({Color? color, double? size}) {
+    final fam = dataFamily ?? bodyFamily;
+    return TextStyle(
+      fontFamily: fam,
+      fontSize: sp(size ?? 11.5),
+      fontWeight: resolveWeight(fam, FontWeight.w600),
+      letterSpacing: labelLetterSpacing,
+      color: color ?? inkMuted,
+    );
+  }
 
-  TextStyle data(double size, {Color? color, FontWeight? weight}) => TextStyle(
-        fontFamily: dataFamily ?? bodyFamily,
-        fontSize: sp(size),
-        fontWeight: weight ?? FontWeight.w700,
-        fontFeatures: const [FontFeature.tabularFigures()],
-        color: color ?? ink,
-      );
+  TextStyle data(double size, {Color? color, FontWeight? weight}) {
+    final fam = dataFamily ?? bodyFamily;
+    return TextStyle(
+      fontFamily: fam,
+      fontSize: sp(size),
+      fontWeight: resolveWeight(fam, weight ?? FontWeight.w700),
+      fontFeatures: const [FontFeature.tabularFigures()],
+      color: color ?? ink,
+    );
+  }
 
+  /// Shadows always use dark alpha (never [ink], which becomes cream in dark
+  /// mode and would otherwise produce milky halos).
   List<BoxShadow> get shadow => elevated
       ? [
           BoxShadow(
-            color: ink.withValues(
-                alpha: brightness == Brightness.dark ? 0.45 : 0.07),
+            color: Colors.black
+                .withValues(alpha: brightness == Brightness.dark ? 0.38 : 0.08),
             blurRadius: 22,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: ink.withValues(
-                alpha: brightness == Brightness.dark ? 0.25 : 0.03),
+            color: Colors.black
+                .withValues(alpha: brightness == Brightness.dark ? 0.22 : 0.04),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
@@ -225,14 +266,18 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
     Color? outline,
     Color? ink,
     Color? inkMuted,
+    Color? inkOnCanvas,
+    Color? inkMutedOnCanvas,
     Color? accent,
     Color? onAccent,
     Color? highlight,
     Color? positive,
     Color? warning,
     Color? critical,
+    Color? onCritical,
     Gradient? heroBackground,
     Color? heroInk,
+    Color? heroOfflineInk,
     Color? radarGrid,
     Color? radarSweep,
     String? displayFamily,
@@ -275,14 +320,18 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
         outline: outline ?? this.outline,
         ink: ink ?? this.ink,
         inkMuted: inkMuted ?? this.inkMuted,
+        inkOnCanvas: inkOnCanvas ?? this.inkOnCanvas,
+        inkMutedOnCanvas: inkMutedOnCanvas ?? this.inkMutedOnCanvas,
         accent: accent ?? this.accent,
         onAccent: onAccent ?? this.onAccent,
         highlight: highlight ?? this.highlight,
         positive: positive ?? this.positive,
         warning: warning ?? this.warning,
         critical: critical ?? this.critical,
+        onCritical: onCritical ?? this.onCritical,
         heroBackground: heroBackground ?? this.heroBackground,
         heroInk: heroInk ?? this.heroInk,
+        heroOfflineInk: heroOfflineInk ?? this.heroOfflineInk,
         radarGrid: radarGrid ?? this.radarGrid,
         radarSweep: radarSweep ?? this.radarSweep,
         displayFamily: displayFamily ?? this.displayFamily,
@@ -334,14 +383,18 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
       outline: c(outline, other.outline),
       ink: c(ink, other.ink),
       inkMuted: c(inkMuted, other.inkMuted),
+      inkOnCanvas: c(inkOnCanvas, other.inkOnCanvas),
+      inkMutedOnCanvas: c(inkMutedOnCanvas, other.inkMutedOnCanvas),
       accent: c(accent, other.accent),
       onAccent: c(onAccent, other.onAccent),
       highlight: c(highlight, other.highlight),
       positive: c(positive, other.positive),
       warning: c(warning, other.warning),
       critical: c(critical, other.critical),
+      onCritical: c(onCritical, other.onCritical),
       heroBackground: Gradient.lerp(heroBackground, other.heroBackground, t)!,
       heroInk: c(heroInk, other.heroInk),
+      heroOfflineInk: c(heroOfflineInk, other.heroOfflineInk),
       radarGrid: c(radarGrid, other.radarGrid),
       radarSweep: c(radarSweep, other.radarSweep),
       displayFamily: discrete.displayFamily,
@@ -377,4 +430,117 @@ class ConvoyDesignTokens extends ThemeExtension<ConvoyDesignTokens> {
       copy: discrete.copy,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConvoyDesignTokens &&
+          other.direction == direction &&
+          other.brightness == brightness &&
+          other.canvas == canvas &&
+          other.surface == surface &&
+          other.surfaceRaised == surfaceRaised &&
+          other.outline == outline &&
+          other.ink == ink &&
+          other.inkMuted == inkMuted &&
+          other.inkOnCanvas == inkOnCanvas &&
+          other.inkMutedOnCanvas == inkMutedOnCanvas &&
+          other.accent == accent &&
+          other.onAccent == onAccent &&
+          other.highlight == highlight &&
+          other.positive == positive &&
+          other.warning == warning &&
+          other.critical == critical &&
+          other.onCritical == onCritical &&
+          other.heroBackground == heroBackground &&
+          other.heroInk == heroInk &&
+          other.heroOfflineInk == heroOfflineInk &&
+          other.radarGrid == radarGrid &&
+          other.radarSweep == radarSweep &&
+          other.displayFamily == displayFamily &&
+          other.bodyFamily == bodyFamily &&
+          other.dataFamily == dataFamily &&
+          other.displayWeight == displayWeight &&
+          other.displayLetterSpacing == displayLetterSpacing &&
+          other.labelLetterSpacing == labelLetterSpacing &&
+          other.fontScale == fontScale &&
+          other.uppercaseLabels == uppercaseLabels &&
+          other.radiusSmall == radiusSmall &&
+          other.radiusMedium == radiusMedium &&
+          other.radiusLarge == radiusLarge &&
+          other.borderWidth == borderWidth &&
+          other.spaceUnit == spaceUnit &&
+          other.screenPaddingScale == screenPaddingScale &&
+          other.cardPaddingScale == cardPaddingScale &&
+          other.sectionGapScale == sectionGapScale &&
+          other.minTouchTarget == minTouchTarget &&
+          other.avatarSize == avatarSize &&
+          other.iconScale == iconScale &&
+          other.radarScopeScale == radarScopeScale &&
+          other.elevated == elevated &&
+          other.animationsEnabled == animationsEnabled &&
+          other.radarRotationEnabled == radarRotationEnabled &&
+          other.livePulseEnabled == livePulseEnabled &&
+          other.showTopoContours == showTopoContours &&
+          other.motionFast == motionFast &&
+          other.motionMedium == motionMedium &&
+          other.radarPeriod == radarPeriod &&
+          other.motionCurve == motionCurve &&
+          other.copy == copy);
+
+  @override
+  int get hashCode => Object.hashAll([
+        direction,
+        brightness,
+        canvas,
+        surface,
+        surfaceRaised,
+        outline,
+        ink,
+        inkMuted,
+        inkOnCanvas,
+        inkMutedOnCanvas,
+        accent,
+        onAccent,
+        highlight,
+        positive,
+        warning,
+        critical,
+        onCritical,
+        heroBackground,
+        heroInk,
+        heroOfflineInk,
+        radarGrid,
+        radarSweep,
+        displayFamily,
+        bodyFamily,
+        dataFamily,
+        displayWeight,
+        displayLetterSpacing,
+        labelLetterSpacing,
+        fontScale,
+        uppercaseLabels,
+        radiusSmall,
+        radiusMedium,
+        radiusLarge,
+        borderWidth,
+        spaceUnit,
+        screenPaddingScale,
+        cardPaddingScale,
+        sectionGapScale,
+        minTouchTarget,
+        avatarSize,
+        iconScale,
+        radarScopeScale,
+        elevated,
+        animationsEnabled,
+        radarRotationEnabled,
+        livePulseEnabled,
+        showTopoContours,
+        motionFast,
+        motionMedium,
+        radarPeriod,
+        motionCurve,
+        copy,
+      ]);
 }

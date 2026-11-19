@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
-import '../design/design_controller.dart';
 import '../design/design_direction_picker.dart';
 import '../design/design_tokens.dart';
 import '../design/outdoor_components.dart';
@@ -14,21 +13,38 @@ import '../services/location_fusion_service.dart';
 import '../services/system_intents.dart';
 import 'ble_radar_ui.dart';
 
-class BlePage extends StatelessWidget {
+class BlePage extends StatefulWidget {
   const BlePage({super.key});
+
+  @override
+  State<BlePage> createState() => _BlePageState();
+}
+
+class _BlePageState extends State<BlePage> {
+  late final Listenable _mergedListenable;
+
+  @override
+  void initState() {
+    super.initState();
+    _mergedListenable = Listenable.merge([
+      ConvoyMeshService.instance,
+      LocationFusionService.instance,
+      BackgroundRuntimeService.instance,
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
     final mesh = ConvoyMeshService.instance;
     final location = LocationFusionService.instance;
     final runtime = BackgroundRuntimeService.instance;
-    final design = DesignDirectionController.instance;
     return AnimatedBuilder(
-      animation: Listenable.merge([mesh, location, runtime, design]),
+      animation: _mergedListenable,
       builder: (context, _) {
-        if (!design.isClassic) {
+        final tokens = ConvoyDesignTokens.maybeOf(context);
+        if (tokens != null) {
           return DesignedRadarView(
-            tokens: design.outdoorTokens,
+            tokens: tokens,
             data: RadarLiveAdapter.read(
               mesh: mesh,
               location: location,

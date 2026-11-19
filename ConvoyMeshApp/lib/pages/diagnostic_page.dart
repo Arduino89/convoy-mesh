@@ -208,7 +208,7 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                 if (t == null) ...[
                   Text('Telefono: $name • ID $id'),
                   const Text('Registrazione diagnostica: massimo 4 minuti'),
-                  Text('App: ' + DiagnosticRecorder.appVersion),
+                  Text('App: ${DiagnosticRecorder.appVersion}'),
                   Text('Build: ${DiagnosticRecorder.buildCommit}'),
                   const SizedBox(height: 8),
                   Text(
@@ -245,7 +245,7 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
                     style: t != null
                         ? FilledButton.styleFrom(
                             backgroundColor: t.critical,
-                            foregroundColor: Colors.white,
+                            foregroundColor: t.onCritical,
                           )
                         : null,
                     onPressed: () async {

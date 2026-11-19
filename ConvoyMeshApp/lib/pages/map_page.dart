@@ -21,7 +21,17 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   final _map = MapController();
+  late final Listenable _mergedListenable;
   bool _centered = false, _onlineBasemap = true, _centerOnNextFresh = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _mergedListenable = Listenable.merge([
+      ConvoyMeshService.instance,
+      LocationFusionService.instance,
+    ]);
+  }
 
   Future<void> _locate(ConvoyMeshService mesh, LocationFusionService loc) async {
     _centerOnNextFresh = true;
@@ -59,7 +69,7 @@ class _MapPageState extends State<MapPage> {
     final mesh = ConvoyMeshService.instance;
     final loc = LocationFusionService.instance;
     return AnimatedBuilder(
-      animation: Listenable.merge([mesh, loc]),
+      animation: _mergedListenable,
       builder: (context, _) {
         final me = mesh.myLast;
         final now = DateTime.now();
@@ -85,8 +95,8 @@ class _MapPageState extends State<MapPage> {
             point: position,
             radius: accuracy,
             useRadiusInMeter: true,
-            color: colour.withOpacity(fresh ? 0.12 : 0.04),
-            borderColor: colour.withOpacity(0.45),
+            color: colour.withValues(alpha: fresh ? 0.12 : 0.04),
+            borderColor: colour.withValues(alpha: 0.45),
             borderStrokeWidth: 1,
           ));
         }
@@ -101,7 +111,7 @@ class _MapPageState extends State<MapPage> {
               lines.add(Polyline(
                 points: segment,
                 strokeWidth: 3,
-                color: colour.withOpacity(0.5),
+                color: colour.withValues(alpha: 0.5),
               ));
             }
           }
@@ -126,7 +136,7 @@ class _MapPageState extends State<MapPage> {
             lines.add(Polyline(
               points: [p0, p1],
               strokeWidth: 3,
-              color: colour.withOpacity(0.65),
+              color: colour.withValues(alpha: 0.65),
             ));
           }
         }
@@ -151,7 +161,7 @@ class _MapPageState extends State<MapPage> {
               lines.add(Polyline(
                 points: [start, end],
                 strokeWidth: 3,
-                color: colour.withOpacity(0.5),
+                color: colour.withValues(alpha: 0.5),
               ));
             }
           }
@@ -291,6 +301,12 @@ class _MapPageState extends State<MapPage> {
                 onPressed: mesh.clearMyTrail,
                 icon: const Icon(Icons.delete_outline),
               ),
+              IconButton(
+                key: const Key('map-open-design-btn'),
+                tooltip: 'Personalizza Outdoor Premium o torna a Originale',
+                onPressed: () => showDesignDirectionPicker(context),
+                icon: const Icon(Icons.palette_outlined),
+              ),
             ],
           ),
           body: Column(
@@ -387,8 +403,8 @@ class _GpsStatusIconState extends State<_GpsStatusIcon>
   );
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _configure();
   }
 
@@ -402,14 +418,17 @@ class _GpsStatusIconState extends State<_GpsStatusIcon>
   }
 
   void _configure() {
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     final period = widget.state.blinkPeriod;
-    if (period == null) {
+    if (period == null || reduceMotion) {
       _controller.stop();
       _controller.value = 1;
       return;
     }
     _controller.duration = period;
-    _controller.repeat(reverse: true);
+    if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
   }
 
   @override

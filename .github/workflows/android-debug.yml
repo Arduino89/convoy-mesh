@@ -145,7 +145,11 @@ jobs:
               flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define-from-file="$PING_DEFINES_FILE"
             fi
           elif [[ "$GITHUB_REF_NAME" == "experiment/frontend-design-studio" ]]; then
-            flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+16 --dart-define=CONVOY_DEFAULT_OUTDOOR=true
+            # PostHog upload is intentionally paused on the Outdoor LAB UI branch
+            # while privacy/retention gates remain open; reactivating later only
+            # requires removing CONVOY_POSTHOG_TEMPORARILY_DISABLED and passing
+            # the existing CONVOY_LAB_POSTHOG_TOKEN secret via --dart-define-from-file.
+            flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+16 --dart-define=CONVOY_DEFAULT_OUTDOOR=true --dart-define=CONVOY_POSTHOG_TEMPORARILY_DISABLED=true
           else
             flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }}
           fi

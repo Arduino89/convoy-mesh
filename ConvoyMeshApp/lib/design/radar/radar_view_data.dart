@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 /// Presentation-only snapshot of the Radar BLE screen.
 ///
@@ -87,13 +87,19 @@ class RadarPeerView {
   String get statusLabel => online ? 'presente' : 'segnale non ricevuto';
 
   String get initials {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) {
-      final p = parts.first;
-      return (p.length >= 2 ? p.substring(0, 2) : p).toUpperCase();
+      final chars = parts.first.characters;
+      return chars.take(2).toString().toUpperCase();
     }
-    return (parts[0][0] + parts[1][0]).toUpperCase();
+    final first = parts[0].characters.first;
+    final second = parts[1].characters.first;
+    return '$first$second'.toUpperCase();
   }
 
   /// 0 = unavailable, 1..4 mirrors the thresholds of

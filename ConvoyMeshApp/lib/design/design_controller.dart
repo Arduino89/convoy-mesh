@@ -14,8 +14,9 @@ import 'outdoor_config.dart';
 /// logs or transmitted remotely.
 class DesignDirectionController extends ChangeNotifier {
   DesignDirectionController._()
-      : _direction =
-            defaultOutdoor ? DesignDirection.outdoorPremium : DesignDirection.classic,
+      : _direction = defaultOutdoor
+            ? DesignDirection.outdoorPremium
+            : DesignDirection.classic,
         _config = OutdoorCustomConfig.defaults;
 
   @visibleForTesting
@@ -37,84 +38,150 @@ class DesignDirectionController extends ChangeNotifier {
 
   DesignDirection _direction;
   OutdoorCustomConfig _config;
+  ConvoyDesignTokens? _cachedOutdoorTokens;
+  int _mutationEpoch = 0;
+  bool _loaded = false;
+  String? _lastPersistenceError;
+  Future<void>? _activeWrite;
 
   DesignDirection get direction => _direction;
   OutdoorCustomConfig get config => _config;
   bool get isClassic => _direction == DesignDirection.classic;
+  bool get hasLoaded => _loaded;
+  String? get lastPersistenceError => _lastPersistenceError;
 
-  /// Effective tokens when Outdoor Premium is active (`null` in classic mode).
-  ConvoyDesignTokens get outdoorTokens => DesignPresets.buildOutdoor(_config);
+  /// Cached tokens for Outdoor Premium; rebuilt only when [_config] changes.
+  ConvoyDesignTokens get outdoorTokens =>
+      _cachedOutdoorTokens ??= DesignPresets.buildOutdoor(_config);
   ConvoyDesignTokens? get activeTokens => isClassic ? null : outdoorTokens;
 
-  /// Best-effort load; storage errors never block app startup.
+  Future<bool> _enqueuePersist(
+    Future<void> Function(SharedPreferences prefs) write,
+  ) {
+    final prev = _activeWrite;
+    late final Future<bool> current;
+    Future<bool> run() async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await write(prefs);
+        _lastPersistenceError = null;
+        return true;
+      } catch (e) {
+        _lastPersistenceError = e.toString();
+        return false;
+      } finally {
+        if (identical(_activeWrite, current)) {
+          _activeWrite = null;
+        }
+      }
+    }
+
+    current = prev == null ? run() : prev.then((_) => run());
+    _activeWrite = current;
+    return current;
+  }
+
+  /// Best-effort load; storage errors never block app startup, and a slow load
+  /// can never overwrite a user selection made earlier during startup.
   Future<void> load() async {
-    var changed = false;
+    final startEpoch = _mutationEpoch;
+    DesignDirection? loadedDirection;
+    OutdoorCustomConfig? loadedConfig;
     try {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getString(storageKey);
       if (stored != null) {
-        final DesignDirection resolved;
-        if (stored == DesignDirection.classic.storageId) {
-          resolved = DesignDirection.classic;
-        } else {
-          // Includes 'outdoorPremium' and any archived prior preview IDs.
-          resolved = DesignDirection.outdoorPremium;
-        }
-        if (resolved != _direction) {
-          _direction = resolved;
-          changed = true;
-        }
+        loadedDirection = stored == DesignDirection.classic.storageId
+            ? DesignDirection.classic
+            : DesignDirection.outdoorPremium;
       }
 
       final rawCfg = prefs.getString(configStorageKey);
       if (rawCfg != null && rawCfg.isNotEmpty) {
         final decoded = jsonDecode(rawCfg);
         if (decoded is Map<String, dynamic>) {
-          final parsed = OutdoorCustomConfig.fromJson(decoded);
-          if (parsed != _config) {
-            _config = parsed;
-            changed = true;
-          }
+          loadedConfig = OutdoorCustomConfig.fromJson(decoded);
         }
       }
     } catch (_) {
       // Keep safe defaults.
     }
+    _loaded = true;
+    // Discard stale disk read if a user mutation occurred while load() was in flight.
+    if (_mutationEpoch != startEpoch) return;
+    var changed = false;
+    if (loadedDirection != null && loadedDirection != _direction) {
+      _direction = loadedDirection;
+      changed = true;
+    }
+    if (loadedConfig != null && loadedConfig != _config) {
+      _config = loadedConfig;
+      _cachedOutdoorTokens = null;
+      changed = true;
+    }
     if (changed) notifyListeners();
   }
 
-  Future<void> select(DesignDirection direction) async {
-    if (direction == _direction) return;
+  Future<bool> select(DesignDirection direction) async {
+    if (direction == _direction) return true;
+    _mutationEpoch++;
     _direction = direction;
     notifyListeners();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(storageKey, direction.storageId);
-    } catch (_) {
-      // Selection still applies in-memory for this session.
-    }
+    return _enqueuePersist(
+      (prefs) => prefs.setString(storageKey, direction.storageId),
+    );
   }
 
-  Future<void> updateConfig(
+  Future<bool> updateConfig(
     OutdoorCustomConfig next, {
     bool activateOutdoor = false,
   }) async {
     final switchMode =
         activateOutdoor && _direction != DesignDirection.outdoorPremium;
-    if (next == _config && !switchMode) return;
+    if (next == _config && !switchMode) return true;
+    _mutationEpoch++;
     _config = next;
+    _cachedOutdoorTokens = null;
     if (switchMode) _direction = DesignDirection.outdoorPremium;
     notifyListeners();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(configStorageKey, jsonEncode(next.toJson()));
+    final encoded = jsonEncode(next.toJson());
+    return _enqueuePersist((prefs) async {
+      await prefs.setString(configStorageKey, encoded);
       if (switchMode) {
-        await prefs.setString(storageKey, DesignDirection.outdoorPremium.storageId);
+        await prefs.setString(
+          storageKey,
+          DesignDirection.outdoorPremium.storageId,
+        );
       }
-    } catch (_) {
-      // Config remains active in-memory.
-    }
+    });
   }
 
-  Future<void> resetConfig() => updateConfig(OutdoorCustomConfig.defaults);
+  /// Atomically updates both [direction] and [config] with a single
+  /// notification and a single serialized persistence batch.
+  Future<bool> applySelection(
+    DesignDirection direction,
+    OutdoorCustomConfig next,
+  ) async {
+    final dirChanged = direction != _direction;
+    final cfgChanged = next != _config;
+    if (!dirChanged && !cfgChanged) return true;
+    _mutationEpoch++;
+    _direction = direction;
+    if (cfgChanged) {
+      _config = next;
+      _cachedOutdoorTokens = null;
+    }
+    notifyListeners();
+    final encoded = cfgChanged ? jsonEncode(next.toJson()) : null;
+    return _enqueuePersist((prefs) async {
+      if (encoded != null) {
+        await prefs.setString(configStorageKey, encoded);
+      }
+      if (dirChanged) {
+        await prefs.setString(storageKey, direction.storageId);
+      }
+    });
+  }
+
+  Future<bool> resetConfig() => updateConfig(OutdoorCustomConfig.defaults);
 }

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../location/gps_visual_state.dart';
+import '../design_presets.dart';
 import '../design_tokens.dart';
 import '../outdoor_components.dart';
 
@@ -48,8 +49,10 @@ class DesignedMapScaffold extends StatelessWidget {
         // Offline vector/topographic surface sits beneath FlutterMap so offline
         // sessions remain crisp and readable without network tiles.
         Positioned.fill(
-          child: CustomPaint(
-            painter: _OfflineCartoPainter(tokens: t),
+          child: RepaintBoundary(
+            child: CustomPaint(
+              painter: _OfflineCartoPainter(tokens: t),
+            ),
           ),
         ),
         Positioned.fill(child: mapChild),
@@ -164,8 +167,9 @@ class DesignedMapScaffold extends StatelessWidget {
     return showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(t.hPad, 0, t.hPad, t.space(5)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -247,9 +251,11 @@ class DesignedMapScaffold extends StatelessWidget {
           title: 'Cancellare la tua traccia?',
           tone: OutdoorTone.critical,
         ),
-        content: Text(
-          'Verranno rimossi i punti della tua traccia visibili in mappa e invalidati eventuali pacchetti HISTORY in coda.',
-          style: t.body(14),
+        content: SingleChildScrollView(
+          child: Text(
+            'Verranno rimossi i punti della tua traccia visibili in mappa e invalidati eventuali pacchetti HISTORY in coda.',
+            style: t.body(14),
+          ),
         ),
         actions: [
           TextButton(
@@ -259,7 +265,7 @@ class DesignedMapScaffold extends StatelessWidget {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: t.critical,
-              foregroundColor: Colors.white,
+              foregroundColor: t.onCritical,
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Cancella traccia'),
@@ -292,6 +298,13 @@ class DesignedMapMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = tokens;
     final dark = t.brightness == Brightness.dark;
+    final iconFg =
+        isSelf ? t.onAccent : DesignPresets.contrastingInkOn(colour);
+    final labelBg = dark
+        ? t.surface.withValues(alpha: 0.94)
+        : const Color(0xE817211B);
+    final labelFg =
+        dark ? DesignPresets.contrastingInkOn(t.surface) : Colors.white;
     return Opacity(
       opacity: fresh ? 1 : 0.65,
       child: Column(
@@ -317,7 +330,7 @@ class DesignedMapMarker extends StatelessWidget {
             ),
             child: Icon(
               isSelf ? Icons.navigation_rounded : Icons.person,
-              color: Colors.white,
+              color: iconFg,
               size: 17,
             ),
           ),
@@ -325,9 +338,7 @@ class DesignedMapMarker extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
-              color: dark
-                  ? t.surface.withValues(alpha: 0.94)
-                  : const Color(0xE817211B),
+              color: labelBg,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: dark
@@ -341,9 +352,12 @@ class DesignedMapMarker extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: t.dataFamily ?? t.bodyFamily,
-                color: Colors.white,
+                color: labelFg,
                 fontSize: t.sp(10.5),
-                fontWeight: FontWeight.w700,
+                fontWeight: ConvoyDesignTokens.resolveWeight(
+                  t.dataFamily ?? t.bodyFamily,
+                  FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -464,7 +478,7 @@ class _PrimaryLocateButton extends StatelessWidget {
     final tone = gpsVisual.isGreen ? t.accent : t.ink;
     final fg = gpsVisual.isGreen
         ? t.onAccent
-        : (t.brightness == Brightness.dark ? t.canvas : Colors.white);
+        : DesignPresets.contrastingInkOn(t.ink);
     final labelText = gpsVisual.mode == GpsVisualMode.off
         ? t.copy.mapSearchCta
         : t.copy.mapRecenterCta;
@@ -484,7 +498,7 @@ class _PrimaryLocateButton extends StatelessWidget {
           onTap: onTap,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-                minHeight: (t.minTouchTarget - 4).clamp(44, 62)),
+                minHeight: t.minTouchTarget.clamp(48.0, 62.0)),
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: t.space(3.5)),
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -527,7 +541,7 @@ class _DockIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = tokens;
-    final s = (t.minTouchTarget - 4).clamp(44.0, 62.0);
+    final s = t.minTouchTarget.clamp(48.0, 62.0);
     final fg = !enabled
         ? t.inkMuted.withValues(alpha: 0.4)
         : destructive
@@ -572,7 +586,7 @@ class _FloatingCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = tokens;
-    final s = (t.minTouchTarget - 6).clamp(42.0, 60.0);
+    final s = (t.minTouchTarget - 4).clamp(48.0, 56.0);
     return Tooltip(
       message: tooltip,
       child: Material(
@@ -658,5 +672,10 @@ class _OfflineCartoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _OfflineCartoPainter old) => old.tokens != tokens;
+  bool shouldRepaint(covariant _OfflineCartoPainter old) =>
+      old.tokens.canvas != tokens.canvas ||
+      old.tokens.outline != tokens.outline ||
+      old.tokens.accent != tokens.accent ||
+      old.tokens.brightness != tokens.brightness ||
+      old.tokens.showTopoContours != tokens.showTopoContours;
 }
