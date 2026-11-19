@@ -163,7 +163,7 @@ jobs:
           # Existing repo-level LAB project ingestion token; never a personal API key.
           CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
         run: |
-          if [[ "$GITHUB_REF_NAME" == "experiment/manual-ping-20261114" || "$GITHUB_REF_NAME" == "experiment/diagnostic-control-20261114" ]]; then
+          if [[ "$GITHUB_REF_NAME" == "experiment/manual-ping-20261114" || "$GITHUB_REF_NAME" == "experiment/diagnostic-control-20261114" || "$GITHUB_REF_NAME" == "experiment/frontend-design-studio" ]]; then
             if [[ ! "$CONVOY_LAB_POSTHOG_TOKEN" =~ ^phc_[A-Za-z0-9_-]{16,200}$ || "$CONVOY_LAB_POSTHOG_TOKEN" == "phc_synthetic_local_only" ]]; then
               echo "::error::Existing LAB ingestion secret missing or invalid; refusing unconfigured ping APK"
               exit 1
@@ -182,15 +182,12 @@ jobs:
             trap 'rm -f "$PING_DEFINES_FILE"' EXIT
             if [[ "$GITHUB_REF_NAME" == "experiment/diagnostic-control-20261114" ]]; then
               flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-diaglab+15 --dart-define-from-file="$PING_DEFINES_FILE"
+            elif [[ "$GITHUB_REF_NAME" == "experiment/frontend-design-studio" ]]; then
+              # Owner-authorized closed beta, not a public release. Manual consent only.
+              flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+17 --dart-define=CONVOY_DEFAULT_OUTDOOR=true --dart-define-from-file="$PING_DEFINES_FILE"
             else
               flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define-from-file="$PING_DEFINES_FILE"
             fi
-          elif [[ "$GITHUB_REF_NAME" == "experiment/frontend-design-studio" ]]; then
-            # PostHog upload is intentionally paused on the Outdoor LAB UI branch
-            # while privacy/retention gates remain open; reactivating later only
-            # requires removing CONVOY_POSTHOG_TEMPORARILY_DISABLED and passing
-            # the existing CONVOY_LAB_POSTHOG_TOKEN secret via --dart-define-from-file.
-            flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+16 --dart-define=CONVOY_DEFAULT_OUTDOOR=true --dart-define=CONVOY_POSTHOG_TEMPORARILY_DISABLED=true
           else
             flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }}
           fi
@@ -213,7 +210,7 @@ jobs:
           diag_lab = ref == 'experiment/diagnostic-control-20261114'
           ping_lab = ref == 'experiment/manual-ping-20261114'
           app_id = 'com.example.convoy_mesh.outdoor' if outdoor_lab else ('com.example.convoy_mesh.diaglab' if diag_lab else ('com.example.convoy_mesh.pinglab2' if ping_lab else 'com.example.convoy_mesh.pedestrianexp1'))
-          version_code = '16' if outdoor_lab else ('15' if diag_lab else ('11' if ping_lab else '9'))
+          version_code = '17' if outdoor_lab else ('15' if diag_lab else ('11' if ping_lab else '9'))
           version_name = '0.7.7-outdoor' if outdoor_lab else ('0.7.7-diaglab' if diag_lab else ('0.7.7-pinglab' if ping_lab else '0.7.7-exp1'))
           app_label = 'Convoy Outdoor LAB' if outdoor_lab else ('Convoy Diagnostics LAB' if diag_lab else ('Convoy Ping LAB 2' if ping_lab else 'Convoy Mesh Exp'))
           assert f"package: name='{app_id}'" in info
@@ -226,6 +223,45 @@ jobs:
           sha256sum "$APK" > build-evidence/apk-sha256.txt
           printf '%s\n' 'Candidate debug APK. Automated checks are not real-device BLE/GNSS certification.' > build-evidence/validation-scope.txt
           printf '%s\n' 'Side-by-side package: not an update of com.example.convoy_mesh. Old app/data remain installed. Independent permissions, identity and storage. Use only one Convoy app at a time. Debug key is not retained; future rebuilds are not guaranteed compatible updates. Baseline run #105 APK is unavailable (artifact 10300013706 returns 404); its certificate cannot be compared.' > build-evidence/install-policy.txt
+
+      # One authorized synthetic transmission only, on the integration checkpoint.
+      # Ordinary builds, test reruns, and future commits never send cloud events.
+      - name: Closed beta synthetic cloud round-trip sender
+        if: github.ref_name == 'experiment/frontend-design-studio' && github.run_attempt == 1
+        working-directory: ConvoyMeshApp
+        shell: bash
+        env:
+          CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD^)" != "a91ff715ae13bd0525f8bfdeb4b023bad1817597" ]]; then
+            echo "One-shot cloud fixture not authorized for this checkpoint"
+            exit 0
+          fi
+          if [[ ! "$CONVOY_LAB_POSTHOG_TOKEN" =~ ^phc_[A-Za-z0-9_-]{16,200}$ || "$CONVOY_LAB_POSTHOG_TOKEN" == "phc_synthetic_local_only" ]]; then
+            echo "::error::Existing LAB ingestion secret missing or invalid"
+            exit 1
+          fi
+          export FIXTURE_DEFINES=$(mktemp "$RUNNER_TEMP/convoy-fixture.XXXXXX")
+          chmod 600 "$FIXTURE_DEFINES"
+          trap 'rm -f "$FIXTURE_DEFINES"' EXIT
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path(os.environ["FIXTURE_DEFINES"]).write_text(json.dumps({
+              "CONVOY_POSTHOG_PROJECT_TOKEN": os.environ["CONVOY_LAB_POSTHOG_TOKEN"]
+          }))
+          PY
+          flutter test --no-pub --reporter expanded --dart-define-from-file="$FIXTURE_DEFINES" --dart-define=CONVOY_SYNTHETIC_RUN_ID="$GITHUB_RUN_ID" tool/diagnostic_cloud_fixture_test.dart
+
+      - name: Upload synthetic cloud manifest
+        if: always() && github.ref_name == 'experiment/frontend-design-studio' && hashFiles('build-evidence/synthetic-cloud-expected.json') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-synthetic-cloud-expected
+          path: build-evidence/synthetic-cloud-expected.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7

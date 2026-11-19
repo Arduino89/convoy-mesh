@@ -60,6 +60,10 @@ void main() {
       fixture(), uploadIdOverride: fixedUploadId);
     expect(selected.recordCount, 6);
     expect(selected.excludedRecords, 1);
+    final terminal = selected.events.last['properties'] as Map<String, Object?>;
+    expect(terminal['upload_record_count'], 6);
+    expect(terminal['upload_excluded_count'], 1);
+    expect(terminal['events'], 7);
     expect(selected.peerLabels, {222: 'Bravo'});
     expect(selected.sessionId, 'CM-test-123');
     final batch = selected.events;

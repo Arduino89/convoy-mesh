@@ -42,7 +42,10 @@ class _DetailedDiagnosticUploadCardState
       'I record BLE contengono ID, sequenze e RSSI. '
       'Se registrate, includono anche condizioni e marcatori '
       'dichiarati dal tester (NON verificati dai sensori). '
-      'Le note libere e i payload radio grezzi restano locali.';
+      'Le note libere e i payload radio grezzi restano locali. '
+      'Analisi tecnica anche tramite ChatGPT. Durata di conservazione e '
+      'cancellazione cloud non ancora verificate: per richieste di revoca o '
+      'cancellazione, contatta il coordinatore della beta indicando upload_id.';
   static const _temporarilyDisabledText =
       'Invio a PostHog temporaneamente disattivato in questa build Outdoor LAB: '
       'nessun dato viene trasmesso al cloud. Puoi comunque registrare e '
@@ -262,6 +265,16 @@ class _DetailedDiagnosticUploadCardState
       _dialogOpen = false;
     }
     if (!mounted || confirmed != true) return;
+    // A dialog may outlive a capture/configuration update. Consent and identity
+    // must still refer to the exact payload shown when the dialog opened.
+    if (_sessionKey != key ||
+        !identical(_payload, payload) ||
+        !_configured ||
+        !_ownerConsent ||
+        !_ackStoredData ||
+        !_approvedPeers.containsAll(payload.peerLabels.keys)) {
+      return;
+    }
     // One attempt per session fingerprint in this launch, including after
     // ListView eviction, style switches, mid-flight unmounts, or ambiguous
     // HTTP timeouts where the cloud may already have ingested the batch.

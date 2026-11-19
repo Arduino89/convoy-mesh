@@ -229,6 +229,14 @@ class DetailedDiagnosticUpload {
     if (events.isEmpty || events.length > maxRecords) {
       throw const FormatException('Troppi record: condividi il file locale');
     }
+    // Explicit transfer manifest on the terminal record. Original event indices
+    // remain intact; allowlist exclusions are distinct from transport losses.
+    final terminal = events.singleWhere((e) {
+      final props = e['properties'] as Map<String, Object?>;
+      return props['category'] == 'session' && props['action'] == 'stop';
+    })['properties'] as Map<String, Object?>;
+    terminal['upload_record_count'] = events.length;
+    terminal['upload_excluded_count'] = excluded;
     final estimate = utf8.encode(jsonEncode({
       'token': 'phc_placeholder_for_size_verification_123456789',
       'batch': events,
