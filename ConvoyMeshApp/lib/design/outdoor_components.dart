@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'design_presets.dart';
 import 'design_tokens.dart';
 
 enum OutdoorTone { accent, highlight, positive, warning, critical, neutral }
@@ -127,6 +128,12 @@ class OutdoorCardHeader extends StatelessWidget {
   }
 }
 
+Color _safeTextOn(Color preferred, Color bg, ConvoyDesignTokens t) {
+  if (DesignPresets.contrastRatio(preferred, bg) >= 4.5) return preferred;
+  if (DesignPresets.contrastRatio(t.ink, bg) >= 4.5) return t.ink;
+  return DesignPresets.contrastingInkOn(bg);
+}
+
 /// High-contrast tinted callout banner replacing bare unstyled warning/error lines.
 class OutdoorCallout extends StatelessWidget {
   const OutdoorCallout({
@@ -152,6 +159,11 @@ class OutdoorCallout extends StatelessWidget {
       color.withValues(alpha: t.brightness == Brightness.dark ? 0.16 : 0.08),
       t.surfaceRaised,
     );
+    final preferredText = tone == OutdoorTone.neutral ? t.inkMuted : color;
+    final textColor = _safeTextOn(preferredText, bg, t);
+    final iconColor = DesignPresets.contrastRatio(color, bg) >= 3.0
+        ? color
+        : textColor;
     return Container(
       padding: padding ??
           EdgeInsets.symmetric(
@@ -169,7 +181,7 @@ class OutdoorCallout extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 1),
-            child: Icon(icon, color: color, size: t.iconSize(17)),
+            child: Icon(icon, color: iconColor, size: t.iconSize(17)),
           ),
           SizedBox(width: t.space(2)),
           Expanded(
@@ -177,7 +189,7 @@ class OutdoorCallout extends StatelessWidget {
               text,
               style: t.body(
                 13,
-                color: tone == OutdoorTone.neutral ? t.inkMuted : color,
+                color: textColor,
                 weight: tone == OutdoorTone.neutral
                     ? FontWeight.w500
                     : FontWeight.w600,
@@ -209,12 +221,16 @@ class OutdoorStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = tokens;
     final color = tone.resolve(t);
+    final bg = Color.alphaBlend(
+      color.withValues(alpha: t.brightness == Brightness.dark ? 0.18 : 0.12),
+      t.surface,
+    );
+    final fg = _safeTextOn(color, bg, t);
     return Container(
       padding:
           EdgeInsets.symmetric(horizontal: t.space(2.2), vertical: t.space(1)),
       decoration: BoxDecoration(
-        color: color.withValues(
-            alpha: t.brightness == Brightness.dark ? 0.18 : 0.12),
+        color: bg,
         borderRadius: BorderRadius.circular(t.radiusSmall),
         border: Border.all(
           color: color.withValues(alpha: 0.28),
@@ -225,7 +241,7 @@ class OutdoorStatusBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: t.iconSize(13), color: color),
+            Icon(icon, size: t.iconSize(13), color: fg),
             SizedBox(width: t.space(1)),
           ],
           Flexible(
@@ -233,7 +249,7 @@ class OutdoorStatusBadge extends StatelessWidget {
               t.label(label),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: t.caption(color: color, size: 11),
+              style: t.caption(color: fg, size: 11),
             ),
           ),
         ],
