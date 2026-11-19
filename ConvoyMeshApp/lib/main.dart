@@ -234,7 +234,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [BlePage(), MapPage(), DiagnosticPage()],
+        // Keep page state mounted, but mute tickers in the two hidden tabs.
+        // This affects visual animations only, never BLE/GPS/outing services.
+        children: [
+          TickerMode(enabled: _index == 0, child: const BlePage()),
+          TickerMode(enabled: _index == 1, child: const MapPage()),
+          TickerMode(enabled: _index == 2, child: const DiagnosticPage()),
+        ],
       ),
       bottomNavigationBar: tokens != null
           ? DesignedBottomDock(

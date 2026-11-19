@@ -21,6 +21,9 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   final _map = MapController();
+  // Both styles host the same live map, even though their chrome differs.
+  // Reparent its state in the same frame instead of remounting the camera.
+  final _mapKey = GlobalKey();
   late final Listenable _mergedListenable;
   bool _centered = false, _onlineBasemap = true, _centerOnNextFresh = false;
 
@@ -220,6 +223,7 @@ class _MapPageState extends State<MapPage> {
         };
 
         final flutterMap = FlutterMap(
+          key: _mapKey,
           mapController: _map,
           options: MapOptions(
             initialCenter: centre,

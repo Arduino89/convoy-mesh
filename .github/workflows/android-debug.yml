@@ -34,6 +34,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          # One parent is needed for the bounded baseline counterproof below.
+          fetch-depth: 2
 
       - name: Capture exact source
         run: |
@@ -86,6 +88,44 @@ jobs:
           set -o pipefail
           flutter test --no-pub --coverage --reporter expanded 2>&1 | tee ../flutter-test.log
 
+      - name: Counterproof against the uncorrected Outdoor checkpoint
+        if: github.ref_name == 'experiment/frontend-design-studio'
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=b8ea08992c8d129f2a83eb79d43a5a2975bc3b7a
+          # Only run for the correction commit (or a rerun of that commit).
+          # All later routine builds continue with the ordinary regression suite.
+          if [[ "$(git rev-parse HEAD^)" != "$BASE" ]]; then
+            echo "Counterproof not required for this checkpoint"
+            exit 0
+          fi
+          baseline=$(mktemp -d "$RUNNER_TEMP/convoy-counterproof.XXXXXX")
+          trap 'rm -rf "$baseline"' EXIT
+          git archive "$BASE" | tar -x -C "$baseline"
+          cp ConvoyMeshApp/test/outdoor_residual_regression_test.dart "$baseline/ConvoyMeshApp/test/"
+          cd "$baseline/ConvoyMeshApp"
+          flutter pub get --enforce-lockfile
+          for case_id in D2 D9 D11; do
+            case "$case_id" in
+              D2) marker=D2_EXPECT_HIDDEN_MUTED ;;
+              D9) marker=D9_EXPECT_NEW_RATE ;;
+              D11) marker=D11_EXPECT_SAME_MAP ;;
+            esac
+            log="$GITHUB_WORKSPACE/counterproof-$case_id.log"
+            if flutter test --no-pub --reporter expanded test/outdoor_residual_regression_test.dart --plain-name "$case_id" 2>&1 | tee "$log"; then
+              echo "::error::$case_id unexpectedly passed on the old source"
+              exit 1
+            else
+              rc=$?
+            fi
+            if [[ "$rc" != 1 ]] || ! grep -Fq "$marker" "$log"; then
+              echo "::error::$case_id failed for an unproven reason; inspect its log"
+              exit 1
+            fi
+            echo "$case_id: expected baseline assertion failure confirmed ($BASE)"
+          done
+
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -93,6 +133,7 @@ jobs:
           name: flutter-test-log
           path: |
             flutter-test.log
+            counterproof-*.log
             ConvoyMeshApp/coverage/lcov.info
           if-no-files-found: warn
           retention-days: 90

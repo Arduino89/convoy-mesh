@@ -64,17 +64,23 @@ class _RadarScopeState extends State<RadarScope>
   @override
   void didUpdateWidget(covariant RadarScope oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.tokens.radarPeriod != widget.tokens.radarPeriod) {
+    final periodChanged =
+        oldWidget.tokens.radarPeriod != widget.tokens.radarPeriod;
+    if (periodChanged) {
       _ctrl.duration = widget.tokens.radarPeriod;
     }
-    _sync();
+    _sync(restart: periodChanged);
   }
 
-  void _sync() {
+  void _sync({bool restart = false}) {
     if (widget.scanning &&
         widget.tokens.shouldRotateRadar &&
         !_reduceMotion) {
-      if (!_ctrl.isAnimating) _ctrl.repeat();
+      // An existing repeating simulation retains its original period.
+      // repeat starts from the current controller value (no phase reset).
+      if (restart || !_ctrl.isAnimating) {
+        _ctrl.repeat(period: widget.tokens.radarPeriod);
+      }
     } else {
       _ctrl.stop();
     }
