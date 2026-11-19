@@ -60,138 +60,153 @@ Future<void> showStudioExportJsonDialog(
 Future<OutdoorCustomConfig?> showStudioImportJsonDialog(
   BuildContext context, {
   required ConvoyDesignTokens tokens,
-}) async {
-  final controller = TextEditingController();
-  String? errorText;
-  OutdoorCustomConfig? parsedConfig;
+}) {
+  return showDialog<OutdoorCustomConfig>(
+    context: context,
+    builder: (_) => _StudioImportJsonDialog(tokens: tokens),
+  );
+}
 
-  try {
-    return await showDialog<OutdoorCustomConfig>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          void validate(String raw) {
-            if (raw.trim().isEmpty) {
-              setDialogState(() {
-                errorText = null;
-                parsedConfig = null;
-              });
-              return;
-            }
-            final result = OutdoorCustomConfig.tryParseJsonString(raw);
-            setDialogState(() {
-              errorText = result.error;
-              parsedConfig = result.config;
-            });
-          }
+class _StudioImportJsonDialog extends StatefulWidget {
+  const _StudioImportJsonDialog({required this.tokens});
 
-          void submit() {
-            final result = OutdoorCustomConfig.tryParseJsonString(
-              controller.text,
-            );
-            if (result.isOk) {
-              Navigator.pop(ctx, result.config);
-            } else {
-              setDialogState(() {
-                errorText = result.error;
-                parsedConfig = null;
-              });
-            }
-          }
+  final ConvoyDesignTokens tokens;
 
-          return AlertDialog(
-            title: const Text('Importa configurazione JSON'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Incolla un JSON esportato da Outdoor Studio (solo uso locale, max 16 KB). I campi fuori scala vengono normalizzati e le note tecniche protette restano invariate.',
-                      style: tokens.body(12.5, color: tokens.inkMuted),
-                    ),
-                    SizedBox(height: tokens.space(2)),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        key: const Key('studio-json-paste-btn'),
-                        onPressed: () async {
-                          final data = await Clipboard.getData(
-                            Clipboard.kTextPlain,
-                          );
-                          final text = data?.text;
-                          if (text == null || text.isEmpty) {
-                            setDialogState(() {
-                              errorText = 'Appunti vuoti o non testuali.';
-                              parsedConfig = null;
-                            });
-                            return;
-                          }
-                          controller.text = text;
-                          validate(text);
-                        },
-                        icon: const Icon(Icons.content_paste, size: 18),
-                        label: const Text('Incolla dagli appunti'),
-                      ),
-                    ),
-                    SizedBox(height: tokens.space(1)),
-                    TextField(
-                      key: const Key('studio-json-import-field'),
-                      controller: controller,
-                      minLines: 4,
-                      maxLines: 8,
-                      style: const TextStyle(
-                        fontFamily: 'JetBrainsMono',
-                        fontSize: 11.5,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: '{"palettePreset": "pinoECarta", ...}',
-                        alignLabelWithHint: true,
-                      ),
-                      onChanged: validate,
-                    ),
-                    if (errorText != null) ...[
-                      SizedBox(height: tokens.space(2)),
-                      OutdoorCallout(
-                        key: const Key('studio-json-import-error'),
-                        tokens: tokens,
-                        icon: Icons.error_outline,
-                        tone: OutdoorTone.critical,
-                        text: errorText!,
-                      ),
-                    ] else if (parsedConfig != null) ...[
-                      SizedBox(height: tokens.space(2)),
-                      OutdoorCallout(
-                        key: const Key('studio-json-import-valid'),
-                        tokens: tokens,
-                        icon: Icons.check_circle_outline,
-                        tone: OutdoorTone.positive,
-                        text:
-                            'JSON valido (${parsedConfig!.palettePreset.label}). Tocca Importa per caricarlo nella bozza.',
-                      ),
-                    ],
-                  ],
+  @override
+  State<_StudioImportJsonDialog> createState() =>
+      _StudioImportJsonDialogState();
+}
+
+class _StudioImportJsonDialogState extends State<_StudioImportJsonDialog> {
+  final TextEditingController _controller = TextEditingController();
+  String? _errorText;
+  OutdoorCustomConfig? _parsedConfig;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _validate(String raw) {
+    if (raw.trim().isEmpty) {
+      setState(() {
+        _errorText = null;
+        _parsedConfig = null;
+      });
+      return;
+    }
+    final result = OutdoorCustomConfig.tryParseJsonString(raw);
+    setState(() {
+      _errorText = result.error;
+      _parsedConfig = result.config;
+    });
+  }
+
+  void _submit() {
+    final result = OutdoorCustomConfig.tryParseJsonString(_controller.text);
+    if (result.isOk) {
+      Navigator.pop(context, result.config);
+    } else {
+      setState(() {
+        _errorText = result.error;
+        _parsedConfig = null;
+      });
+    }
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (!mounted) return;
+    final text = data?.text;
+    if (text == null || text.isEmpty) {
+      setState(() {
+        _errorText = 'Appunti vuoti o non testuali.';
+        _parsedConfig = null;
+      });
+      return;
+    }
+    _controller.text = text;
+    _validate(text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = widget.tokens;
+    return AlertDialog(
+      title: const Text('Importa configurazione JSON'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Incolla un JSON esportato da Outdoor Studio (solo uso locale, max 16 KB). I campi fuori scala vengono normalizzati e le note tecniche protette restano invariate.',
+                style: tokens.body(12.5, color: tokens.inkMuted),
+              ),
+              SizedBox(height: tokens.space(2)),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const Key('studio-json-paste-btn'),
+                  onPressed: _pasteFromClipboard,
+                  icon: const Icon(Icons.content_paste, size: 18),
+                  label: const Text('Incolla dagli appunti'),
                 ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Annulla'),
+              SizedBox(height: tokens.space(1)),
+              TextField(
+                key: const Key('studio-json-import-field'),
+                controller: _controller,
+                minLines: 4,
+                maxLines: 8,
+                style: const TextStyle(
+                  fontFamily: 'JetBrainsMono',
+                  fontSize: 11.5,
+                ),
+                decoration: const InputDecoration(
+                  hintText: '{"palettePreset": "pinoECarta", ...}',
+                  alignLabelWithHint: true,
+                ),
+                onChanged: _validate,
               ),
-              FilledButton(
-                key: const Key('studio-json-import-submit'),
-                onPressed: submit,
-                child: const Text('Importa'),
-              ),
+              if (_errorText != null) ...[
+                SizedBox(height: tokens.space(2)),
+                OutdoorCallout(
+                  key: const Key('studio-json-import-error'),
+                  tokens: tokens,
+                  icon: Icons.error_outline,
+                  tone: OutdoorTone.critical,
+                  text: _errorText!,
+                ),
+              ] else if (_parsedConfig != null) ...[
+                SizedBox(height: tokens.space(2)),
+                OutdoorCallout(
+                  key: const Key('studio-json-import-valid'),
+                  tokens: tokens,
+                  icon: Icons.check_circle_outline,
+                  tone: OutdoorTone.positive,
+                  text:
+                      'JSON valido (${_parsedConfig!.palettePreset.label}). Tocca Importa per caricarlo nella bozza.',
+                ),
+              ],
             ],
-          );
-        },
+          ),
+        ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annulla'),
+        ),
+        FilledButton(
+          key: const Key('studio-json-import-submit'),
+          onPressed: _submit,
+          child: const Text('Importa'),
+        ),
+      ],
     );
-  } finally {
-    controller.dispose();
   }
 }

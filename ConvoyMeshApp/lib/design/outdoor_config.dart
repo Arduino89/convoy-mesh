@@ -462,11 +462,36 @@ class OutdoorCustomConfig {
         'Il JSON deve contenere un oggetto di configurazione { ... }.',
       );
     }
+    final unknownTopKeys = decoded.keys
+        .where((k) => !_knownJsonKeys.contains(k))
+        .toList(growable: false);
+    if (unknownTopKeys.isNotEmpty) {
+      return OutdoorConfigImportResult.error(
+        'Parametro non riconosciuto nel JSON: «${unknownTopKeys.first}».',
+      );
+    }
     final hasKnownKey = decoded.keys.any(_knownJsonKeys.contains);
     if (!hasKnownKey) {
       return const OutdoorConfigImportResult.error(
         'Nessun parametro Outdoor riconosciuto nel JSON incollato.',
       );
+    }
+    if (decoded.containsKey('copy')) {
+      final rawCopy = decoded['copy'];
+      if (rawCopy is! Map<String, dynamic>) {
+        return const OutdoorConfigImportResult.error(
+          'Il campo «copy» deve essere un oggetto JSON { ... }.',
+        );
+      }
+      final unknownCopyKeys = rawCopy.keys
+          .where((k) =>
+              k != 'radarCaption' && !OutdoorCopyTokens.maxLengths.containsKey(k))
+          .toList(growable: false);
+      if (unknownCopyKeys.isNotEmpty) {
+        return OutdoorConfigImportResult.error(
+          'Campo testo non riconosciuto in «copy»: «${unknownCopyKeys.first}».',
+        );
+      }
     }
     return OutdoorConfigImportResult.ok(OutdoorCustomConfig.fromJson(decoded));
   }

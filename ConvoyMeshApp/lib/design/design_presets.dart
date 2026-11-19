@@ -153,8 +153,8 @@ class DesignPresets {
       final h0 = _opaque(config.heroBaseArgb!);
       final h0IsDark = h0.computeLuminance() < 0.30;
       final shiftTarget = h0IsDark ? Colors.white : const Color(0xFF101914);
-      final h1 = Color.lerp(h0, shiftTarget, h0IsDark ? 0.10 : 0.08)!;
-      final h2 = Color.lerp(h0, shiftTarget, h0IsDark ? 0.18 : 0.14)!;
+      final h1 = Color.lerp(h0, shiftTarget, 0.08)!;
+      final h2 = Color.lerp(h0, shiftTarget, 0.14)!;
       final stops = [h0, h1, h2];
       heroBg = LinearGradient(
         begin: Alignment.topLeft,
@@ -245,13 +245,16 @@ class DesignPresets {
   }
 
   static Color _offlineInkForGradient(List<Color> stops) {
-    const lightAmber = Color(0xFFF3CA7E);
-    const darkAmber = Color(0xFF7A4400);
+    const lightAmber = Color(0xFFFFE7A8);
+    const darkAmber = Color(0xFF6B3A00);
     final worstLight =
         stops.map((s) => contrastRatio(lightAmber, s)).reduce(math.min);
     final worstDark =
         stops.map((s) => contrastRatio(darkAmber, s)).reduce(math.min);
-    return worstLight >= worstDark ? lightAmber : darkAmber;
+    final bestAmber = worstLight >= worstDark ? lightAmber : darkAmber;
+    final bestRatio = math.max(worstLight, worstDark);
+    if (bestRatio >= 4.5) return bestAmber;
+    return _bestInkForGradient(stops, preferWarm: true);
   }
 
   /// Evaluates WCAG contrast across every live foreground/background pair in [t].
@@ -423,10 +426,10 @@ class DesignPresets {
     heroBackground: LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF173428), Color(0xFF2B5A47), Color(0xFF3C6B52)],
+      colors: [Color(0xFF173428), Color(0xFF214838), Color(0xFF2B5644)],
     ),
     heroInk: Color(0xFFF6EFDD),
-    heroOfflineInk: Color(0xFFF5D08A),
+    heroOfflineInk: Color(0xFFFFE7A8),
     radarGrid: Color(0x66F6EFDD),
     radarSweep: Color(0xFFE9B85C),
     displayFamily: 'Fraunces',
