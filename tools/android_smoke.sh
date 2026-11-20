@@ -258,16 +258,17 @@ for i in 1 2 3 4; do
 done
 assert_no_runtime preview
 capture_diag preview
-python3 - "$OUT/diag-preview.jsonl" "${EXPECTED_BUILD_COMMIT:-}" "$PACKAGE" <<'PY'
+python3 - "$OUT/diag-preview.jsonl" "${EXPECTED_BUILD_COMMIT:-}" "$PACKAGE" "${EXPECTED_OUTDOOR_VERSION:-}" <<'PY'
 import json, sys
 rows = [json.loads(line) for line in open(sys.argv[1]) if line.strip()]
 start = next(r['data'] for r in rows if r['category'] == 'session' and r['event'] == 'start')
 if sys.argv[2]:
     assert start['build_commit'] == sys.argv[2], start
 expected_version = {
-    'com.example.convoy_mesh.outdoor': '0.7.7-outdoor+16',
+    'com.example.convoy_mesh.outdoor': sys.argv[4],
     'com.example.convoy_mesh.diaglab': '0.7.7-diaglab+15',
 }.get(sys.argv[3], '0.7.7-exp1+9')
+assert expected_version, 'Outdoor expected version must be supplied by CI'
 assert start['app_version'] == expected_version, start
 fixes = [r['data'] for r in rows if r['category'] == 'gps' and r['event'] == 'fix']
 assert fixes and any(f['fresh'] for f in fixes), 'Preview did not acquire a real provider fix'

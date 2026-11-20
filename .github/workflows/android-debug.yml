@@ -184,7 +184,7 @@ jobs:
               flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-diaglab+15 --dart-define-from-file="$PING_DEFINES_FILE"
             elif [[ "$GITHUB_REF_NAME" == "experiment/frontend-design-studio" ]]; then
               # Owner-authorized closed beta, not a public release. Manual consent only.
-              flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+17 --dart-define=CONVOY_DEFAULT_OUTDOOR=true --dart-define-from-file="$PING_DEFINES_FILE"
+              flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+18 --dart-define=CONVOY_DEFAULT_OUTDOOR=true --dart-define-from-file="$PING_DEFINES_FILE"
             else
               flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define-from-file="$PING_DEFINES_FILE"
             fi
@@ -210,7 +210,7 @@ jobs:
           diag_lab = ref == 'experiment/diagnostic-control-20261114'
           ping_lab = ref == 'experiment/manual-ping-20261114'
           app_id = 'com.example.convoy_mesh.outdoor' if outdoor_lab else ('com.example.convoy_mesh.diaglab' if diag_lab else ('com.example.convoy_mesh.pinglab2' if ping_lab else 'com.example.convoy_mesh.pedestrianexp1'))
-          version_code = '17' if outdoor_lab else ('15' if diag_lab else ('11' if ping_lab else '9'))
+          version_code = '18' if outdoor_lab else ('15' if diag_lab else ('11' if ping_lab else '9'))
           version_name = '0.7.7-outdoor' if outdoor_lab else ('0.7.7-diaglab' if diag_lab else ('0.7.7-pinglab' if ping_lab else '0.7.7-exp1'))
           app_label = 'Convoy Outdoor LAB' if outdoor_lab else ('Convoy Diagnostics LAB' if diag_lab else ('Convoy Ping LAB 2' if ping_lab else 'Convoy Mesh Exp'))
           assert f"package: name='{app_id}'" in info
@@ -447,7 +447,7 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/frontend-design-studio' && 'com.example.convoy_mesh.outdoor' || (github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1')) }}
+          script: EXPECTED_OUTDOOR_VERSION=0.7.7-outdoor+18 EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/frontend-design-studio' && 'com.example.convoy_mesh.outdoor' || (github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1')) }}
 
       - name: Remove duplicate APK from diagnostics
         if: always()
