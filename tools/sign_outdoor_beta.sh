@@ -46,12 +46,11 @@ trap 'rm -rf -- "$work"' EXIT
 "$apksigner" sign --ks "$keystore" --ks-key-alias "$alias" --out "$work/signed.apk" "$input"
 "$zipalign" -c -P 16 4 "$work/signed.apk"
 check_identity "$work/signed.apk"
-proof=$("$apksigner" verify --verbose --print-certs "$work/signed.apk")
-grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' <<< "$proof"
-actual_cert=$(sed -nE 's/^[[:space:]]*(V[0-9]+ )?Signer( #[0-9]+)?:?[[:space:]]+certificate SHA-256 digest:[[:space:]]*([a-fA-F0-9]{64})[[:space:]]*$/\3/p' <<< "$proof" | tr 'A-F' 'a-f' | sort -u)
-[[ "$actual_cert" =~ ^[a-f0-9]{64}$ ]] || { echo 'Cannot extract exactly one distinct signer certificate' >&2; exit 1; }
-printf 'Actual APK public certificate SHA-256: %s\n' "$actual_cert"
-[[ "$actual_cert" == "$cert" ]] || { echo 'Unexpected signing certificate' >&2; exit 1; }
+"$apksigner" verify --verbose --print-certs "$work/signed.apk"
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+jar="$ANDROID_BUILD_TOOLS/lib/apksigner.jar"
+javac -cp "$jar" -d "$work" "$script_dir/ConvoyApkCertificate.java"
+java -cp "$jar:$work" ConvoyApkCertificate "$work/signed.apk" "$cert"
 [[ "$(sha256sum -- "$input" | awk '{print $1}')" == "$expected_sha" ]]
 # POSIX noclobber prevents replacing an older delivered APK.
 (set -o noclobber; cat "$work/signed.apk" > "$output")

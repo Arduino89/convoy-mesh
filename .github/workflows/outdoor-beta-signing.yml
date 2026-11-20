@@ -19,8 +19,94 @@ env:
   NEXT_RUN: '44714699005'
   NEXT_SOURCE: c0ea363485dfaccbcd2ba339dfcf08ce18be4132
   NEXT_HASH: 1e0118569b63bdfd6e78313e369c4fb18148299f4ea195e3733f53c3c6c93b56
+  VERIFIER_SOURCE: |
+    import com.android.apksig.ApkVerifier;
+    import java.io.File;
+    import java.security.MessageDigest;
+    import java.security.cert.X509Certificate;
+    import java.util.HexFormat;
+    import java.util.List;
+    
+    public class ConvoyApkCertificate {
+      static String digest(X509Certificate c) throws Exception {
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(c.getEncoded()));
+      }
+      static void same(String expected, List<X509Certificate> certs, String scheme) throws Exception {
+        if (certs.size() != 1 || !digest(certs.get(0)).equals(expected))
+          throw new IllegalStateException("Wrong or ambiguous signer in " + scheme);
+      }
+      public static void main(String[] args) throws Exception {
+        if (args.length != 2 || !args[1].matches("[0-9a-f]{64}"))
+          throw new IllegalArgumentException("APK and expected SHA-256 required");
+        var r = new ApkVerifier.Builder(new File(args[0])).build().verify();
+        if (!r.isVerified() || !r.isVerifiedUsingV2Scheme())
+          throw new IllegalStateException("APK or v2 signature not verified: " + r.getErrors());
+        String expected = args[1];
+        same(expected, r.getSignerCertificates(), "Android signer");
+        same(expected, r.getV2SchemeSigners().stream().map(x -> x.getCertificate()).toList(), "v2");
+        if (r.isVerifiedUsingV3Scheme())
+          same(expected, r.getV3SchemeSigners().stream().map(x -> x.getCertificate()).toList(), "v3");
+        if (r.isVerifiedUsingV31Scheme())
+          same(expected, r.getV31SchemeSigners().stream().map(x -> x.getCertificate()).toList(), "v3.1");
+        if (r.isVerifiedUsingV1Scheme())
+          same(expected, r.getV1SchemeSigners().stream().map(x -> x.getCertificate()).toList(), "v1");
+        System.out.println("Verified single APK signer across verified schemes: " + expected);
+      }
+    }
 jobs:
+  preflight:
+    if: github.repository == 'Arduino89/convoy-mesh' && github.ref_name == 'experiment/frontend-design-studio'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Fetch and verify exact input artifacts without signing secrets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p inputs
+          fetch() {
+            local run="$1" hash="$2" code="$3"
+            gh run download "$run" --repo "$GITHUB_REPOSITORY" --name convoy-mesh-debug-apk --dir "inputs/$code"
+            mapfile -t apks < <(find "inputs/$code" -type f -name app-debug.apk)
+            test "${#apks[@]}" -eq 1
+            printf '%s  %s\n' "$hash" "${apks[0]}" | sha256sum -c -
+            mv "${apks[0]}" "inputs/$code.apk"
+          }
+          fetch "$BASE_RUN" "$BASE_HASH" 18
+          fetch "$NEXT_RUN" "$NEXT_HASH" 19
+      - name: Exercise actual APK re-signing and verification with disposable RSA key
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          tmp=$(mktemp -d "$RUNNER_TEMP/convoy-preflight.XXXXXX")
+          trap 'rm -rf -- "$tmp"' EXIT
+          export TEST_PASSWORD=$(openssl rand -hex 24)
+          keytool -genkeypair -storetype PKCS12 -keystore "$tmp/disposable.p12" -alias convoy-beta -keyalg RSA -keysize 3072 -validity 2 -dname 'CN=Synthetic preflight only' -storepass:env TEST_PASSWORD
+          keytool -exportcert -storetype PKCS12 -keystore "$tmp/disposable.p12" -alias convoy-beta -storepass:env TEST_PASSWORD -file "$tmp/disposable.der"
+          test_cert=$(sha256sum "$tmp/disposable.der" | cut -d' ' -f1)
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          tools=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          jar="$tools/lib/apksigner.jar"
+          printf '%s\n' "$VERIFIER_SOURCE" > "$tmp/ConvoyApkCertificate.java"
+          javac -cp "$jar" "$tmp/ConvoyApkCertificate.java"
+          verify() { java -cp "$jar:$tmp" ConvoyApkCertificate "$1" "$2"; }
+          for code in 18 19; do
+            input="inputs/$code.apk"
+            output="$tmp/test-$code.apk"
+            "$tools/apksigner" verify "$input"
+            "$tools/zipalign" -c -P 16 4 "$input"
+            "$tools/apksigner" sign --ks "$tmp/disposable.p12" --ks-type PKCS12 --ks-key-alias convoy-beta --ks-pass env:TEST_PASSWORD --key-pass env:TEST_PASSWORD --out "$output" "$input"
+            "$tools/zipalign" -c -P 16 4 "$output"
+            "$tools/apksigner" verify --verbose --print-certs "$output"
+            verify "$output" "$test_cert"
+            if verify "$output" "$EXPECTED_CERT"; then echo 'Wrong-cert counterproof unexpectedly passed'; exit 1; fi
+            if verify "$input" "$test_cert"; then echo 'Original debug cert counterproof unexpectedly passed'; exit 1; fi
+          done
+          echo 'PASS: both exact APKs independently signed and verified using disposable key; wrong certificates rejected'
   sign:
+    needs: preflight
     if: github.repository == 'Arduino89/convoy-mesh' && github.ref_name == 'experiment/frontend-design-studio'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -77,32 +163,15 @@ jobs:
             info=$("$aapt" dump badging "$1")
             grep -Fq "package: name='$2' versionCode='$3' versionName='0.7.7-outdoor'" <<< "$info"
           }
-          verified_cert() {
-            local proof cert
-            proof=$("$apksigner" verify --verbose --print-certs "$1") || return 1
-            grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' <<< "$proof" || return 1
-            cert=$(sed -nE 's/^[[:space:]]*(V[0-9]+ )?Signer( #[0-9]+)?:?[[:space:]]+certificate SHA-256 digest:[[:space:]]*([a-fA-F0-9]{64})[[:space:]]*$/\3/p' <<< "$proof" | tr 'A-F' 'a-f' | sort -u)
-            [[ "$cert" =~ ^[a-f0-9]{64}$ ]] || { echo 'Cannot extract exactly one distinct signer certificate' >&2; return 1; }
-            printf '%s\n' "$cert"
-          }
+          jar="$tools/lib/apksigner.jar"
+          printf '%s\n' "$VERIFIER_SOURCE" > "$tmp/ConvoyApkCertificate.java"
+          javac -cp "$jar" "$tmp/ConvoyApkCertificate.java"
           verify_expected() {
-            local actual
-            actual=$(verified_cert "$1") || return 1
-            printf 'APK public certificate SHA-256: %s\n' "$actual"
-            [[ "$actual" == "$EXPECTED_CERT" ]]
+            java -cp "$jar:$tmp" ConvoyApkCertificate "$1" "$EXPECTED_CERT"
           }
-          # Exercise the actual parser on both observed SDK output families before key use.
-          parse_fixture() {
-            sed -nE 's/^[[:space:]]*(V[0-9]+ )?Signer( #[0-9]+)?:?[[:space:]]+certificate SHA-256 digest:[[:space:]]*([a-fA-F0-9]{64})[[:space:]]*$/\3/p' | tr 'A-F' 'a-f' | sort -u
-          }
-          for prefix in 'Signer #1' 'Signer #1:' 'V2 Signer:' 'V2 Signer #1:'; do
-            [[ "$(printf '%s certificate SHA-256 digest: %s\n' "$prefix" "$EXPECTED_CERT" | parse_fixture)" == "$EXPECTED_CERT" ]]
-          done
-          [[ -z "$(printf '%s\n' 'Signer #1 certificate SHA-1 digest: invalid' | parse_fixture)" ]]
-          # A parser failure is not a successful wrong-cert control.
-          debug_cert=$(verified_cert inputs/19.apk)
-          printf 'Debug input public certificate SHA-256: %s\n' "$debug_cert"
-          [[ "$debug_cert" != "$EXPECTED_CERT" ]] || { echo 'Wrong-certificate control failed'; exit 1; }
+          # Prove original debug certificate is valid but not the pinned beta signer.
+          "$apksigner" verify --verbose --print-certs inputs/19.apk
+          if verify_expected inputs/19.apk; then echo 'Wrong-certificate control failed'; exit 1; fi
           if identity inputs/19.apk com.example.convoy_mesh.wrong 19; then echo 'Wrong-package control failed'; exit 1; fi
           sign_one() {
             local code="$1" source="$2" hash="$3" run="$4"
@@ -114,8 +183,8 @@ jobs:
             "$apksigner" sign --ks "$tmp/key.p12" --ks-type PKCS12 --ks-key-alias convoy-beta --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD --out "$output" "$input"
             "$zipalign" -c -P 16 4 "$output"
             identity "$output" "$PACKAGE" "$code"
-            verify_expected "$output" || { echo 'Owner certificate mismatch'; exit 1; }
-            "$apksigner" verify --verbose --print-certs "$output" > "staged/certificate-$code.txt"
+            "$apksigner" verify --verbose --print-certs "$output" | tee "staged/certificate-$code.txt"
+            verify_expected "$output" || { echo 'Owner certificate verification failed'; exit 1; }
             "$aapt" dump badging "$output" > "staged/badging-$code.txt"
             sha=$(sha256sum "$output" | cut -d' ' -f1)
             bytes=$(stat -c%s "$output")
