@@ -9,7 +9,7 @@ permissions:
   actions: read
 concurrency:
   group: outdoor-beta-signing
-  cancel-in-progress: false
+  cancel-in-progress: true
 env:
   EXPECTED_CERT: dd058e998369d9e3b46ae91e60177b95a31aa096a6ed04b9f7ba29142480f965
   PACKAGE: com.example.convoy_mesh.outdoor
@@ -37,7 +37,7 @@ jobs:
             gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" | jq -e --arg source "$source" '.head_sha == $source and .conclusion == "success" and .path == ".github/workflows/android-debug.yml" and .head_branch == "experiment/frontend-design-studio"' >/dev/null
             gh run download "$run" --repo "$GITHUB_REPOSITORY" --name convoy-mesh-debug-apk --dir "inputs/$code"
             mapfile -t apks < <(find "inputs/$code" -type f -name app-debug.apk)
-            test "$${#apks[@]}" -eq 1
+            test "${#apks[@]}" -eq 1
             printf '%s  %s\n' "$hash" "${apks[0]}" | sha256sum -c -
             mv "${apks[0]}" "inputs/$code.apk"
           }
@@ -153,6 +153,8 @@ jobs:
           done
           grep -q 'flutter.my_id' evidence/prefs18.xml
           adb shell am force-stop "$PACKAGE"
+          adb exec-out run-as "$PACKAGE" cat shared_prefs/FlutterSharedPreferences.xml > evidence/prefs18.xml
+          grep -q 'flutter.my_id' evidence/prefs18.xml
           adb shell "run-as $PACKAGE mkdir -p files/convoy-diagnostics"
           # Synthetic file in the actual diagnostic directory, no user data.
           printf 'CONVOY_SYNTHETIC_UPGRADE_MARKER\n' > evidence/marker-before.txt
