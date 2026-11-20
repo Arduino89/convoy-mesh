@@ -59,6 +59,13 @@ jobs:
           trap 'rm -rf -- "$tmp"' EXIT
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$tmp/key.p12"
           unset KEYSTORE_BASE64
+          # Independent check of the public DER certificate before signing.
+          # Password comes from the environment; never print or export private key bytes.
+          keytool -exportcert -storetype PKCS12 -keystore "$tmp/key.p12" -alias convoy-beta -storepass:env KEYSTORE_PASSWORD -file "$tmp/public.der"
+          public_cert=$(sha256sum "$tmp/public.der" | cut -d' ' -f1)
+          printf 'Keystore public certificate SHA-256: %s\n' "$public_cert"
+          [[ "$public_cert" == "$EXPECTED_CERT" ]] || { echo 'Keystore certificate differs from owner fingerprint; check uploaded file'; exit 1; }
+          echo 'Keystore public certificate matches owner fingerprint'
           sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           tools=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
           apksigner="$tools/apksigner"
@@ -70,15 +77,32 @@ jobs:
             info=$("$aapt" dump badging "$1")
             grep -Fq "package: name='$2' versionCode='$3' versionName='0.7.7-outdoor'" <<< "$info"
           }
-          verify_expected() {
+          verified_cert() {
             local proof cert
             proof=$("$apksigner" verify --verbose --print-certs "$1") || return 1
             grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' <<< "$proof" || return 1
-            cert=$(sed -nE 's/^(V[0-9]+ Signer|Signer #[0-9]+): certificate SHA-256 digest: ([a-fA-F0-9]+)$/\2/p' <<< "$proof" | tr 'A-F' 'a-f' | sort -u)
-            [[ "$cert" == "$EXPECTED_CERT" ]]
+            cert=$(sed -nE 's/^[[:space:]]*(V[0-9]+ )?Signer( #[0-9]+)?:?[[:space:]]+certificate SHA-256 digest:[[:space:]]*([a-fA-F0-9]{64})[[:space:]]*$/\3/p' <<< "$proof" | tr 'A-F' 'a-f' | sort -u)
+            [[ "$cert" =~ ^[a-f0-9]{64}$ ]] || { echo 'Cannot extract exactly one distinct signer certificate' >&2; return 1; }
+            printf '%s\n' "$cert"
           }
-          # The actual unsigned-for-delivery debug input must fail the beta cert gate.
-          if verify_expected inputs/19.apk; then echo 'Wrong-certificate control failed'; exit 1; fi
+          verify_expected() {
+            local actual
+            actual=$(verified_cert "$1") || return 1
+            printf 'APK public certificate SHA-256: %s\n' "$actual"
+            [[ "$actual" == "$EXPECTED_CERT" ]]
+          }
+          # Exercise the actual parser on both observed SDK output families before key use.
+          parse_fixture() {
+            sed -nE 's/^[[:space:]]*(V[0-9]+ )?Signer( #[0-9]+)?:?[[:space:]]+certificate SHA-256 digest:[[:space:]]*([a-fA-F0-9]{64})[[:space:]]*$/\3/p' | tr 'A-F' 'a-f' | sort -u
+          }
+          for prefix in 'Signer #1' 'Signer #1:' 'V2 Signer:' 'V2 Signer #1:'; do
+            [[ "$(printf '%s certificate SHA-256 digest: %s\n' "$prefix" "$EXPECTED_CERT" | parse_fixture)" == "$EXPECTED_CERT" ]]
+          done
+          [[ -z "$(printf '%s\n' 'Signer #1 certificate SHA-1 digest: invalid' | parse_fixture)" ]]
+          # A parser failure is not a successful wrong-cert control.
+          debug_cert=$(verified_cert inputs/19.apk)
+          printf 'Debug input public certificate SHA-256: %s\n' "$debug_cert"
+          [[ "$debug_cert" != "$EXPECTED_CERT" ]] || { echo 'Wrong-certificate control failed'; exit 1; }
           if identity inputs/19.apk com.example.convoy_mesh.wrong 19; then echo 'Wrong-package control failed'; exit 1; fi
           sign_one() {
             local code="$1" source="$2" hash="$3" run="$4"
