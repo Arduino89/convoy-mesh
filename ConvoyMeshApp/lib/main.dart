@@ -166,9 +166,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         throw StateError('Torna in Convoy Mesh e premi Avvia uscita.');
       }
 
-      // The map may have started a foreground-only GPS preview. An outing owns
-      // a fresh estimator/track, so preview observations never become outing history.
-      await LocationFusionService.instance.disposeService();
+      // Promote an existing foreground GPS preview without restarting its
+      // provider/filter. LocationFusionService starts a new trail at promotion.
       await _mesh.startOuting();
       await _runtime.start();
       if (!_runtime.isRunning) {

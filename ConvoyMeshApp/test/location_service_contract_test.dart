@@ -147,7 +147,74 @@ void main() {
     },
   );
 
-  contractTest('outing resets preview estimator and previous outing trail', (
+  contractTest('warm preview promotion keeps provider and source fix', (h) async {
+    await h.service.startPreview();
+    h.walk(from: 0, until: 60);
+    final before = h.service.last!;
+    expect(before.hasFreshFixAt(h.now), isTrue);
+    expect(h.service.trackPoints, isEmpty);
+    final boundary = _Harness.epoch.add(const Duration(seconds: 65));
+    h.now = boundary;
+    try {
+      await h.service.startOuting();
+    } catch (e) {
+      fail('GPS_WARM_PROMOTION: $e');
+    }
+    expect(h.platform.requestedSettings, hasLength(1),
+        reason: 'GPS_WARM_PROMOTION: provider must not restart');
+    expect(identical(h.service.last, before), isTrue,
+        reason: 'GPS_WARM_PROMOTION: no new or restamped fix');
+    expect(h.service.last!.hasFreshFixAt(h.now), isTrue);
+    expect(h.service.isRecordingTrack, isTrue);
+    expect(h.service.trackPoints, isEmpty);
+    h.receive(62, 86.8, receivedSeconds: 66);
+    expect(h.service.trackPoints, isEmpty,
+        reason: 'Delayed pre-outing position must not enter the new trail');
+    h.walk(from: 70, until: 105, origin: 98);
+    expect(h.service.trackPoints, isNotEmpty);
+    expect(h.service.trackPoints.every((p) => p.ts.isAfter(boundary)), isTrue);
+    expect(h.platform.requestedSettings, hasLength(1));
+  });
+
+  contractTest('promotion of a stale preview cannot manufacture freshness', (
+    h,
+  ) async {
+    await h.service.startPreview();
+    for (final s in [0, 5, 10]) {
+      h.receive(s, 0);
+    }
+    final measured = h.service.last!.measurementAt;
+    expect(h.service.last!.hasFreshFixAt(h.now), isTrue);
+    h.now = _Harness.epoch.add(const Duration(seconds: 80));
+    await h.service.startOuting();
+    expect(h.service.last!.measurementAt, measured);
+    expect(h.service.last!.hasFreshFixAt(h.now), isFalse);
+    expect(h.service.trackPoints, isEmpty);
+    h.receive(12, 50, receivedSeconds: 81);
+    expect(h.service.last!.hasFreshFixAt(h.now), isFalse);
+    expect(h.service.trackPoints, isEmpty);
+    for (final s in [85, 90, 95]) {
+      h.receive(s, 100);
+    }
+    expect(h.service.last!.gpsDecision, 'reacquired');
+    expect(h.service.last!.hasFreshFixAt(h.now), isTrue);
+    expect(h.service.trackPoints, isEmpty);
+    expect(h.platform.requestedSettings, hasLength(1));
+  });
+
+  contractTest('outing waits for in-flight preview start without a second stream', (
+    h,
+  ) async {
+    final preview = h.service.startPreview();
+    final outing = h.service.startOuting();
+    await Future.wait([preview, outing]);
+    expect(h.service.isRecordingTrack, isTrue);
+    expect(h.platform.requestedSettings, hasLength(1));
+    expect(h.service.last!.lat, isNull);
+    expect(h.service.trackPoints, isEmpty);
+  });
+
+  contractTest('cold restart resets estimator and previous outing trail', (
     h,
   ) async {
     await h.service.startPreview();

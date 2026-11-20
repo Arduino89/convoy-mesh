@@ -248,7 +248,7 @@ if grep -q '"category":"session","event":"stop"' "$OUT/diag-nearby-test.jsonl"; 
   exit 1
 fi
 
-# Exercise the real preview path before the outing resets the estimator/track.
+# Exercise the real preview path before the outing takes ownership of the trail.
 # These are synthetic emulator coordinates, never a person's field recording.
 wait_and_tap_text 'Mappa' open-map
 wait_and_tap_text 'Posizione non agganciata • tocca per localizzarti' start-preview
@@ -296,6 +296,28 @@ for i in $(seq 1 6); do
   sleep 5
 done
 capture_diag before-screen-off
+if [[ "$PACKAGE" == 'com.example.convoy_mesh.outdoor' ]]; then
+  python3 - "$OUT/diag-before-screen-off.jsonl" <<'PY'
+import json, sys
+from datetime import datetime
+rows = [json.loads(line) for line in open(sys.argv[1]) if line.strip()]
+promotions = [r for r in rows if r['category']=='gps' and r['event']=='mode_transition']
+assert len(promotions) == 1, 'Expected one warm preview promotion'
+promotion = promotions[0]
+p = promotion['data']
+assert p['reason'] == 'preview_to_outing' and p['record_track'], p
+assert p['fresh'] and p['gps_ready'], 'The steady emulator preview should still be ready at promotion'
+requests = [r for r in rows if r['category']=='gps' and r['event']=='position_request']
+assert len(requests) == 1 and requests[0]['event_index'] < promotion['event_index'], 'GPS provider restarted during warm handoff'
+boundary = datetime.fromisoformat(p['outing_started_utc'].replace('Z', '+00:00'))
+for r in rows:
+    if r['category'] == 'gps' and r['event'] == 'fix' and r['data']['track_added']:
+        assert r['event_index'] > promotion['event_index']
+        for k in ['source_ts_utc', 'coordinate_ts_utc', 'supported_ts_utc']:
+            assert datetime.fromisoformat(r['data'][k].replace('Z', '+00:00')) > boundary, (k, r['event_index'])
+print('PASS: warm preview promoted with fresh source fix, one provider request, no pre-outing track points')
+PY
+fi
 BASE_FIXES=$(count_matches '"category":"gps","event":"fix"' "$OUT/diag-before-screen-off.jsonl")
 BASE_TRACK=$(count_matches '"track_added":true' "$OUT/diag-before-screen-off.jsonl")
 if [ "$BASE_TRACK" -eq 0 ]; then

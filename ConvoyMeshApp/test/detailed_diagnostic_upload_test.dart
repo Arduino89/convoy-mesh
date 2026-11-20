@@ -88,6 +88,33 @@ void main() {
     expect(batch.every((e) => (e['properties'] as Map)[r'$geoip_disable'] == true), isTrue);
   });
 
+  test('GPS lifecycle markers preserve acquisition timing without unknown fields', () {
+    final log = [
+      record(0, 'session', 'start', {}),
+      record(1, 'gps', 'position_request', {'record_track': false}),
+      record(2, 'gps', 'fix', {'gps_ready': false, 'fresh': false}),
+      record(3, 'gps', 'mode_transition', {
+        'reason': 'preview_to_outing', 'outing_started_utc': ts,
+        'supported_ts_utc': ts, 'fresh': true,
+        'gps_ready': true, 'record_track': true, 'secret_note': 'never upload',
+      }),
+      record(4, 'session', 'stop', {'events': 5}),
+    ].join('\n');
+    final selection = DetailedDiagnosticUpload.fromJsonl(
+      log, uploadIdOverride: fixedUploadId,
+    );
+    expect(selection.recordCount, 5);
+    final request = selection.events[1]['properties'] as Map<String, Object?>;
+    final fix = selection.events[2]['properties'] as Map<String, Object?>;
+    final promotion = selection.events[3]['properties'] as Map<String, Object?>;
+    expect(request['record_track'], false);
+    expect(fix['gps_ready'], false);
+    expect(promotion['outing_started_utc'], ts);
+    expect(promotion['supported_ts_utc'], ts);
+    expect(promotion['gps_ready'], true);
+    expect(promotion.containsKey('secret_note'), isFalse);
+  });
+
   test('fixed schema excludes user notes, raw BLE packets and arbitrary errors', () {
     final selected = DetailedDiagnosticUpload.fromJsonl(
       fixture(), uploadIdOverride: fixedUploadId);
