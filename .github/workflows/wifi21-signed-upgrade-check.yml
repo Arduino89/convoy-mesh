@@ -112,7 +112,11 @@ jobs:
           cmp evidence/prefs-19.xml evidence/prefs-20.xml
           adb shell dumpsys package "$PACKAGE" > evidence/package-20.txt
           launch 20
-          test -n "$(adb shell pidof "$PACKAGE" || true)"
+          for i in $(seq 1 30); do
+            if adb shell pidof "$PACKAGE" | grep -q '[0-9]'; then break; fi
+            sleep 2
+          done
+          adb shell pidof "$PACKAGE" | grep -q '[0-9]'
           adb shell am force-stop "$PACKAGE"
           install_code 21 -r
           adb exec-out run-as "$PACKAGE" cat shared_prefs/FlutterSharedPreferences.xml > evidence/prefs-21.xml
