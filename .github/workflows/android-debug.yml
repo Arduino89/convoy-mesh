@@ -240,11 +240,12 @@ jobs:
           from pathlib import Path
           info = Path('build-evidence/apk-badging.txt').read_text()
           ref = os.environ.get('GITHUB_REF_NAME', '')
-          outdoor_lab = ref == 'experiment/frontend-design-studio'
+          integrated_wifi_lab = ref == 'experiment/wifi-direct-offline-lab-20261121'
+          outdoor_lab = ref in ('experiment/frontend-design-studio', 'experiment/wifi-direct-offline-lab-20261121')
           diag_lab = ref == 'experiment/diagnostic-control-20261114'
           ping_lab = ref == 'experiment/manual-ping-20261114'
           app_id = 'com.example.convoy_mesh.outdoor' if outdoor_lab else ('com.example.convoy_mesh.diaglab' if diag_lab else ('com.example.convoy_mesh.pinglab2' if ping_lab else 'com.example.convoy_mesh.pedestrianexp1'))
-          version_code = '20' if outdoor_lab else ('15' if diag_lab else ('11' if ping_lab else '9'))
+          version_code = '21' if integrated_wifi_lab else ('20' if outdoor_lab else ('15' if diag_lab else ('11' if ping_lab else '9')))
           version_name = '0.7.7-outdoor' if outdoor_lab else ('0.7.7-diaglab' if diag_lab else ('0.7.7-pinglab' if ping_lab else '0.7.7-exp1'))
           app_label = 'Convoy Outdoor LAB' if outdoor_lab else ('Convoy Diagnostics LAB' if diag_lab else ('Convoy Ping LAB 2' if ping_lab else 'Convoy Mesh Exp'))
           assert f"package: name='{app_id}'" in info
@@ -256,7 +257,11 @@ jobs:
           PY
           sha256sum "$APK" > build-evidence/apk-sha256.txt
           printf '%s\n' 'Candidate debug APK. Automated checks are not real-device BLE/GNSS certification.' > build-evidence/validation-scope.txt
+          if [[ "$GITHUB_REF_NAME" == "experiment/wifi-direct-offline-lab-20261121" ]]; then
+            printf '%s\n' 'Integrated Wi-Fi debug candidate: package outdoor and version 21, but DEBUG certificate differs from permanent beta. Do not replace the signed beta or uninstall anything. This is not yet the deliverable.' > build-evidence/install-policy.txt
+          else
           printf '%s\n' 'Side-by-side package: not an update of com.example.convoy_mesh. Old app/data remain installed. Independent permissions, identity and storage. Use only one Convoy app at a time. Debug key is not retained; future rebuilds are not guaranteed compatible updates. Baseline run #105 APK is unavailable (artifact 10300013706 returns 404); its certificate cannot be compared.' > build-evidence/install-policy.txt
+          fi
 
       # One authorized synthetic transmission only, on the integration checkpoint.
       # Ordinary builds, test reruns, and future commits never send cloud events.
