@@ -24,6 +24,11 @@ import 'wifi_direct_lab/wifi_direct_lab_page.dart';
 const bool kConvoyWifiDirectLab =
     bool.fromEnvironment('CONVOY_WIFI_DIRECT_LAB');
 
+/// Integrate the synthetic-only LAB inside the existing Outdoor application.
+/// This flag is enabled solely on the isolated Wi-Fi experiment branch.
+const bool kConvoyWifiDirectIntegrated =
+    bool.fromEnvironment('CONVOY_WIFI_DIRECT_LAB_INTEGRATED');
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
@@ -73,6 +78,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   final _mesh = ConvoyMeshService.instance;
   int _index = 0;
   bool _busy = false;
+  bool _wifiLabActive = false;
+  bool _wifiLabSwitching = false;
   String? _error;
 
   @override
@@ -111,6 +118,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   /// Foreground lobby: nearby people are visible as soon as both apps are open.
   /// It advertises identity/presence only; GPS/background begin with an outing.
   Future<void> _ensureNearby() async {
+    // Resume/permission callbacks must never restart BLE during a Wi-Fi LAB.
+    if (_wifiLabActive || _wifiLabSwitching) return;
     try {
       await _runtime.refreshCapabilities();
       final sdk = _runtime.sdkInt ?? 31;
@@ -138,7 +147,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         );
       }
 
-      if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+      if (!mounted || _wifiLabActive || _wifiLabSwitching ||
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
       if (!_mesh.isRunning) {
         await _mesh.startNearby();
       }
@@ -149,8 +159,53 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     }
   }
 
+  /// Leave all GPS/BLE resources with their existing owners. The only change
+  /// is temporarily suspending Nearby while the synthetic Wi-Fi LAB is open.
+  Future<void> _openWifiLab() async {
+    if (!kConvoyWifiDirectIntegrated || _index != 2 ||
+        _wifiLabActive || _wifiLabSwitching || _busy) return;
+    if (_runtime.isRunning || DiagnosticRecorder.instance.isActive) {
+      if (mounted) {
+        setState(() => _error =
+            'Termina uscita e registrazione Test log prima del Wi-Fi Direct LAB.');
+      }
+      return;
+    }
+    setState(() {
+      _wifiLabSwitching = true;
+      _error = null;
+    });
+    try {
+      // No outing or recorder is active: safe to release foreground Nearby.
+      // Do not stop Bluetooth at OS level: user explicitly disables BT for the test.
+      await _mesh.disposeService();
+      await LocationFusionService.instance.disposeService();
+      if (!mounted) return;
+      setState(() => _wifiLabActive = true);
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const WifiDirectLabPage(integratedMode: true),
+          settings: const RouteSettings(name: '/wifi-direct-lab'),
+        ),
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Wi-Fi Direct LAB: $error');
+    } finally {
+      _wifiLabActive = false;
+      _wifiLabSwitching = false;
+      if (mounted) {
+        setState(() {});
+        // Re-enable normal foreground Nearby, never start an outing or GPS.
+        // If BT is still OFF the existing BLE path reports its real state.
+        if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+          await _ensureNearby();
+        }
+      }
+    }
+  }
+
   Future<void> _startOuting() async {
-    if (_busy || _runtime.isRunning) return;
+    if (_busy || _wifiLabActive || _wifiLabSwitching || _runtime.isRunning) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -197,7 +252,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   Future<void> _stopOuting() async {
-    if (_busy) return;
+    if (_busy || _wifiLabActive || _wifiLabSwitching) return;
     setState(() => _busy = true);
     AppLifecycleCoordinator.instance.runtimeActive = false;
     // Do not stop an active diagnostic session when the outing ends.
@@ -217,6 +272,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     unawaited(AppLifecycleCoordinator.instance.onStateChanged(state));
+    if (_wifiLabActive || _wifiLabSwitching) {
+      if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+        unawaited(DiagnosticRecorder.instance.flush());
+      }
+      return;
+    }
     if (state == AppLifecycleState.resumed && !_runtime.isRunning) {
       unawaited(_ensureNearby());
     }
@@ -253,7 +314,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         children: [
           TickerMode(enabled: _index == 0, child: const BlePage()),
           TickerMode(enabled: _index == 1, child: const MapPage()),
-          TickerMode(enabled: _index == 2, child: const DiagnosticPage()),
+          TickerMode(
+            enabled: _index == 2,
+            child: DiagnosticPage(
+              onOpenWifiDirectLab:
+                  kConvoyWifiDirectIntegrated ? _openWifiLab : null,
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: tokens != null
