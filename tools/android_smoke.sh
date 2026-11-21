@@ -269,6 +269,22 @@ timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 
 # A diagnostic session may begin BEFORE an outing and must span the transition.
 wait_and_tap_text 'Test log' open-test-log
+# The integrated branch uses the same Outdoor package; the Wi-Fi LAB is a
+# separate route, not a second installed app or an always-running transport.
+if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+21" ]]; then
+  wait_and_tap_text 'Apri Wi-Fi Direct LAB (solo probe sintetici)' open-integrated-wifi
+  sleep 3
+  assert_no_runtime wifi-lab-open
+  timeout 15 adb shell uiautomator dump /sdcard/convoy-integrated-lab.xml >/dev/null 2>&1 || true
+  timeout 15 adb shell cat /sdcard/convoy-integrated-lab.xml > "$OUT/ui-integrated-wifi.xml"
+  grep -Fq 'Convoy Wi-Fi Direct LAB' "$OUT/ui-integrated-wifi.xml"
+  wait_and_tap_text 'Chiudi LAB e torna a Convoy' return-integrated-outdoor
+  sleep 3
+  assert_no_runtime wifi-lab-return
+  timeout 15 adb shell uiautomator dump /sdcard/convoy-return-outdoor.xml >/dev/null 2>&1 || true
+  timeout 15 adb shell cat /sdcard/convoy-return-outdoor.xml > "$OUT/ui-return-outdoor.xml"
+  grep -Fq 'Test diagnostico' "$OUT/ui-return-outdoor.xml"
+fi
 # The start control is deliberately before the explanatory text. Do NOT
 # swipe here: a previous unconditional swipe hid the button above the
 # viewport in actual emulator UI dumps. Capture the pre-tap view to
