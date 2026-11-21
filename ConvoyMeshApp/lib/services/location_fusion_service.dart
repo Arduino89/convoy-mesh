@@ -310,6 +310,30 @@ class LocationFusionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// End the outing without restarting an already-running provider only when
+  /// the visible foreground map explicitly retains ownership of GPS preview.
+  /// Otherwise stop GPS as before (Nearby/Test log do not acquire it).
+  Future<void> finishOuting({bool keepPreview = false}) {
+    if (!keepPreview || !_running) return disposeService();
+    if (!_recordTrack) return Future.value();
+    _recordTrack = false; // Synchronous cutoff: no subsequent fix enters trail.
+    _outingStartedAt = null;
+    final now = _now().toUtc();
+    final supported = _last?.measurementAt?.toUtc();
+    final fresh = _last?.hasFreshFixAt(now) ?? false;
+    DiagnosticRecorder.instance.record('gps', 'mode_transition', data: {
+      'reason': 'outing_to_preview',
+      'supported_ts_utc': supported?.toIso8601String(),
+      'fresh': fresh,
+      'gps_ready': fresh && _last?.gpsState == GpsUiState.ok,
+      'record_track': false,
+    });
+    // Keep the original estimator/source timestamp, position subscription and
+    // frozen outing trail. No manufactured position or extra GPS request.
+    notifyListeners();
+    return Future.value();
+  }
+
   Future<void> disposeService() async {
     _running = false;
     _generation++;

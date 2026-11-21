@@ -214,6 +214,77 @@ void main() {
     expect(h.service.trackPoints, isEmpty);
   });
 
+  contractTest('warm outing stop preserves preview, frozen trail and fix', (
+    h,
+  ) async {
+    await h.service.startOuting();
+    h.walk(from: 0, until: 75);
+    expect(h.service.last!.hasFreshFixAt(h.now), isTrue);
+    final before = h.service.last!;
+    final oldTrail = h.service.trackPoints;
+    expect(oldTrail, isNotEmpty);
+    final oldLast = oldTrail.last.ts;
+    expect(h.platform.requestedSettings, hasLength(1));
+
+    await h.service.finishOuting(keepPreview: true);
+    expect(h.service.isRecordingTrack, isFalse,
+        reason: 'WARM_STOP_NO_TRACK: an outing stop must close history');
+    expect(identical(before, h.service.last), isTrue,
+        reason: 'WARM_STOP_GPS_RESTART: preview must keep source fix and filter');
+    expect(h.service.last!.hasFreshFixAt(h.now), isTrue,
+        reason: 'WARM_STOP_GPS_RESTART: no GPS re-acquisition');
+    expect(h.platform.requestedSettings, hasLength(1));
+    h.walk(from: 80, until: 120, origin: 112);
+    expect(h.service.last!.hasFreshFixAt(h.now), isTrue);
+    expect(h.service.trackPoints, hasLength(oldTrail.length),
+        reason: 'WARM_STOP_NO_TRACK: preview points cannot extend outing');
+    expect(h.service.trackPoints.last.ts, oldLast);
+
+    await h.service.startOuting();
+    expect(h.platform.requestedSettings, hasLength(1),
+        reason: 'Warm next outing must reuse preview');
+    expect(h.service.trackPoints, isEmpty,
+        reason: 'New outing cannot inherit previous outing history');
+    h.walk(from: 125, until: 185, origin: 175);
+    expect(h.service.trackPoints, isNotEmpty);
+    expect(h.service.trackPoints.every((p) =>
+      p.ts.isAfter(_Harness.epoch.add(const Duration(seconds: 120))), isTrue);
+  });
+
+  contractTest('outing stop off-map fully releases foreground GPS preview', (
+    h,
+  ) async {
+    await h.service.startOuting();
+    h.walk(from: 0, until: 30);
+    final supported = h.service.last!.measurementAt;
+    await h.service.finishOuting(keepPreview: false);
+    expect(h.service.isRecordingTrack, isFalse);
+    expect(h.service.last!.hasFreshFixAt(h.now), isFalse);
+    h.receive(35, 999);
+    expect(h.service.last!.measurementAt, supported);
+    expect(h.platform.requestedSettings, hasLength(1));
+    await h.service.startPreview();
+    expect(h.platform.requestedSettings, hasLength(2),
+        reason: 'Off-map stop should require an explicit new preview request');
+    expect(h.service.last!.hasFreshFixAt(h.now), isFalse);
+  });
+
+  contractTest('stopping Test log alone preserves active GPS and trail', (h) async {
+    await h.service.startOuting();
+    h.walk(from: 0, until: 45);
+    final previous = h.service.last!;
+    final oldTrailCount = h.service.trackPoints.length;
+    final recorder = DiagnosticRecorder.instance;
+    recorder.start(deviceId: 12345, deviceName: 'Synthetic test');
+    recorder.stop(reason: 'manual_stop');
+    expect(h.service.isRecordingTrack, isTrue);
+    expect(h.service.last!.measurementAt, previous.measurementAt);
+    h.walk(from: 50, until: 100, origin: 70);
+    expect(h.platform.requestedSettings, hasLength(1));
+    expect(h.service.last!.hasFreshFixAt(h.now), isTrue);
+    expect(h.service.trackPoints.length, greaterThan(oldTrailCount));
+  });
+
   contractTest('cold restart resets estimator and previous outing trail', (
     h,
   ) async {

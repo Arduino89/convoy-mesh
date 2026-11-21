@@ -213,14 +213,14 @@ class ConvoyMeshService extends ChangeNotifier {
     }
   }
 
-  Future<void> stopOuting() async {
+  Future<void> stopOuting({bool keepGpsPreview = false}) async {
     if (!_outingActive && _locSub == null) return;
     _outingActive = false;
     _historyQueue.clear();
     _lastHistoryTx = null;
     await _locSub?.cancel();
     _locSub = null;
-    await LocationFusionService.instance.disposeService();
+    await LocationFusionService.instance.finishOuting(keepPreview: keepGpsPreview);
     _lastLocationEnabled = null;
     _scheduler.requestName();
     DiagnosticRecorder.instance.record('runtime', 'outing_mode', data: {'active': false});

@@ -192,7 +192,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     // Do not stop an active diagnostic session when the outing ends.
     // The user owns the test session explicitly from the Test log page.
     await DiagnosticRecorder.instance.flush();
-    await _mesh.stopOuting();
+    // Only a visible, foreground map owns GPS preview after Outing.
+    // Nearby and Test log never silently start continuous GPS tracking.
+    final keepMapPreview = _index == 1 &&
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    await _mesh.stopOuting(keepGpsPreview: keepMapPreview);
     await _runtime.stop();
     // Deliberately keep foreground nearby discovery alive.
     await _ensureNearby();
