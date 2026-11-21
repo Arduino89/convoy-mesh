@@ -41,6 +41,7 @@ class LocationFusionService extends ChangeNotifier {
   Timer? _ageTimer;
   bool _running = false, _hasPerm = false, _serviceEnabled = false;
   bool _recordTrack = false;
+  DateTime? _outingStartedAt;
   int _generation = 0, _positionGeneration = 0, _segment = 0;
   final Stopwatch _clock = Stopwatch()..start();
   static const int updateSeconds = 5;
@@ -58,15 +59,49 @@ class LocationFusionService extends ChangeNotifier {
 
   Future<void> _start({required bool recordTrack, required bool resetTrack}) {
     if (_running) {
-      if (_recordTrack == recordTrack) return Future.value();
+      if (_recordTrack == recordTrack) return _startFuture ?? Future.value();
+      if (recordTrack) return _promotePreview(resetTrack: resetTrack);
       return Future.error(StateError('Arresta la localizzazione corrente prima di cambiare modalità.'));
     }
     _recordTrack = recordTrack;
+    _outingStartedAt = recordTrack ? _now().toUtc() : null;
     if (resetTrack) {
       _track.clear();
       _segment = 0;
     }
     return _startFuture ??= _startInternal();
+  }
+
+  Future<void> _promotePreview({required bool resetTrack}) async {
+    final epoch = _generation;
+    // Permission/provider startup may still be in flight.
+    final startup = _startFuture;
+    if (startup != null) await startup;
+    if (!_running || epoch != _generation) {
+      throw StateError('Anteprima GPS interrotta durante l’avvio dell’uscita.');
+    }
+    if (_recordTrack) return;
+    // Preserve the actual provider subscription, estimator and motion evidence.
+    // Do not emit a synthetic fix or change its source timestamp.
+    final boundary = _now().toUtc();
+    _outingStartedAt = boundary;
+    if (resetTrack) {
+      _track.clear();
+      _segment = 0;
+    }
+    _segment++;
+    _recordTrack = true;
+    final current = _last;
+    final fresh = current?.hasFreshFixAt(boundary) ?? false;
+    DiagnosticRecorder.instance.record('gps', 'mode_transition', data: {
+      'reason': 'preview_to_outing',
+      'outing_started_utc': boundary.toIso8601String(),
+      'supported_ts_utc': current?.measurementAt?.toUtc().toIso8601String(),
+      'fresh': fresh,
+      'gps_ready': fresh && current?.gpsState == GpsUiState.ok,
+      'record_track': true,
+    });
+    notifyListeners();
   }
 
   Future<void> _startInternal() async {
@@ -135,6 +170,9 @@ class LocationFusionService extends ChangeNotifier {
         intervalDuration: const Duration(seconds: updateSeconds),
         distanceFilter: 0,
       );
+      DiagnosticRecorder.instance.record('gps', 'position_request', data: {
+        'record_track': _recordTrack,
+      });
       _posSub = Geolocator.getPositionStream(locationSettings: settings).listen((position) {
         if (_running && epoch == _generation && streamEpoch == _positionGeneration) {
           _onPosition(position);
@@ -168,7 +206,14 @@ class LocationFusionService extends ChangeNotifier {
     );
     if (result.decision == 'reacquired') _segment++;
     var added = false;
-    if (_recordTrack && result.addToTrack && result.isFreshAt(received) && result.lat != null &&
+    final boundary = _outingStartedAt;
+    // Delayed pre-outing fixes can still be legitimate estimator input, but
+    // never become outing history (nor create a point with a pre-outing time).
+    if (_recordTrack && boundary != null &&
+        observation.at.isAfter(boundary) &&
+        result.supportedAt?.isAfter(boundary) == true &&
+        result.coordinateAt?.isAfter(boundary) == true &&
+        result.addToTrack && result.isFreshAt(received) && result.lat != null &&
         result.lon != null && result.accuracyM != null) {
       final previous = _track.isEmpty ? null : _track.last;
       final distance = previous == null || previous.segment != _segment
@@ -205,6 +250,9 @@ class LocationFusionService extends ChangeNotifier {
       'accuracy_m': result.accuracyM,
       'decision': result.decision,
       'fresh': result.isFreshAt(received),
+      'gps_ready': _running && _hasPerm && _serviceEnabled &&
+          result.isFreshAt(received) &&
+          PedestrianGpsFilter.barsForAccuracy(result.accuracyM) >= 2,
       'track_added': added,
       'track_points_total': _track.length,
       'record_track': _recordTrack,
@@ -262,6 +310,30 @@ class LocationFusionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// End the outing without restarting an already-running provider only when
+  /// the visible foreground map explicitly retains ownership of GPS preview.
+  /// Otherwise stop GPS as before (Nearby/Test log do not acquire it).
+  Future<void> finishOuting({bool keepPreview = false}) {
+    if (!keepPreview || !_running) return disposeService();
+    if (!_recordTrack) return Future.value();
+    _recordTrack = false; // Synchronous cutoff: no subsequent fix enters trail.
+    _outingStartedAt = null;
+    final now = _now().toUtc();
+    final supported = _last?.measurementAt?.toUtc();
+    final fresh = _last?.hasFreshFixAt(now) ?? false;
+    DiagnosticRecorder.instance.record('gps', 'mode_transition', data: {
+      'reason': 'outing_to_preview',
+      'supported_ts_utc': supported?.toIso8601String(),
+      'fresh': fresh,
+      'gps_ready': fresh && _last?.gpsState == GpsUiState.ok,
+      'record_track': false,
+    });
+    // Keep the original estimator/source timestamp, position subscription and
+    // frozen outing trail. No manufactured position or extra GPS request.
+    notifyListeners();
+    return Future.value();
+  }
+
   Future<void> disposeService() async {
     _running = false;
     _generation++;
@@ -277,6 +349,7 @@ class LocationFusionService extends ChangeNotifier {
     _posSub = null;
     _motion.reset();
     _recordTrack = false;
+    _outingStartedAt = null;
     _startFuture = null;
     _emit(_estimator.snapshot('stopped'));
   }

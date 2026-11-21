@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'manual_ping_service.dart';
 import 'diagnostic_test_context.dart';
 
@@ -53,7 +55,10 @@ class DetailedDiagnosticUpload {
       'supported_ts_utc', 'raw_lat', 'raw_lon', 'raw_accuracy_m',
       'display_lat', 'display_lon', 'accuracy_m', 'decision', 'fresh',
       'track_added', 'track_points_total', 'record_track', 'moving',
-      'motion_reliable', 'motion_score'],
+      'motion_reliable', 'motion_score', 'gps_ready'],
+    'gps.position_request': ['record_track'],
+    'gps.mode_transition': ['reason', 'outing_started_utc', 'supported_ts_utc',
+      'fresh', 'gps_ready', 'record_track'],
     'gps.service_status': ['enabled', 'permission'],
     'gps.service_status_error': [],
     'gps.stream_error': [],
@@ -227,6 +232,14 @@ class DetailedDiagnosticUpload {
     if (events.isEmpty || events.length > maxRecords) {
       throw const FormatException('Troppi record: condividi il file locale');
     }
+    // Explicit transfer manifest on the terminal record. Original event indices
+    // remain intact; allowlist exclusions are distinct from transport losses.
+    final terminal = events.singleWhere((e) {
+      final props = e['properties'] as Map<String, Object?>;
+      return props['category'] == 'session' && props['action'] == 'stop';
+    })['properties'] as Map<String, Object?>;
+    terminal['upload_record_count'] = events.length;
+    terminal['upload_excluded_count'] = excluded;
     final estimate = utf8.encode(jsonEncode({
       'token': 'phc_placeholder_for_size_verification_123456789',
       'batch': events,
@@ -281,11 +294,108 @@ class DetailedDiagnosticUpload {
   }
 }
 
+/// Immutable snapshot of a single-shot detailed diagnostic upload attempt.
+class DetailedDiagnosticUploadAttemptRecord {
+  const DetailedDiagnosticUploadAttemptRecord({
+    required this.uploadId,
+    this.attempted = false,
+    this.inFlight = false,
+    this.status,
+    this.ownerConsent = false,
+    this.ackStoredData = false,
+    this.approvedPeers = const <int>{},
+  });
+
+  final String uploadId;
+  final bool attempted;
+  final bool inFlight;
+  final String? status;
+  final bool ownerConsent;
+  final bool ackStoredData;
+  final Set<int> approvedPeers;
+}
+
+/// Process-scoped, in-memory-only single-shot ledger for detailed diagnostic
+/// uploads. Never persists consent to disk and never retries; survives
+/// ListView evictions, style switches, and mid-flight widget unmounts.
+class DetailedDiagnosticUploadAttemptStore extends ChangeNotifier {
+  final Map<String, DetailedDiagnosticUploadAttemptRecord> _records = {};
+
+  /// Deterministic fingerprint combining session ID, UTF-8 length, and two
+  /// independent 32-bit hashes so distinct sessions/captures never collide.
+  static String fingerprintFor(String sessionId, String jsonl) {
+    var fnv = 0x811c9dc5;
+    var djb = 5381;
+    final bytes = utf8.encode(jsonl);
+    for (final b in bytes) {
+      fnv ^= b;
+      fnv = (fnv * 0x01000193) & 0xFFFFFFFF;
+      djb = (((djb << 5) + djb) ^ b) & 0xFFFFFFFF;
+    }
+    return '$sessionId|${bytes.length}|'
+        '${fnv.toRadixString(16).padLeft(8, '0')}'
+        '${djb.toRadixString(16).padLeft(8, '0')}';
+  }
+
+  DetailedDiagnosticUploadAttemptRecord? recordFor(String key) => _records[key];
+
+  bool beginAttempt(
+    String key, {
+    required String uploadId,
+    required bool ownerConsent,
+    required bool ackStoredData,
+    required Set<int> approvedPeers,
+  }) {
+    final existing = _records[key];
+    if (existing != null && (existing.attempted || existing.inFlight)) {
+      return false;
+    }
+    _records[key] = DetailedDiagnosticUploadAttemptRecord(
+      uploadId: existing?.uploadId ?? uploadId,
+      attempted: true,
+      inFlight: true,
+      status: 'Un unico invio HTTPS in corso…',
+      ownerConsent: ownerConsent,
+      ackStoredData: ackStoredData,
+      approvedPeers: Set<int>.unmodifiable(approvedPeers),
+    );
+    notifyListeners();
+    return true;
+  }
+
+  void completeAttempt(String key, String status) {
+    final existing = _records[key];
+    if (existing == null || !existing.attempted) return;
+    _records[key] = DetailedDiagnosticUploadAttemptRecord(
+      uploadId: existing.uploadId,
+      attempted: true,
+      inFlight: false,
+      status: status,
+      ownerConsent: existing.ownerConsent,
+      ackStoredData: existing.ackStoredData,
+      approvedPeers: existing.approvedPeers,
+    );
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void reset() {
+    _records.clear();
+    notifyListeners();
+  }
+}
+
 /// One HTTPS POST, no persisting, queue, retry or SDK tracking.
 class DetailedDiagnosticUploadSender {
   static const String _token = String.fromEnvironment(
       'CONVOY_POSTHOG_PROJECT_TOKEN');
+  static bool get temporarilyDisabled => ManualPingService.temporarilyDisabled;
   static bool get configured => ManualPingService.isConfigured;
+  static final DetailedDiagnosticUploadAttemptStore attemptStore =
+      DetailedDiagnosticUploadAttemptStore();
+
+  @visibleForTesting
+  static void resetAttemptsForTest() => attemptStore.reset();
 
   static Map<String, Object> requestBody(
       DetailedDiagnosticUpload candidate, String token) {
@@ -298,6 +408,10 @@ class DetailedDiagnosticUploadSender {
   /// HTTP success does not prove PostHog stored the events. Use upload_id for
   /// readback; avoid retriggering after ambiguous timeouts.
   static Future<int> sendOnce(DetailedDiagnosticUpload candidate) async {
+    if (temporarilyDisabled) {
+      throw StateError(
+          'Invio PostHog temporaneamente disattivato in questa build');
+    }
     if (!configured) throw StateError('Token PostHog EU non configurato');
     final bytes = utf8.encode(jsonEncode(requestBody(candidate, _token)));
     if (bytes.length > DetailedDiagnosticUpload.maxRequestBytes) {

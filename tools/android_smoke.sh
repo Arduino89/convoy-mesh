@@ -248,7 +248,7 @@ if grep -q '"category":"session","event":"stop"' "$OUT/diag-nearby-test.jsonl"; 
   exit 1
 fi
 
-# Exercise the real preview path before the outing resets the estimator/track.
+# Exercise the real preview path before the outing takes ownership of the trail.
 # These are synthetic emulator coordinates, never a person's field recording.
 wait_and_tap_text 'Mappa' open-map
 wait_and_tap_text 'Posizione non agganciata • tocca per localizzarti' start-preview
@@ -258,13 +258,17 @@ for i in 1 2 3 4; do
 done
 assert_no_runtime preview
 capture_diag preview
-python3 - "$OUT/diag-preview.jsonl" "${EXPECTED_BUILD_COMMIT:-}" "$PACKAGE" <<'PY'
+python3 - "$OUT/diag-preview.jsonl" "${EXPECTED_BUILD_COMMIT:-}" "$PACKAGE" "${EXPECTED_OUTDOOR_VERSION:-}" <<'PY'
 import json, sys
 rows = [json.loads(line) for line in open(sys.argv[1]) if line.strip()]
 start = next(r['data'] for r in rows if r['category'] == 'session' and r['event'] == 'start')
 if sys.argv[2]:
     assert start['build_commit'] == sys.argv[2], start
-expected_version = '0.7.7-diaglab+15' if sys.argv[3] == 'com.example.convoy_mesh.diaglab' else '0.7.7-exp1+9'
+expected_version = {
+    'com.example.convoy_mesh.outdoor': sys.argv[4],
+    'com.example.convoy_mesh.diaglab': '0.7.7-diaglab+15',
+}.get(sys.argv[3], '0.7.7-exp1+9')
+assert expected_version, 'Outdoor expected version must be supplied by CI'
 assert start['app_version'] == expected_version, start
 fixes = [r['data'] for r in rows if r['category'] == 'gps' and r['event'] == 'fix']
 assert fixes and any(f['fresh'] for f in fixes), 'Preview did not acquire a real provider fix'
@@ -292,6 +296,28 @@ for i in $(seq 1 6); do
   sleep 5
 done
 capture_diag before-screen-off
+if [[ "$PACKAGE" == 'com.example.convoy_mesh.outdoor' ]]; then
+  python3 - "$OUT/diag-before-screen-off.jsonl" <<'PY'
+import json, sys
+from datetime import datetime
+rows = [json.loads(line) for line in open(sys.argv[1]) if line.strip()]
+promotions = [r for r in rows if r['category']=='gps' and r['event']=='mode_transition']
+assert len(promotions) == 1, 'Expected one warm preview promotion'
+promotion = promotions[0]
+p = promotion['data']
+assert p['reason'] == 'preview_to_outing' and p['record_track'], p
+assert p['fresh'] and p['gps_ready'], 'The steady emulator preview should still be ready at promotion'
+requests = [r for r in rows if r['category']=='gps' and r['event']=='position_request']
+assert len(requests) == 1 and requests[0]['event_index'] < promotion['event_index'], 'GPS provider restarted during warm handoff'
+boundary = datetime.fromisoformat(p['outing_started_utc'].replace('Z', '+00:00'))
+for r in rows:
+    if r['category'] == 'gps' and r['event'] == 'fix' and r['data']['track_added']:
+        assert r['event_index'] > promotion['event_index']
+        for k in ['source_ts_utc', 'coordinate_ts_utc', 'supported_ts_utc']:
+            assert datetime.fromisoformat(r['data'][k].replace('Z', '+00:00')) > boundary, (k, r['event_index'])
+print('PASS: warm preview promoted with fresh source fix, one provider request, no pre-outing track points')
+PY
+fi
 BASE_FIXES=$(count_matches '"category":"gps","event":"fix"' "$OUT/diag-before-screen-off.jsonl")
 BASE_TRACK=$(count_matches '"track_added":true' "$OUT/diag-before-screen-off.jsonl")
 if [ "$BASE_TRACK" -eq 0 ]; then
@@ -383,10 +409,17 @@ sleep 5
 assert_runtime resumed
 
 # Ending the outing must NOT end the diagnostic session.
+# Refresh the genuine emulator provider fix just before leaving Outing.
+# Otherwise an expired last measurement could mislead this warm-handoff gate.
+timeout 10 adb emu geo fix 10.0 45.0012 >> "$OUT/gps-injection.txt" 2>&1
+sleep 4
 capture_diag before-outing-stop
 STOP_BASE_LINES=$(wc -l < "$OUT/diag-before-outing-stop.jsonl")
 wait_and_tap_text 'Uscita attiva • Termina uscita' stop-outing
-sleep 8
+# The foreground map must stay on the SAME GPS stream; request one new real
+# emulator callback after the boundary, not a made-up software freshness tick.
+timeout 10 adb emu geo fix 10.0 45.0012 >> "$OUT/gps-injection.txt" 2>&1
+sleep 5
 assert_no_runtime after-outing-stop
 capture_diag after-outing-stop
 if grep -q '"category":"session","event":"stop"' "$OUT/diag-after-outing-stop.jsonl"; then
@@ -395,11 +428,30 @@ if grep -q '"category":"session","event":"stop"' "$OUT/diag-after-outing-stop.js
 fi
 tail -n +$((STOP_BASE_LINES + 1)) "$OUT/diag-after-outing-stop.jsonl" > "$OUT/diag-after-stop-tail.jsonl"
 grep -q '"outing_active":false' "$OUT/diag-after-stop-tail.jsonl"
+if [[ "$PACKAGE" == 'com.example.convoy_mesh.outdoor' ]]; then
+  python3 - "$OUT/diag-before-outing-stop.jsonl" "$OUT/diag-after-outing-stop.jsonl" <<'PY'
+import json, sys
+before = [json.loads(s) for s in open(sys.argv[1]) if s.strip()]
+after = [json.loads(s) for s in open(sys.argv[2]) if s.strip()]
+first_stop = max(r['event_index'] for r in before)
+tail = [r for r in after if r['event_index'] > first_stop]
+handoff = [r for r in tail if r['category'] == 'gps' and r['event'] == 'mode_transition' and r['data'].get('reason') == 'outing_to_preview']
+assert len(handoff) == 1, 'WARM_STOP_HANDOFF: expected one visible-map outing->preview transition'
+t = handoff[0]
+assert t['data']['record_track'] is False and t['data']['fresh'] is True, 'WARM_STOP_FRESH: fresh original source fix must survive stop'
+assert not [r for r in tail if r['category']=='gps' and r['event']=='position_request'], 'WARM_STOP_RESTART: GPS provider must not be restarted'
+fixes = [r['data'] for r in tail if r['category']=='gps' and r['event']=='fix']
+assert fixes and any(f['fresh'] for f in fixes), 'WARM_STOP_FRESH: new physical provider callback required'
+assert all(f['record_track'] is False and f['track_added'] is False for f in fixes), 'WARM_STOP_TRAIL: after-stop fixes must not extend outing'
+assert not [r for r in tail if r['category']=='runtime' and r['event']=='foreground_service_started'], 'WARM_STOP_FOREGROUND: stopped outing must not restart FGS'
+print('PASS: Map owns foreground GPS preview after outing, no new provider request/FGS/trail')
+PY
+fi
 
 timeout 15 adb logcat -d --pid="$PID" > "$OUT/app-logcat.txt"
 if grep -E 'FATAL EXCEPTION|Fatal signal|Unhandled Exception|EXCEPTION CAUGHT BY' "$OUT/app-logcat.txt"; then
   echo 'App exception detected' >&2
   exit 1
 fi
-printf '%s\n' 'PASS: exact APK/build stamp and clean-install location request passed; preview acquired without FGS/trail and did not leak into Outing; diagnostic started in Nearby and survived Outing stop; explicit Outing promoted to FGS; process/owner survived verified screen-off; fresh GPS fixes and local trail grew while screen was off; resumed without detected app exception.' > "$OUT/result.txt"
+printf '%s\n' 'PASS: exact APK/build stamp and clean-install location request passed; preview acquired without FGS/trail and did not leak into Outing; diagnostic started in Nearby and survived Outing stop; explicit Outing promoted to FGS; foreground Map retains GPS provider without restarting after Outing stop; process/owner survived verified screen-off; fresh GPS fixes and local trail grew while screen was off; resumed without detected app exception.' > "$OUT/result.txt"
 printf '%s\n' 'NOT TESTED: very slow walking with quiet/unavailable IMU, real BLE peer-to-peer, real GNSS error, IMU motion, forced Doze, OEM energy policies, battery endurance, real multi-device HISTORY ACK loss/retry; dropout/segment correctness is a separate synthetic unit-test gate.' >> "$OUT/result.txt"

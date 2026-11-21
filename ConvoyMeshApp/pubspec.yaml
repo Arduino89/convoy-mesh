@@ -1,7 +1,7 @@
 name: convoy_mesh
 description: Convoy Mesh - walking groups, BLE and GPS
 publish_to: "none"
-version: 0.7.7-diaglab+15
+version: 0.7.7-outdoor+20
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -28,3 +28,24 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Fraunces
+      fonts:
+        - asset: assets/fonts/Fraunces-500.ttf
+          weight: 500
+        - asset: assets/fonts/Fraunces-700.ttf
+          weight: 700
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope-400.ttf
+          weight: 400
+        - asset: assets/fonts/Manrope-600.ttf
+          weight: 600
+        - asset: assets/fonts/Manrope-800.ttf
+          weight: 800
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-500.ttf
+          weight: 500
+        - asset: assets/fonts/JetBrainsMono-700.ttf
+          weight: 700

@@ -11,7 +11,7 @@ on:
   push:
     # The experimental PR targets fix/v0.4-stability, so only this push event
     # builds it. Avoid duplicate push + pull_request candidate artifacts.
-    branches: [ main, experiment/pedestrian-acquisition-v1, experiment/manual-ping-20261114, experiment/diagnostic-control-20261114 ]
+    branches: [ main, experiment/pedestrian-acquisition-v1, experiment/manual-ping-20261114, experiment/diagnostic-control-20261114, experiment/frontend-design-studio ]
     paths:
       - 'ConvoyMeshApp/**'
       - 'tools/android_smoke.sh'
@@ -34,6 +34,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          # One parent is needed for the bounded baseline counterproof below.
+          fetch-depth: 2
 
       - name: Capture exact source
         run: |
@@ -86,6 +88,73 @@ jobs:
           set -o pipefail
           flutter test --no-pub --coverage --reporter expanded 2>&1 | tee ../flutter-test.log
 
+      - name: Counterproof against the uncorrected Outdoor checkpoint
+        if: github.ref_name == 'experiment/frontend-design-studio'
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=b8ea08992c8d129f2a83eb79d43a5a2975bc3b7a
+          # Only run for the correction commit (or a rerun of that commit).
+          # All later routine builds continue with the ordinary regression suite.
+          if [[ "$(git rev-parse HEAD^)" != "$BASE" ]]; then
+            echo "Counterproof not required for this checkpoint"
+            exit 0
+          fi
+          baseline=$(mktemp -d "$RUNNER_TEMP/convoy-counterproof.XXXXXX")
+          trap 'rm -rf "$baseline"' EXIT
+          git archive "$BASE" | tar -x -C "$baseline"
+          cp ConvoyMeshApp/test/outdoor_residual_regression_test.dart "$baseline/ConvoyMeshApp/test/"
+          cd "$baseline/ConvoyMeshApp"
+          flutter pub get --enforce-lockfile
+          for case_id in D2 D9 D11; do
+            case "$case_id" in
+              D2) marker=D2_EXPECT_HIDDEN_MUTED ;;
+              D9) marker=D9_EXPECT_NEW_RATE ;;
+              D11) marker=D11_EXPECT_SAME_MAP ;;
+            esac
+            log="$GITHUB_WORKSPACE/counterproof-$case_id.log"
+            if flutter test --no-pub --reporter expanded test/outdoor_residual_regression_test.dart --plain-name "$case_id" 2>&1 | tee "$log"; then
+              echo "::error::$case_id unexpectedly passed on the old source"
+              exit 1
+            else
+              rc=$?
+            fi
+            if [[ "$rc" != 1 ]] || ! grep -Fq "$marker" "$log"; then
+              echo "::error::$case_id failed for an unproven reason; inspect its log"
+              exit 1
+            fi
+            echo "$case_id: expected baseline assertion failure confirmed ($BASE)"
+          done
+
+      - name: Counterproof for warm GPS preview promotion
+        if: github.ref_name == 'experiment/frontend-design-studio'
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=2227afac78d26932dfde49e2d6cead4df7388fcf
+          if [[ "$(git rev-parse HEAD^)" != "$BASE" ]]; then
+            echo "GPS promotion counterproof not required for this checkpoint"
+            exit 0
+          fi
+          baseline=$(mktemp -d "$RUNNER_TEMP/convoy-gps-counterproof.XXXXXX")
+          trap 'rm -rf "$baseline"' EXIT
+          git archive "$BASE" | tar -x -C "$baseline"
+          cp ConvoyMeshApp/test/location_service_contract_test.dart "$baseline/ConvoyMeshApp/test/"
+          cd "$baseline/ConvoyMeshApp"
+          flutter pub get --enforce-lockfile
+          log="$GITHUB_WORKSPACE/counterproof-gps-promotion.log"
+          if flutter test --no-pub --reporter expanded test/location_service_contract_test.dart --plain-name 'warm preview promotion' 2>&1 | tee "$log"; then
+            echo "::error::Warm promotion unexpectedly passed on baseline"
+            exit 1
+          else
+            rc=$?
+          fi
+          if [[ "$rc" != 1 ]] || ! grep -Fq 'GPS_WARM_PROMOTION' "$log"; then
+            echo "::error::Baseline failed for an unproven reason"
+            exit 1
+          fi
+          echo "Expected warm promotion baseline failure confirmed"
+
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -93,6 +162,7 @@ jobs:
           name: flutter-test-log
           path: |
             flutter-test.log
+            counterproof-*.log
             ConvoyMeshApp/coverage/lcov.info
           if-no-files-found: warn
           retention-days: 90
@@ -118,10 +188,11 @@ jobs:
           ORG_GRADLE_PROJECT_convoyExperimental: 'true'
           ORG_GRADLE_PROJECT_convoyPingLab: ${{ github.ref_name == 'experiment/manual-ping-20261114' && 'true' || 'false' }}
           ORG_GRADLE_PROJECT_convoyDiagnosticLab: ${{ github.ref_name == 'experiment/diagnostic-control-20261114' && 'true' || 'false' }}
+          ORG_GRADLE_PROJECT_convoyOutdoorLab: ${{ github.ref_name == 'experiment/frontend-design-studio' && 'true' || 'false' }}
           # Existing repo-level LAB project ingestion token; never a personal API key.
           CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
         run: |
-          if [[ "$GITHUB_REF_NAME" == "experiment/manual-ping-20261114" || "$GITHUB_REF_NAME" == "experiment/diagnostic-control-20261114" ]]; then
+          if [[ "$GITHUB_REF_NAME" == "experiment/manual-ping-20261114" || "$GITHUB_REF_NAME" == "experiment/diagnostic-control-20261114" || "$GITHUB_REF_NAME" == "experiment/frontend-design-studio" ]]; then
             if [[ ! "$CONVOY_LAB_POSTHOG_TOKEN" =~ ^phc_[A-Za-z0-9_-]{16,200}$ || "$CONVOY_LAB_POSTHOG_TOKEN" == "phc_synthetic_local_only" ]]; then
               echo "::error::Existing LAB ingestion secret missing or invalid; refusing unconfigured ping APK"
               exit 1
@@ -140,6 +211,9 @@ jobs:
             trap 'rm -f "$PING_DEFINES_FILE"' EXIT
             if [[ "$GITHUB_REF_NAME" == "experiment/diagnostic-control-20261114" ]]; then
               flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-diaglab+15 --dart-define-from-file="$PING_DEFINES_FILE"
+            elif [[ "$GITHUB_REF_NAME" == "experiment/frontend-design-studio" ]]; then
+              # Owner-authorized closed beta, not a public release. Manual consent only.
+              flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+20 --dart-define=CONVOY_DEFAULT_OUTDOOR=true --dart-define-from-file="$PING_DEFINES_FILE"
             else
               flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define-from-file="$PING_DEFINES_FILE"
             fi
@@ -160,12 +234,14 @@ jobs:
           import re
           from pathlib import Path
           info = Path('build-evidence/apk-badging.txt').read_text()
-          diag_lab = os.environ.get('GITHUB_REF_NAME') == 'experiment/diagnostic-control-20261114'
-          ping_lab = os.environ.get('GITHUB_REF_NAME') == 'experiment/manual-ping-20261114'
-          app_id = 'com.example.convoy_mesh.diaglab' if diag_lab else ('com.example.convoy_mesh.pinglab2' if ping_lab else 'com.example.convoy_mesh.pedestrianexp1')
-          version_code = '15' if diag_lab else ('11' if ping_lab else '9')
-          version_name = '0.7.7-diaglab' if diag_lab else ('0.7.7-pinglab' if ping_lab else '0.7.7-exp1')
-          app_label = 'Convoy Diagnostics LAB' if diag_lab else ('Convoy Ping LAB 2' if ping_lab else 'Convoy Mesh Exp')
+          ref = os.environ.get('GITHUB_REF_NAME', '')
+          outdoor_lab = ref == 'experiment/frontend-design-studio'
+          diag_lab = ref == 'experiment/diagnostic-control-20261114'
+          ping_lab = ref == 'experiment/manual-ping-20261114'
+          app_id = 'com.example.convoy_mesh.outdoor' if outdoor_lab else ('com.example.convoy_mesh.diaglab' if diag_lab else ('com.example.convoy_mesh.pinglab2' if ping_lab else 'com.example.convoy_mesh.pedestrianexp1'))
+          version_code = '20' if outdoor_lab else ('15' if diag_lab else ('11' if ping_lab else '9'))
+          version_name = '0.7.7-outdoor' if outdoor_lab else ('0.7.7-diaglab' if diag_lab else ('0.7.7-pinglab' if ping_lab else '0.7.7-exp1'))
+          app_label = 'Convoy Outdoor LAB' if outdoor_lab else ('Convoy Diagnostics LAB' if diag_lab else ('Convoy Ping LAB 2' if ping_lab else 'Convoy Mesh Exp'))
           assert f"package: name='{app_id}'" in info
           assert f"versionCode='{version_code}'" in info and f"versionName='{version_name}'" in info
           assert f"application-label:'{app_label}'" in info
@@ -176,6 +252,45 @@ jobs:
           sha256sum "$APK" > build-evidence/apk-sha256.txt
           printf '%s\n' 'Candidate debug APK. Automated checks are not real-device BLE/GNSS certification.' > build-evidence/validation-scope.txt
           printf '%s\n' 'Side-by-side package: not an update of com.example.convoy_mesh. Old app/data remain installed. Independent permissions, identity and storage. Use only one Convoy app at a time. Debug key is not retained; future rebuilds are not guaranteed compatible updates. Baseline run #105 APK is unavailable (artifact 10300013706 returns 404); its certificate cannot be compared.' > build-evidence/install-policy.txt
+
+      # One authorized synthetic transmission only, on the integration checkpoint.
+      # Ordinary builds, test reruns, and future commits never send cloud events.
+      - name: Closed beta synthetic cloud round-trip sender
+        if: github.ref_name == 'experiment/frontend-design-studio' && github.run_attempt == 1
+        working-directory: ConvoyMeshApp
+        shell: bash
+        env:
+          CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD^)" != "a91ff715ae13bd0525f8bfdeb4b023bad1817597" ]]; then
+            echo "One-shot cloud fixture not authorized for this checkpoint"
+            exit 0
+          fi
+          if [[ ! "$CONVOY_LAB_POSTHOG_TOKEN" =~ ^phc_[A-Za-z0-9_-]{16,200}$ || "$CONVOY_LAB_POSTHOG_TOKEN" == "phc_synthetic_local_only" ]]; then
+            echo "::error::Existing LAB ingestion secret missing or invalid"
+            exit 1
+          fi
+          export FIXTURE_DEFINES=$(mktemp "$RUNNER_TEMP/convoy-fixture.XXXXXX")
+          chmod 600 "$FIXTURE_DEFINES"
+          trap 'rm -f "$FIXTURE_DEFINES"' EXIT
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path(os.environ["FIXTURE_DEFINES"]).write_text(json.dumps({
+              "CONVOY_POSTHOG_PROJECT_TOKEN": os.environ["CONVOY_LAB_POSTHOG_TOKEN"]
+          }))
+          PY
+          flutter test --no-pub --reporter expanded --dart-define-from-file="$FIXTURE_DEFINES" --dart-define=CONVOY_SYNTHETIC_RUN_ID="$GITHUB_RUN_ID" tool/diagnostic_cloud_fixture_test.dart
+
+      - name: Upload synthetic cloud manifest
+        if: always() && github.ref_name == 'experiment/frontend-design-studio' && hashFiles('build-evidence/synthetic-cloud-expected.json') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-synthetic-cloud-expected
+          path: build-evidence/synthetic-cloud-expected.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
@@ -361,7 +476,7 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1') }}
+          script: EXPECTED_OUTDOOR_VERSION=0.7.7-outdoor+20 EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/frontend-design-studio' && 'com.example.convoy_mesh.outdoor' || (github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1')) }}
 
       - name: Remove duplicate APK from diagnostics
         if: always()

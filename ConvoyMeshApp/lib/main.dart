@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import 'ble/ble_page.dart';
+import 'design/design_controller.dart';
+import 'design/design_theme.dart';
+import 'design/design_tokens.dart';
+import 'design/shell/designed_app_shell.dart';
 import 'pages/diagnostic_page.dart';
 import 'pages/map_page.dart';
 import 'services/app_lifecycle_coordinator.dart';
@@ -22,15 +26,28 @@ class ConvoyMeshApp extends StatelessWidget {
   const ConvoyMeshApp({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Convoy Mesh',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-          useMaterial3: true,
-        ),
-        home: const AppShell(),
-      );
+  Widget build(BuildContext context) {
+    final design = DesignDirectionController.instance;
+    return AnimatedBuilder(
+      animation: design,
+      builder: (context, _) {
+        final tokens = design.activeTokens;
+        final theme = tokens == null
+            ? ThemeData(
+                colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
+                useMaterial3: true,
+              )
+            : buildConvoyTheme(tokens);
+        return MaterialApp(
+          title: 'Convoy Mesh',
+          debugShowCheckedModeBanner: false,
+          theme: theme,
+          themeAnimationDuration: Duration.zero,
+          home: const AppShell(),
+        );
+      },
+    );
+  }
 }
 
 class AppShell extends StatefulWidget {
@@ -75,6 +92,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   Future<void> _boot() async {
+    unawaited(DesignDirectionController.instance.load());
     await DiagnosticRecorder.instance.initialize();
     if (mounted) await _ensureNearby();
   }
@@ -148,9 +166,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         throw StateError('Torna in Convoy Mesh e premi Avvia uscita.');
       }
 
-      // The map may have started a foreground-only GPS preview. An outing owns
-      // a fresh estimator/track, so preview observations never become outing history.
-      await LocationFusionService.instance.disposeService();
+      // Promote an existing foreground GPS preview without restarting its
+      // provider/filter. LocationFusionService starts a new trail at promotion.
       await _mesh.startOuting();
       await _runtime.start();
       if (!_runtime.isRunning) {
@@ -175,7 +192,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     // Do not stop an active diagnostic session when the outing ends.
     // The user owns the test session explicitly from the Test log page.
     await DiagnosticRecorder.instance.flush();
-    await _mesh.stopOuting();
+    // Only a visible, foreground map owns GPS preview after Outing.
+    // Nearby and Test log never silently start continuous GPS tracking.
+    final keepMapPreview = _index == 1 &&
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    await _mesh.stopOuting(keepGpsPreview: keepMapPreview);
     await _runtime.stop();
     // Deliberately keep foreground nearby discovery alive.
     await _ensureNearby();
@@ -211,59 +232,78 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: IndexedStack(
-          index: _index,
-          children: const [BlePage(), MapPage(), DiagnosticPage()],
-        ),
-        bottomNavigationBar: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _busy
-                      ? null
-                      : _runtime.isRunning
-                          ? _stopOuting
-                          : _startOuting,
-                  icon: Icon(
-                    _runtime.isRunning
-                        ? Icons.stop_circle_outlined
-                        : Icons.play_circle_outline,
-                  ),
-                  label: Text(
-                    _busy
-                        ? 'Preparazione…'
-                        : _runtime.isRunning
-                            ? 'Uscita attiva • Termina uscita'
-                            : 'Avvia uscita',
-                  ),
-                ),
-              ),
-            ),
-            NavigationBar(
+  Widget build(BuildContext context) {
+    final tokens = ConvoyDesignTokens.maybeOf(context);
+    return Scaffold(
+      body: IndexedStack(
+        index: _index,
+        // Keep page state mounted, but mute tickers in the two hidden tabs.
+        // This affects visual animations only, never BLE/GPS/outing services.
+        children: [
+          TickerMode(enabled: _index == 0, child: const BlePage()),
+          TickerMode(enabled: _index == 1, child: const MapPage()),
+          TickerMode(enabled: _index == 2, child: const DiagnosticPage()),
+        ],
+      ),
+      bottomNavigationBar: tokens != null
+          ? DesignedBottomDock(
+              tokens: tokens,
               selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              destinations: const [
-                NavigationDestination(icon: Icon(Icons.radar), label: 'Radar BLE'),
-                NavigationDestination(icon: Icon(Icons.map), label: 'Mappa'),
-                NavigationDestination(icon: Icon(Icons.bug_report_outlined), label: 'Test log'),
+              onSelectIndex: (i) => setState(() => _index = i),
+              outingActive: _runtime.isRunning,
+              busy: _busy,
+              error: _error,
+              onToggleOuting: _runtime.isRunning ? _stopOuting : _startOuting,
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : _runtime.isRunning
+                              ? _stopOuting
+                              : _startOuting,
+                      icon: Icon(
+                        _runtime.isRunning
+                            ? Icons.stop_circle_outlined
+                            : Icons.play_circle_outline,
+                      ),
+                      label: Text(
+                        _busy
+                            ? 'Preparazione…'
+                            : _runtime.isRunning
+                                ? 'Uscita attiva • Termina uscita'
+                                : 'Avvia uscita',
+                      ),
+                    ),
+                  ),
+                ),
+                NavigationBar(
+                  selectedIndex: _index,
+                  onDestinationSelected: (i) => setState(() => _index = i),
+                  destinations: const [
+                    NavigationDestination(icon: Icon(Icons.radar), label: 'Radar BLE'),
+                    NavigationDestination(icon: Icon(Icons.map), label: 'Mappa'),
+                    NavigationDestination(icon: Icon(Icons.bug_report_outlined), label: 'Test log'),
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
-      );
+    );
+  }
 }
