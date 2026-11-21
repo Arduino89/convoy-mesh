@@ -16,10 +16,21 @@ import 'services/convoy_mesh_service.dart';
 import 'services/diagnostic_capture_bridge.dart';
 import 'services/diagnostic_recorder.dart';
 import 'services/location_fusion_service.dart';
+import 'wifi_direct_lab/wifi_direct_lab_page.dart';
+
+/// Compile-time flag isolating the Wi-Fi Direct Offline Lab from Outdoor +20.
+/// When true, `AppShell._boot`, `ConvoyMeshService.startNearby()`, and
+/// `BackgroundRuntimeService` are never mounted or started.
+const bool kConvoyWifiDirectLab =
+    bool.fromEnvironment('CONVOY_WIFI_DIRECT_LAB');
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ConvoyMeshApp());
+  runApp(
+    kConvoyWifiDirectLab
+        ? const WifiDirectOfflineLabApp()
+        : const ConvoyMeshApp(),
+  );
 }
 
 class ConvoyMeshApp extends StatelessWidget {

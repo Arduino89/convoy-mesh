@@ -11,7 +11,7 @@ on:
   push:
     # The experimental PR targets fix/v0.4-stability, so only this push event
     # builds it. Avoid duplicate push + pull_request candidate artifacts.
-    branches: [ main, experiment/pedestrian-acquisition-v1, experiment/manual-ping-20261114, experiment/diagnostic-control-20261114, experiment/frontend-design-studio ]
+    branches: [ main, experiment/pedestrian-acquisition-v1, experiment/manual-ping-20261114, experiment/diagnostic-control-20261114, experiment/frontend-design-studio, experiment/wifi-direct-offline-lab-20261121 ]
     paths:
       - 'ConvoyMeshApp/**'
       - 'tools/android_smoke.sh'
@@ -476,7 +476,7 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: EXPECTED_OUTDOOR_VERSION=0.7.7-outdoor+20 EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/frontend-design-studio' && 'com.example.convoy_mesh.outdoor' || (github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1')) }}
+          script: EXPECTED_OUTDOOR_VERSION=0.7.7-outdoor+20 EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/wifi-direct-offline-lab-20261121' && 'com.example.convoy_mesh.wifilab' || (github.ref_name == 'experiment/frontend-design-studio' && 'com.example.convoy_mesh.outdoor' || (github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1'))) }}
 
       - name: Remove duplicate APK from diagnostics
         if: always()
