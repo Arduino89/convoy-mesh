@@ -1,0 +1,167 @@
+name: Verified signed Outdoor +19 to +20 to +21 upgrade (no signing secrets)
+on:
+  push:
+    branches: [experiment/wifi-direct-offline-lab-20261121]
+    paths: ['.github/workflows/wifi21-signed-upgrade-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: convoy-wifi21-signed-upgrade
+  cancel-in-progress: true
+jobs:
+  verify-upgrade:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PACKAGE: com.example.convoy_mesh.outdoor
+      EXPECTED_CERT: dd058e998369d9e3b46ae91e60177b95a31aa096a6ed04b9f7ba29142480f965
+      SIGNED21_SHA: f0287798d8c2301ac899b492bf4986b49ad9e80430505702f903835573aaf101
+      SIGNED20_SHA: 476e923dcd5dcddfd31a84a4b60c05737616163eddfcaddf97cde0d13cb4dd75
+      SIGNED19_SHA: 0da3e4b7787ca8e49d21b6e2dfa9b08915a9c7c30a5d49c37f8980ba1dbbfe59
+    steps:
+      - name: Checkout exact independent check script
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Prepare verified prior and current owner-signed APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pair original19 evidence
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/44915876826" | jq -e '.head_sha == "6c3f554c0e87fc5afa6e6cdedcaaf7d105187c92" and .path == ".github/workflows/outdoor-beta-signing.yml"' >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/44815769826" | jq -e '.conclusion == "success" and .path == ".github/workflows/outdoor-beta-signing.yml"' >/dev/null
+          gh run download 44915876826 --repo "$GITHUB_REPOSITORY" --name outdoor-beta-staged-not-yet-approved --dir pair
+          gh run download 44815769826 --repo "$GITHUB_REPOSITORY" --name convoy-outdoor-beta-19-signed --dir original19
+          test -f original19/Convoy-Outdoor-Beta-19.apk
+          cp original19/Convoy-Outdoor-Beta-19.apk pair/Convoy-Outdoor-Beta-19.apk
+          printf '%s  %s\n' "$SIGNED19_SHA" pair/Convoy-Outdoor-Beta-19.apk | sha256sum -c -
+          printf '%s  %s\n' "$SIGNED20_SHA" pair/Convoy-Outdoor-Beta-20.apk | sha256sum -c -
+          printf '%s  %s\n' "$SIGNED21_SHA" pair/Convoy-Outdoor-Beta-21.apk | sha256sum -c -
+          (cd pair && sha256sum -c SHA256SUMS.txt)
+          jq -e --arg c "$EXPECTED_CERT" --arg h "$SIGNED20_SHA" '.certificate_sha256 == $c and .apk_sha256 == $h and .version_code == 20 and .package == "com.example.convoy_mesh.outdoor"' pair/receipt-20.json >/dev/null
+          jq -e --arg c "$EXPECTED_CERT" --arg h "$SIGNED21_SHA" '.certificate_sha256 == $c and .apk_sha256 == $h and .version_code == 21 and .source_sha == "c70c8729061738fb0eb33d7dfdc2625c19f1613b" and .build_run == "44906575990" and .package == "com.example.convoy_mesh.outdoor"' pair/receipt-21.json >/dev/null
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          TOOLS=$(find "$SDK/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          for code in 19 20 21; do
+            apk="pair/Convoy-Outdoor-Beta-$code.apk"
+            "$TOOLS/apksigner" verify --verbose --print-certs "$apk" | tee "evidence/signer-$code.txt"
+            grep -Fq "certificate SHA-256 digest: $EXPECTED_CERT" "evidence/signer-$code.txt"
+            "$TOOLS/aapt" dump badging "$apk" > "evidence/badging-$code.txt"
+            grep -Fq "package: name='$PACKAGE' versionCode='$code' versionName='0.7.7-outdoor'" "evidence/badging-$code.txt"
+          done
+          printf '%s\n' 'All three APK signatures, versions, source receipts and hashes verified' > evidence/source-check.txt
+      - name: Enable KVM
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Write bounded upgrade test with failure diagnostics
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/check21.sh" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          mkdir -p evidence
+          collect() {
+            adb shell pidof "$PACKAGE" > evidence/process-last.txt 2>&1 || true
+            adb logcat -d > evidence/emulator-logcat.txt 2>&1 || true
+            adb shell dumpsys activity activities > evidence/activities-last.txt 2>&1 || true
+            adb shell dumpsys package "$PACKAGE" > evidence/package-last.txt 2>&1 || true
+          }
+          trap collect EXIT
+          install_code() {
+            local code="$1" mode="$2"
+            adb install $mode "pair/Convoy-Outdoor-Beta-$code.apk" | tee "evidence/install-$code.txt"
+            grep -Fq Success "evidence/install-$code.txt"
+            adb shell dumpsys package "$PACKAGE" | grep -m1 versionCode= > "evidence/version-$code.txt"
+            grep -Fq "versionCode=$code " "evidence/version-$code.txt"
+          }
+          capture_prefs() {
+            local label="$1" deadline=$((SECONDS + 60))
+            while (( SECONDS < deadline )); do
+              if adb exec-out run-as "$PACKAGE" cat shared_prefs/FlutterSharedPreferences.xml > "evidence/prefs-$label.xml" 2>/dev/null &&
+                grep -Fq 'flutter.my_id' "evidence/prefs-$label.xml"; then
+                return 0
+              fi
+              sleep 2
+            done
+            echo "::error::Missing Flutter identity preferences on $label; retaining diagnostic evidence"
+            return 1
+          }
+          launch() {
+            local label="$1"
+            adb shell am start -n "$PACKAGE/com.example.convoy_mesh.MainActivity" | tee "evidence/launch-$label.txt"
+            if grep -Eq 'Error:|Exception' "evidence/launch-$label.txt"; then return 1; fi
+          }
+          install_code 19 ''
+          for p in ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION BLUETOOTH_SCAN BLUETOOTH_CONNECT BLUETOOTH_ADVERTISE POST_NOTIFICATIONS; do
+            adb shell pm grant "$PACKAGE" "android.permission.$p"
+          done
+          launch 19
+          capture_prefs 19
+          adb shell am force-stop "$PACKAGE"
+          adb shell "run-as $PACKAGE mkdir -p files/convoy-diagnostics"
+          printf 'CONVOY_SYNTHETIC_UPGRADE_MARKER\n' > evidence/marker-before.txt
+          adb shell "run-as $PACKAGE sh -c 'cat > files/convoy-diagnostics/upgrade-proof.txt'" < evidence/marker-before.txt
+          adb shell dumpsys package "$PACKAGE" > evidence/package-19.txt
+          install_code 20 -r
+          adb exec-out run-as "$PACKAGE" cat shared_prefs/FlutterSharedPreferences.xml > evidence/prefs-20.xml
+          cmp evidence/prefs-19.xml evidence/prefs-20.xml
+          adb shell dumpsys package "$PACKAGE" > evidence/package-20.txt
+          launch 20
+          test -n "$(adb shell pidof "$PACKAGE" || true)"
+          adb shell am force-stop "$PACKAGE"
+          install_code 21 -r
+          adb exec-out run-as "$PACKAGE" cat shared_prefs/FlutterSharedPreferences.xml > evidence/prefs-21.xml
+          adb exec-out run-as "$PACKAGE" cat files/convoy-diagnostics/upgrade-proof.txt > evidence/marker-after.txt
+          cmp evidence/prefs-20.xml evidence/prefs-21.xml
+          cmp evidence/marker-before.txt evidence/marker-after.txt
+          adb shell dumpsys package "$PACKAGE" > evidence/package-21.txt
+          for p in ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION BLUETOOTH_SCAN BLUETOOTH_CONNECT BLUETOOTH_ADVERTISE POST_NOTIFICATIONS; do
+            grep -Fq "android.permission.$p: granted=true" evidence/package-20.txt
+            grep -Fq "android.permission.$p: granted=true" evidence/package-21.txt
+          done
+          launch 21
+          for i in $(seq 1 20); do
+            if adb shell pidof "$PACKAGE" | grep -q '[0-9]'; then break; fi
+            sleep 2
+          done
+          adb shell pidof "$PACKAGE" | grep -q '[0-9]'
+          sleep 5
+          adb shell pidof "$PACKAGE" | grep -q '[0-9]'
+          if adb install -r pair/Convoy-Outdoor-Beta-20.apk > evidence/downgrade.txt 2>&1; then echo 'Unexpected downgrade'; exit 1; fi
+          grep -Fq INSTALL_FAILED_VERSION_DOWNGRADE evidence/downgrade.txt
+          echo 'PASS: prior-signed +19 -> signed +20 -> signed +21 in-place; identity prefs, diagnostic marker and permissions preserved; app launches; downgrade blocked.' | tee evidence/result.txt
+          SH
+      - name: Prove sequential update on Android 35
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          disable-animations: true
+          script: bash "$RUNNER_TEMP/check21.sh"
+      - name: Upload proof including failures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wifi21-owner-signed-upgrade-proof
+          path: evidence/
+          retention-days: 90
+          if-no-files-found: error
+      - name: Hand off exact signed +21 only after green
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-outdoor-beta-21-signed-upgrade-verified
+          path: |
+            pair/Convoy-Outdoor-Beta-21.apk
+            pair/receipt-21.json
+            pair/certificate-21.txt
+            pair/badging-21.txt
+          retention-days: 90
+          if-no-files-found: error
