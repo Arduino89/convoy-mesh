@@ -189,8 +189,7 @@ jobs:
           ORG_GRADLE_PROJECT_convoyPingLab: ${{ github.ref_name == 'experiment/manual-ping-20261114' && 'true' || 'false' }}
           ORG_GRADLE_PROJECT_convoyDiagnosticLab: ${{ github.ref_name == 'experiment/diagnostic-control-20261114' && 'true' || 'false' }}
           ORG_GRADLE_PROJECT_convoyOutdoorLab: ${{ github.ref_name == 'experiment/frontend-design-studio' && 'true' || 'false' }}
-          # Existing repo-level LAB project ingestion token; never a personal API key.
-          CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
+          # This branch's integrated Wi-Fi build receives no PostHog secret.
         run: |
           if [[ "$GITHUB_REF_NAME" == "experiment/manual-ping-20261114" || "$GITHUB_REF_NAME" == "experiment/diagnostic-control-20261114" || "$GITHUB_REF_NAME" == "experiment/frontend-design-studio" ]]; then
             if [[ ! "$CONVOY_LAB_POSTHOG_TOKEN" =~ ^phc_[A-Za-z0-9_-]{16,200}$ || "$CONVOY_LAB_POSTHOG_TOKEN" == "phc_synthetic_local_only" ]]; then
