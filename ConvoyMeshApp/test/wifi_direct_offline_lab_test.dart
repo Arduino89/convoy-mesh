@@ -885,4 +885,42 @@ void main() {
       await bridge.dispose();
     });
   });
+ 
+  test('P2P pairing is serialized: no duplicate connect or discovery while connecting', () async {
+    final bridge = FakeWifiDirectPlatformBridge();
+    final controller = WifiDirectLabController(platform: bridge, random: Random(989));
+    addTearDown(() async {
+      controller.dispose();
+      await bridge.dispose();
+    });
+
+    expect(await controller.requestDiscovery(), isTrue);
+    bridge.emit(<String, Object?>{
+      'type': 'peers_updated',
+      'peer_count': 1,
+      'peers': [
+        <String, Object?>{'peer_id': 'peer-01', 'status': 'available'},
+      ],
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 15));
+
+    expect(
+      await controller.requestConnect(peerId: 'peer-01', userConsented: true),
+      isTrue,
+    );
+    expect(controller.isConnecting, isTrue);
+    expect(
+      await controller.requestConnect(peerId: 'peer-01', userConsented: true),
+      isFalse,
+    );
+    expect(await controller.requestDiscovery(), isFalse);
+    expect(bridge.connectCalls, 1);
+    expect(bridge.discoverCalls, 1);
+    expect(controller.logs.last.data['code'], 'P2P_CONNECTION_ACTIVE');
+
+    await controller.stopAll(reason: 'test_done');
+    expect(controller.isConnecting, isFalse);
+    expect(bridge.stopCalls, greaterThanOrEqualTo(1));
+  });
+
 }
