@@ -853,5 +853,36 @@ void main() {
       controller.dispose();
       await bridge.dispose();
     });
+    testWidgets('integrated Wi-Fi LAB stops P2P before returning to Outdoor route', (tester) async {
+      final bridge = FakeWifiDirectPlatformBridge();
+      final controller = WifiDirectLabController(platform: bridge, random: Random(727));
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(builder: (context) => Scaffold(
+          body: FilledButton(
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(
+                builder: (_) => WifiDirectLabPage(
+                  controller: controller, integratedMode: true,
+                ),
+              ),
+            ),
+            child: const Text('Open synthetic LAB'),
+          ),
+        )),
+      ));
+      await tester.tap(find.text('Open synthetic LAB'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('wfd_return_to_outdoor')), findsOneWidget);
+      expect(find.byKey(const Key('wfd_discover_button')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('wfd_return_to_outdoor')));
+      await tester.pumpAndSettle();
+      expect(find.text('Open synthetic LAB'), findsOneWidget);
+      expect(find.byKey(const Key('wfd_return_to_outdoor')), findsNothing);
+      expect(bridge.stopCalls, greaterThanOrEqualTo(1));
+      expect(bridge.lastStopReason, isNotNull);
+      expect(controller.isSocketOpen, isFalse);
+      controller.dispose();
+      await bridge.dispose();
+    });
   });
 }
