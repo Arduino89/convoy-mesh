@@ -58,6 +58,9 @@ class ConvoyWifiDirectLabAdapter(
     private var receiverRegistered = false
     private var p2pBroadcastEnabled: Boolean? = null
     private var wasGroupFormed = false
+    // Invalidates asynchronous discovery/connection callbacks after Stop.
+    private var p2pOperationEpoch = 0
+    private var pendingConnectResult: MethodChannel.Result? = null
 
     // Session-scoped in-memory translation table. Cleared on stopAll/dispose.
     private val addressToSyntheticId = linkedMapOf<String, String>()
@@ -299,15 +302,15 @@ class ConvoyWifiDirectLabAdapter(
         val peerId = call.argument<String>("peerId")?.trim().orEmpty()
         val userConsented = call.argument<Boolean>("userConsented") == true
         if (!userConsented) {
-            result.error(
-                "CONSENT_REQUIRED",
-                "Consenso locale obbligatorio prima di connettersi a un peer Wi-Fi Direct",
-                null,
-            )
+            result.error("CONSENT_REQUIRED", "Consenso locale richiesto per connettersi al peer", null)
             return
         }
         if (peerId.isEmpty()) {
             result.error("INVALID_PEER_ID", "ID peer sintetico mancante", null)
+            return
+        }
+        if (pendingConnectResult != null) {
+            result.error("CONNECT_IN_PROGRESS", "Richiesta Wi-Fi Direct già in corso: attendere o usare Stop", null)
             return
         }
         val preflightError = checkP2pPreflight()
@@ -327,7 +330,7 @@ class ConvoyWifiDirectLabAdapter(
         if (rawAddress.isNullOrBlank()) {
             result.error(
                 "PEER_NOT_FOUND",
-                "Peer sintetico $peerId non presente nella sessione corrente; rieseguire la scoperta",
+                "Peer $peerId non presente nella sessione corrente: ripetere la scoperta",
                 null,
             )
             return
@@ -338,45 +341,98 @@ class ConvoyWifiDirectLabAdapter(
                 return
             }
 
-        val config = WifiP2pConfig().apply {
-            deviceAddress = rawAddress
-            wps.setup = WpsInfo.PBC
-        }
-        manager.connect(
-            channel,
-            config,
-            object : WifiP2pManager.ActionListener {
-                override fun onSuccess() {
-                    handler.post {
-                        result.success(
-                            mapOf(
-                                "accepted" to true,
-                                "peer_id" to peerId,
-                            ),
-                        )
-                    }
-                }
+        val epoch = p2pOperationEpoch
+        pendingConnectResult = result
 
-                override fun onFailure(reasonCode: Int) {
-                    val reasonText = p2pReasonToText(reasonCode)
-                    handler.post {
-                        emitEvent(
-                            mapOf(
-                                "type" to "native_error",
-                                "stage" to "connect_peer",
-                                "code" to "CONNECT_PEER_FAILED_$reasonCode",
-                                "message" to "connect($peerId) fallito: $reasonText (code=$reasonCode)",
-                            ),
-                        )
-                        result.error(
-                            "CONNECT_PEER_FAILED",
-                            "connect($peerId) fallito: $reasonText (code=$reasonCode)",
-                            reasonCode,
-                        )
+        fun reject(stage: String, code: String, message: String, reasonCode: Int? = null) {
+            if (epoch != p2pOperationEpoch || pendingConnectResult !== result) return
+            pendingConnectResult = null
+            emitEvent(
+                mapOf(
+                    "type" to "native_error",
+                    "stage" to stage,
+                    "code" to code,
+                    "message" to message,
+                ),
+            )
+            result.error(code, message, reasonCode)
+        }
+
+        fun requestConnectionAfterDiscoveryStopped() {
+            if (epoch != p2pOperationEpoch || pendingConnectResult !== result) return
+            val config = WifiP2pConfig().apply {
+                deviceAddress = rawAddress
+                wps.setup = WpsInfo.PBC
+            }
+            try {
+                manager.connect(
+                    channel,
+                    config,
+                    object : WifiP2pManager.ActionListener {
+                        override fun onSuccess() {
+                            handler.post {
+                                if (epoch != p2pOperationEpoch || pendingConnectResult !== result) return@post
+                                pendingConnectResult = null
+                                result.success(
+                                    mapOf(
+                                        "accepted" to true,
+                                        "peer_id" to peerId,
+                                    ),
+                                )
+                            }
+                        }
+
+                        override fun onFailure(reasonCode: Int) {
+                            handler.post {
+                                reject(
+                                    "connect_peer",
+                                    "CONNECT_PEER_FAILED_$reasonCode",
+                                    "connect($peerId) fallito: ${p2pReasonToText(reasonCode)} " +
+                                        "(code=$reasonCode). Usare Stop su entrambi i telefoni, " +
+                                        "ripetere la scoperta e connettere da uno solo.",
+                                    reasonCode,
+                                )
+                            }
+                        }
+                    },
+                )
+            } catch (e: Exception) {
+                reject("connect_peer", "CONNECT_REQUEST_EXCEPTION", "Connessione P2P non avviata: ${e.javaClass.simpleName}")
+            }
+        }
+
+        // Android can reject connect(BUSY=2) if discovery/negotiation is still
+        // active. Await the platform callback instead of issuing both calls at
+        // once. This mitigates one race; it cannot guarantee an OEM radio link.
+        try {
+            manager.stopPeerDiscovery(
+                channel,
+                object : WifiP2pManager.ActionListener {
+                    override fun onSuccess() {
+                        handler.post { requestConnectionAfterDiscoveryStopped() }
                     }
-                }
-            },
-        )
+
+                    override fun onFailure(reasonCode: Int) {
+                        handler.post {
+                            reject(
+                                "stop_discovery_before_connect",
+                                "STOP_DISCOVERY_FAILED_$reasonCode",
+                                "Android non ha fermato la scoperta Wi-Fi Direct: " +
+                                    "${p2pReasonToText(reasonCode)} (code=$reasonCode). " +
+                                    "Usare Stop su entrambi i telefoni e riprovare da uno solo.",
+                                reasonCode,
+                            )
+                        }
+                    }
+                },
+            )
+        } catch (e: Exception) {
+            reject(
+                "stop_discovery_before_connect",
+                "STOP_DISCOVERY_EXCEPTION",
+                "Impossibile preparare il collegamento P2P: ${e.javaClass.simpleName}",
+            )
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -531,6 +587,10 @@ class ConvoyWifiDirectLabAdapter(
     }
 
     private fun stopAllInternal(reason: String, notifyEvent: Boolean) {
+        p2pOperationEpoch++
+        // A pending stop-discovery callback must not initiate connect after Stop.
+        pendingConnectResult?.error("CONNECT_CANCELLED", "Connessione P2P annullata: Stop", null)
+        pendingConnectResult = null
         val manager = p2pManager
         val channel = p2pChannel
         if (manager != null && channel != null) {
