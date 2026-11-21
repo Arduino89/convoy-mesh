@@ -218,7 +218,12 @@ jobs:
               flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define-from-file="$PING_DEFINES_FILE"
             fi
           else
-            flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }}
+            if [[ "$GITHUB_REF_NAME" == "experiment/wifi-direct-offline-lab-20261121" ]]; then
+              export ORG_GRADLE_PROJECT_convoyOutdoorLab=true
+              flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+21 --dart-define=CONVOY_DEFAULT_OUTDOOR=true --dart-define=CONVOY_WIFI_DIRECT_LAB_INTEGRATED=true --dart-define=CONVOY_POSTHOG_TEMPORARILY_DISABLED=true
+            else
+              flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }}
+            fi
           fi
 
       - name: Verify APK identity, signature and compatibility
