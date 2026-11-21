@@ -209,6 +209,41 @@ count_matches() {
 
 timeout 90 adb install -r "$APK" | tee "$OUT/install.txt"
 grep -q 'Success' "$OUT/install.txt"
+if [[ "$PACKAGE" == "com.example.convoy_mesh.wifilab" ]]; then
+  timeout 15 adb shell pm grant "$PACKAGE" android.permission.NEARBY_WIFI_DEVICES >/dev/null 2>&1 || true
+  for permission in ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION BLUETOOTH_SCAN BLUETOOTH_CONNECT BLUETOOTH_ADVERTISE; do
+    timeout 15 adb shell pm revoke "$PACKAGE" "android.permission.$permission" >/dev/null 2>&1 || true
+  done
+  timeout 15 adb shell cmd bluetooth_manager disable >/dev/null 2>&1 || true
+  timeout 15 adb shell input keyevent KEYCODE_WAKEUP
+  timeout 15 adb shell wm dismiss-keyguard
+  timeout 15 adb logcat -c
+
+  launch_app_process wifilab-first-run
+  sleep 4
+  assert_no_runtime wifilab-boot
+  timeout 15 adb exec-out screencap -p > "$OUT/wifilab-screen.png"
+  timeout 15 adb shell uiautomator dump /sdcard/convoy-wifilab-ui.xml >/dev/null 2>&1 || true
+  timeout 15 adb shell cat /sdcard/convoy-wifilab-ui.xml > "$OUT/ui-wifilab.xml" 2>/dev/null || true
+  grep -Fq 'Convoy Wi-Fi Direct LAB' "$OUT/ui-wifilab.xml"
+  if grep -Eq 'Radar BLE|Avvia uscita' "$OUT/ui-wifilab.xml"; then
+    echo 'Wi-Fi Direct LAB unexpectedly mounted AppShell/BLE UI' >&2
+    exit 1
+  fi
+  timeout 15 adb shell dumpsys package "$PACKAGE" > "$OUT/wifilab-permissions.txt"
+  if grep -Eq 'android\.permission\.ACCESS_(FINE|COARSE)_LOCATION: granted=true' "$OUT/wifilab-permissions.txt"; then
+    echo 'Wi-Fi Direct LAB unexpectedly requested or received location permission on API 35' >&2
+    exit 1
+  fi
+  timeout 15 adb logcat -d --pid="$PID" > "$OUT/app-logcat.txt"
+  if grep -E 'FATAL EXCEPTION|Fatal signal|Unhandled Exception|EXCEPTION CAUGHT BY' "$OUT/app-logcat.txt"; then
+    echo 'App exception detected in Wi-Fi Direct LAB' >&2
+    exit 1
+  fi
+  printf '%s\n' 'PASS: Wi-Fi Direct Offline Lab APK installed as com.example.convoy_mesh.wifilab; launched isolated WifiDirectOfflineLabApp with Bluetooth off, zero location permission granted on API 35, zero ConvoyForegroundService runtime, zero AppShell/BLE startup, and zero app exceptions.' > "$OUT/result.txt"
+  printf '%s\n' 'NOT TESTED: physical two-phone Wi-Fi Direct radio discovery, group formation, range (10..150 m), OEM P2P behavior, and screen-off battery impact require two real Android handsets.' >> "$OUT/result.txt"
+  exit 0
+fi
 # Grant Bluetooth first but deliberately leave location ungranted. Nearby itself
 # must request location on a clean Android 12+ install because Convoy uses BLE
 # observations as proximity/location evidence and does not declare neverForLocation.
@@ -234,6 +269,22 @@ timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 
 # A diagnostic session may begin BEFORE an outing and must span the transition.
 wait_and_tap_text 'Test log' open-test-log
+# The integrated branch uses the same Outdoor package; the Wi-Fi LAB is a
+# separate route, not a second installed app or an always-running transport.
+if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+21" ]]; then
+  wait_and_tap_text 'Apri Wi-Fi Direct LAB (solo probe sintetici)' open-integrated-wifi
+  sleep 3
+  assert_no_runtime wifi-lab-open
+  timeout 15 adb shell uiautomator dump /sdcard/convoy-integrated-lab.xml >/dev/null 2>&1 || true
+  timeout 15 adb shell cat /sdcard/convoy-integrated-lab.xml > "$OUT/ui-integrated-wifi.xml"
+  grep -Fq 'Convoy Wi-Fi Direct LAB' "$OUT/ui-integrated-wifi.xml"
+  wait_and_tap_text 'Chiudi LAB e torna a Convoy' return-integrated-outdoor
+  sleep 3
+  assert_no_runtime wifi-lab-return
+  timeout 15 adb shell uiautomator dump /sdcard/convoy-return-outdoor.xml >/dev/null 2>&1 || true
+  timeout 15 adb shell cat /sdcard/convoy-return-outdoor.xml > "$OUT/ui-return-outdoor.xml"
+  grep -Fq 'Test diagnostico' "$OUT/ui-return-outdoor.xml"
+fi
 # The start control is deliberately before the explanatory text. Do NOT
 # swipe here: a previous unconditional swipe hid the button above the
 # viewport in actual emulator UI dumps. Capture the pre-tap view to

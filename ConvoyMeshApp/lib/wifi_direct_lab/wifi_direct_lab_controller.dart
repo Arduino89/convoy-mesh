@@ -1,0 +1,1097 @@
+import 'dart:async';
+import 'dart:math';
+
+import 'package:flutter/widgets.dart';
+
+import 'wifi_direct_lab_models.dart';
+import 'wifi_direct_lab_transport.dart';
+
+/// State and protocol controller for the isolated Wi-Fi Direct Offline Lab
+/// (First Gate).
+///
+/// Enforces:
+/// - Bluetooth OFF and Wi-Fi Direct feature/permission preflight.
+/// - Local user consent before connecting to a peer or sending synthetic probes.
+/// -Strict separation between system events (`discover_requested`, `peer_seen`,
+///  `connect_requested`, `group_formed`), transport events (`socket_open`,
+///  `disconnect`), and application proof (`probe_sent`, `probe_received`,
+///  `ack_received`).
+/// - 20-probe bidirectional exchange with exact `(seq, nonce)` ACK matching
+///   (`0` false confirmations) and receiver deduplication across reconnects.
+/// - Immediate cleanup of sockets, P2P group, and native receiver on `Stop`,
+///   page disposal, or app backgrounding.
+class WifiDirectLabController extends ChangeNotifier {
+  WifiDirectLabController({
+    WifiDirectPlatformBridge? platform,
+    WifiDirectSocketTransport? socketTransport,
+    DateTime Function()? nowUtc,
+    int Function()? elapsedMsProvider,
+    Random? random,
+    this.labPort = TcpWifiDirectSocketTransport.defaultLabPort,
+  })  : _platform = platform ?? MethodChannelWifiDirectPlatformBridge(),
+        _socket = socketTransport ?? TcpWifiDirectSocketTransport(),
+        _nowUtc = nowUtc ?? (() => DateTime.now().toUtc()),
+        _random = random ?? Random.secure() {
+    _stopwatch.start();
+    _elapsedMs = elapsedMsProvider ?? (() => _stopwatch.elapsedMilliseconds);
+    _sessionId = _buildSessionId();
+    _localNodeId = WifiDirectSyntheticFrame.generateSyntheticNodeId(_random);
+    _platformEventSub = _platform.events.listen(
+      _handlePlatformEvent,
+      onError: (Object error) {
+        _record(
+          WifiDirectLabEventKind.error,
+          layer: WifiDirectEvidenceLayer.system,
+          data: <String, Object?>{
+            'stage': 'platform_event_stream',
+            'code': 'PLATFORM_STREAM_ERROR',
+            'message': error.toString(),
+          },
+        );
+      },
+    );
+  }
+
+  static const int defaultProbeBatchSize = 20;
+
+  final WifiDirectPlatformBridge _platform;
+  final WifiDirectSocketTransport _socket;
+  final DateTime Function() _nowUtc;
+  final Stopwatch _stopwatch = Stopwatch();
+  late final int Function() _elapsedMs;
+  final Random _random;
+  final int labPort;
+
+  StreamSubscription<Map<String, Object?>>? _platformEventSub;
+  late String _sessionId;
+  late String _localNodeId;
+
+  WifiDirectEnvironmentStatus _environment = const WifiDirectEnvironmentStatus();
+  final Map<String, WifiDirectSyntheticPeer> _peers =
+      <String, WifiDirectSyntheticPeer>{};
+  final List<WifiDirectLabLogEntry> _logs = <WifiDirectLabLogEntry>[];
+  final Map<int, WifiDirectSentProbeRecord> _sentProbes =
+      <int, WifiDirectSentProbeRecord>{};
+  // Maps "$remoteNodeId:$seq" -> nonce for deduplication across link recovery.
+  final Map<String, String> _deliveredProbesByRemote = <String, String>{};
+
+  bool _isDiscovering = false;
+  bool _isConnecting = false;
+  bool _isGroupFormed = false;
+  bool _isSocketOpen = false;
+  bool _isSendingBatch = false;
+  bool _disposed = false;
+  String? _selectedPeerId;
+  String? _lastError;
+  WifiDirectGroupRole _groupRole = WifiDirectGroupRole.none;
+  int _activePort = TcpWifiDirectSocketTransport.defaultLabPort;
+  int _nextSeq = 1;
+  int _batchEpoch = 0;
+
+  int _uniqueProbesDelivered = 0;
+  int _duplicateProbesSuppressed = 0;
+  int _falseAcksRejected = 0;
+  int _duplicateAcksIgnored = 0;
+  int _invalidFramesRejected = 0;
+  int _acksSentCount = 0;
+
+  String get sessionId => _sessionId;
+  String get localNodeId => _localNodeId;
+  WifiDirectEnvironmentStatus get environment => _environment;
+  List<WifiDirectSyntheticPeer> get peers =>
+      _peers.values.toList(growable: false);
+  List<WifiDirectLabLogEntry> get logs => List.unmodifiable(_logs);
+  List<WifiDirectSentProbeRecord> get sentProbes =>
+      _sentProbes.values.toList(growable: false);
+
+  bool get isDiscovering => _isDiscovering;
+  bool get isConnecting => _isConnecting;
+  bool get isGroupFormed => _isGroupFormed;
+  bool get isSocketOpen => _isSocketOpen && _socket.isSocketOpen;
+  bool get isSendingBatch => _isSendingBatch;
+  String? get selectedPeerId => _selectedPeerId;
+  String? get lastError => _lastError;
+  WifiDirectGroupRole get groupRole => _groupRole;
+  int get activePort => _activePort;
+
+  int get probesSentCount => _sentProbes.length;
+  int get acksConfirmedCount =>
+      _sentProbes.values.where((p) => p.ackConfirmed).length;
+  int get unconfirmedProbesCount =>
+      _sentProbes.values.where((p) => !p.ackConfirmed).length;
+  int get uniqueProbesDelivered => _uniqueProbesDelivered;
+  int get duplicateProbesSuppressed => _duplicateProbesSuppressed;
+  int get falseAcksRejected => _falseAcksRejected;
+  int get duplicateAcksIgnored => _duplicateAcksIgnored;
+  int get invalidFramesRejected => _invalidFramesRejected;
+  int get acksSentCount => _acksSentCount;
+
+  List<int> get confirmedRttsMs => _sentProbes.values
+      .where((p) => p.ackConfirmed && p.localRttMs != null)
+      .map((p) => p.localRttMs!)
+      .toList(growable: false);
+
+  int? get minRttMs {
+    final rtts = confirmedRttsMs;
+    if (rtts.isEmpty) return null;
+    return rtts.reduce(min);
+  }
+
+  int? get maxRttMs {
+    final rtts = confirmedRttsMs;
+    if (rtts.isEmpty) return null;
+    return rtts.reduce(max);
+  }
+
+  double? get meanRttMs {
+    final rtts = confirmedRttsMs;
+    if (rtts.isEmpty) return null;
+    final sum = rtts.fold<int>(0, (acc, v) => acc + v);
+    return sum / rtts.length;
+  }
+
+  String _buildSessionId() {
+    final stamp =
+        _nowUtc().toIso8601String().replaceAll(RegExp(r'[^0-9TZ]'), '');
+    final suffix = List.generate(
+      3,
+      (_) => _random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    return 'WFD-$stamp-$suffix';
+  }
+
+  Future<WifiDirectEnvironmentStatus> refreshEnvironment() async {
+    try {
+      _environment = await _platform.getEnvironmentStatus();
+      _notify();
+    } catch (e) {
+      _recordError(
+        stage: 'environment_check',
+        code: 'ENVIRONMENT_CHECK_FAILED',
+        message: e.toString(),
+      );
+    }
+    return _environment;
+  }
+
+  Future<WifiDirectEnvironmentStatus> requestPermission() async {
+    try {
+      _environment = await _platform.requestRequiredPermission();
+      if (!_environment.requiredRuntimePermissionGranted) {
+        _recordError(
+          stage: 'permission_request',
+          code: 'PERMISSION_DENIED',
+          message:
+              'Permesso runtime ${_environment.requiredPermissionName} negato dall’utente.',
+        );
+      } else {
+        _lastError = null;
+      }
+      _notify();
+    } catch (e) {
+      _recordError(
+        stage: 'permission_request',
+        code: 'PERMISSION_REQUEST_ERROR',
+        message: e.toString(),
+      );
+    }
+    return _environment;
+  }
+
+  Future<void> openWifiSettings() => _platform.openWifiSettings();
+  Future<void> openBluetoothSettings() => _platform.openBluetoothSettings();
+  Future<void> openLocationSettings() => _platform.openLocationSettings();
+  Future<void> openAppSettings() => _platform.openAppSettings();
+
+  /// Step 1: Request Wi-Fi Direct peer discovery.
+  ///
+  /// Fails closed (with an explicit `error` event and zero BLE fallback) if
+  /// Bluetooth is enabled, Wi-Fi is off, Wi-Fi Direct is unsupported, or the
+  /// required permission is missing.
+  Future<bool> requestDiscovery() async {
+    await refreshEnvironment();
+    _record(
+      WifiDirectLabEventKind.discoverRequested,
+      layer: WifiDirectEvidenceLayer.system,
+      data: <String, Object?>{
+        'bluetooth_off': _environment.isBluetoothOffClean,
+        'wifi_enabled': _environment.wifiEnabled,
+        'internet_absent': _environment.isOfflineClean,
+        'permission_granted': _environment.requiredRuntimePermissionGranted,
+      },
+    );
+
+    final preflightFailure = _checkPreflightCodeAndMessage();
+    if (preflightFailure != null) {
+      _isDiscovering = false;
+      _recordError(
+        stage: 'discover_preflight',
+        code: preflightFailure.$1,
+        message: preflightFailure.$2,
+      );
+      return false;
+    }
+
+    try {
+      await _platform.discoverPeers();
+      _isDiscovering = true;
+      _lastError = null;
+      _notify();
+      return true;
+    } catch (e) {
+      _isDiscovering = false;
+      _recordError(
+        stage: 'discover_peers',
+        code: 'DISCOVER_PEERS_FAILED',
+        message: e.toString(),
+      );
+      return false;
+    }
+  }
+
+  /// Reports an explicit `no_peers` error when a discovery window completes
+  /// with zero peers observed.
+  void reportNoPeersObserved() {
+    if (_peers.isNotEmpty) return;
+    _recordError(
+      stage: 'discover_peers',
+      code: 'NO_PEERS_FOUND',
+      message:
+          'Nessun peer Wi-Fi Direct rilevato. Verificare che anche l’altro telefono sia in scoperta con Wi-Fi attivo.',
+    );
+  }
+
+  /// Step 2: Request P2P connection to an explicitly selected synthetic peer.
+  ///
+  /// Never auto-connects to unknown devices; [userConsented] must be `true`.
+  Future<bool> requestConnect({
+    required String peerId,
+    required bool userConsented,
+  }) async {
+    if (!userConsented) {
+      _recordError(
+        stage: 'connect_preflight',
+        code: 'CONSENT_REQUIRED',
+        message:
+            'Consenso locale richiesto per avviare la connessione al peer $peerId.',
+      );
+      return false;
+    }
+    if (!WifiDirectSyntheticPeer.validSyntheticPeerId.hasMatch(peerId)) {
+      _recordError(
+        stage: 'connect_preflight',
+        code: 'INVALID_SYNTHETIC_PEER_ID',
+        message: 'ID peer non sintetico o non valido: $peerId',
+      );
+      return false;
+    }
+    if (!_peers.containsKey(peerId)) {
+      _recordError(
+        stage: 'connect_preflight',
+        code: 'PEER_NOT_FOUND',
+        message: 'Peer $peerId non presente nell’elenco scoperto.',
+      );
+      return false;
+    }
+
+    await refreshEnvironment();
+    final preflightFailure = _checkPreflightCodeAndMessage();
+    if (preflightFailure != null) {
+      _recordError(
+        stage: 'connect_preflight',
+        code: preflightFailure.$1,
+        message: preflightFailure.$2,
+      );
+      return false;
+    }
+
+    _selectedPeerId = peerId;
+    _isConnecting = true;
+    _record(
+      WifiDirectLabEventKind.connectRequested,
+      layer: WifiDirectEvidenceLayer.system,
+      data: <String, Object?>{
+        'peer_id': peerId,
+        'user_consented': true,
+      },
+    );
+
+    try {
+      await _platform.connectPeer(
+        peerId: peerId,
+        userConsented: true,
+      );
+      _lastError = null;
+      _notify();
+      return true;
+    } catch (e) {
+      _isConnecting = false;
+      _recordError(
+        stage: 'connect_peer',
+        code: 'CONNECT_PEER_FAILED',
+        message: e.toString(),
+      );
+      return false;
+    }
+  }
+
+  /// Step 3: Send a single synthetic probe over the open Wi-Fi Direct socket.
+  Future<bool> sendSingleProbe({
+    required bool userConsented,
+    String syntheticState = WifiDirectSyntheticFrame.defaultSyntheticState,
+  }) async {
+    if (!userConsented) {
+      _recordError(
+        stage: 'send_probe',
+        code: 'CONSENT_REQUIRED',
+        message: 'Consenso locale richiesto prima di inviare probe sintetici.',
+      );
+      return false;
+    }
+    if (!isSocketOpen) {
+      _recordError(
+        stage: 'send_probe',
+        code: 'SOCKET_NOT_OPEN',
+        message:
+            'Impossibile inviare probe: socket TCP Wi-Fi Direct non aperto.',
+      );
+      return false;
+    }
+    if (_environment.bluetoothEnabled) {
+      _recordError(
+        stage: 'send_probe',
+        code: 'BLUETOOTH_MUST_BE_OFF',
+        message:
+            'Bluetooth attivo: spegnere il Bluetooth prima di inviare probe Wi-Fi Direct.',
+      );
+      return false;
+    }
+
+    final seq = _nextSeq++;
+    final nonce = WifiDirectSyntheticFrame.generateNonce(_random);
+    final nowElapsed = _elapsedMs();
+    final frame = WifiDirectSyntheticFrame.probe(
+      senderNodeId: _localNodeId,
+      seq: seq,
+      nonce: nonce,
+      sentElapsedMs: nowElapsed,
+      syntheticState: syntheticState,
+    );
+
+    final record = WifiDirectSentProbeRecord(
+      seq: seq,
+      nonce: nonce,
+      syntheticState: syntheticState,
+      firstSentElapsedMs: nowElapsed,
+      lastSentElapsedMs: nowElapsed,
+    );
+    _sentProbes[seq] = record;
+
+    try {
+      await _socket.sendJsonLine(frame.toJsonLine());
+      _record(
+        WifiDirectLabEventKind.probeSent,
+        layer: WifiDirectEvidenceLayer.application,
+        data: <String, Object?>{
+          'seq': seq,
+          'nonce': nonce,
+          'synthetic_state': syntheticState,
+          'attempt': 1,
+          'retransmit': false,
+        },
+      );
+      return true;
+    } catch (e) {
+      _sentProbes.remove(seq);
+      _recordError(
+        stage: 'send_probe',
+        code: 'SOCKET_SEND_FAILED',
+        message: 'Errore invio probe seq=$seq: $e',
+        layer: WifiDirectEvidenceLayer.transport,
+      );
+      return false;
+    }
+  }
+
+  /// Step 3b: Send the standard 20-probe synthetic batch over the open socket.
+  Future<int> sendProbeBatch({
+    required bool userConsented,
+    int count = defaultProbeBatchSize,
+    Duration interval = const Duration(milliseconds: 40),
+  }) async {
+    if (!userConsented) {
+      _recordError(
+        stage: 'send_probe_batch',
+        code: 'CONSENT_REQUIRED',
+        message:
+            'Consenso locale richiesto per avviare la sequenza di $count probe sintetici.',
+      );
+      return 0;
+    }
+    if (count < 1 || count > 200) {
+      throw ArgumentError.value(count, 'count', 'Must be between 1 and 200');
+    }
+    if (!isSocketOpen) {
+      _recordError(
+        stage: 'send_probe_batch',
+        code: 'SOCKET_NOT_OPEN',
+        message:
+            'Impossibile avviare i $count probe: socket TCP Wi-Fi Direct non aperto.',
+      );
+      return 0;
+    }
+
+    final myEpoch = ++_batchEpoch;
+    _isSendingBatch = true;
+    _notify();
+    var sentInBatch = 0;
+
+    try {
+      for (var i = 0; i < count; i++) {
+        if (myEpoch != _batchEpoch || !isSocketOpen || _disposed) {
+          break;
+        }
+        final ok = await sendSingleProbe(userConsented: true);
+        if (!ok) {
+          break;
+        }
+        sentInBatch++;
+        if (i + 1 < count && interval > Duration.zero) {
+          await Future<void>.delayed(interval);
+        }
+      }
+    } finally {
+      if (myEpoch == _batchEpoch) {
+        _isSendingBatch = false;
+        _notify();
+      }
+    }
+    return sentInBatch;
+  }
+
+  /// Step 4: After link loss and reconnection, retransmit unconfirmed probes
+  /// with their original `(seq, nonce)` (so the receiver deduplicates already
+  /// delivered probes while re-ACKing lost confirmations) and complete any
+  /// remaining probes up to [targetTotalProbes].
+  Future<int> resumeAfterReconnect({
+    required bool userConsented,
+    int targetTotalProbes = defaultProbeBatchSize,
+    Duration interval = const Duration(milliseconds: 40),
+  }) async {
+    if (!userConsented) {
+      _recordError(
+        stage: 'resume_probes',
+        code: 'CONSENT_REQUIRED',
+        message: 'Consenso locale richiesto per riprendere i probe dopo la riconnessione.',
+      );
+      return 0;
+    }
+    if (!isSocketOpen) {
+      _recordError(
+        stage: 'resume_probes',
+        code: 'SOCKET_NOT_OPEN',
+        message: 'Socket TCP non aperto: attendere socket_open prima della ripresa.',
+      );
+      return 0;
+    }
+
+    final myEpoch = ++_batchEpoch;
+    _isSendingBatch = true;
+    _notify();
+    var transmitted = 0;
+
+    try {
+      final unacked = _sentProbes.values
+          .where((p) => !p.ackConfirmed)
+          .toList(growable: false)
+        ..sort((a, b) => a.seq.compareTo(b.seq));
+
+      for (final record in unacked) {
+        if (myEpoch != _batchEpoch || !isSocketOpen || _disposed) break;
+        final nowElapsed = _elapsedMs();
+        record.lastSentElapsedMs = nowElapsed;
+        record.attempts += 1;
+        final frame = WifiDirectSyntheticFrame.probe(
+          senderNodeId: _localNodeId,
+          seq: record.seq,
+          nonce: record.nonce,
+          sentElapsedMs: nowElapsed,
+          syntheticState: record.syntheticState,
+        );
+        try {
+          await _socket.sendJsonLine(frame.toJsonLine());
+          transmitted++;
+          _record(
+            WifiDirectLabEventKind.probeSent,
+            layer: WifiDirectEvidenceLayer.application,
+            data: <String, Object?>{
+              'seq': record.seq,
+              'nonce': record.nonce,
+              'synthetic_state': record.syntheticState,
+              'attempt': record.attempts,
+              'retransmit': true,
+            },
+          );
+        } catch (e) {
+          _recordError(
+            stage: 'retransmit_probe',
+            code: 'SOCKET_SEND_FAILED',
+            message: 'Errore ritrasmissione seq=${record.seq}: $e',
+            layer: WifiDirectEvidenceLayer.transport,
+          );
+          break;
+        }
+        if (interval > Duration.zero) {
+          await Future<void>.delayed(interval);
+        }
+      }
+
+      while (_sentProbes.length < targetTotalProbes &&
+          myEpoch == _batchEpoch &&
+          isSocketOpen &&
+          !_disposed) {
+        final ok = await sendSingleProbe(userConsented: true);
+        if (!ok) break;
+        transmitted++;
+        if (_sentProbes.length < targetTotalProbes && interval > Duration.zero) {
+          await Future<void>.delayed(interval);
+        }
+      }
+    } finally {
+      if (myEpoch == _batchEpoch) {
+        _isSendingBatch = false;
+        _notify();
+      }
+    }
+    return transmitted;
+  }
+
+  /// Step 5: Stop discovery, close TCP sockets, tear down Wi-Fi Direct group,
+  /// and unregister native receivers.
+  Future<void> stopAll({String reason = 'manual_stop'}) async {
+    _batchEpoch++;
+    _isSendingBatch = false;
+    final hadActiveResources =
+        _isDiscovering || _isConnecting || _isGroupFormed || _isSocketOpen || _socket.isSocketOpen;
+
+    _isDiscovering = false;
+    _isConnecting = false;
+    _isGroupFormed = false;
+    _isSocketOpen = false;
+    _groupRole = WifiDirectGroupRole.none;
+    _selectedPeerId = null;
+    _peers.clear();
+
+    await _socket.close();
+    try {
+      await _platform.stopAll(reason: reason);
+    } catch (_) {}
+
+    if (hadActiveResources) {
+      _record(
+        WifiDirectLabEventKind.disconnect,
+        layer: WifiDirectEvidenceLayer.transport,
+        data: <String, Object?>{
+          'reason': reason,
+          'probes_sent': probesSentCount,
+          'acks_confirmed': acksConfirmedCount,
+          'unconfirmed_probes': unconfirmedProbesCount,
+        },
+      );
+    } else {
+      _notify();
+    }
+  }
+
+  /// Automatically stops sockets, receivers, and P2P group when the app goes to
+  /// background (`paused`, `inactive`, `detached`, `hidden`).
+  Future<void> onAppLifecycleStateChanged(AppLifecycleState state) async {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      await stopAll(reason: 'app_backgrounded_${state.name}');
+    } else if (state == AppLifecycleState.resumed) {
+      await refreshEnvironment();
+    }
+  }
+
+  String exportJsonl() =>
+      _logs.isEmpty ? '' : '${_logs.map((e) => e.toJsonLine()).join('\n')}\n';
+
+  void _handlePlatformEvent(Map<String, Object?> event) {
+    if (_disposed) return;
+    final type = event['type'] as String?;
+    switch (type) {
+      case 'p2p_state_changed':
+        final enabled = event['enabled'] == true;
+        _environment = _environment.copyWith(p2pStateEnabled: enabled);
+        if (!enabled) {
+          _recordError(
+            stage: 'p2p_state',
+            code: 'WIFI_P2P_DISABLED',
+            message: 'Wi-Fi Direct disabilitato a livello di sistema.',
+          );
+          unawaited(_closeTransportOnDisconnect('wifi_p2p_disabled'));
+        } else {
+          _notify();
+        }
+        break;
+
+      case 'peers_updated':
+        final rawPeers = event['peers'];
+        final now = _elapsedMs();
+        final seenIds = <String>{};
+        if (rawPeers is List) {
+          for (final item in rawPeers) {
+            if (item is Map) {
+              final peerId = item['peer_id']?.toString() ?? '';
+              final status = item['status']?.toString() ?? 'available';
+              if (!WifiDirectSyntheticPeer.validSyntheticPeerId.hasMatch(peerId)) {
+                continue;
+              }
+              seenIds.add(peerId);
+              final existing = _peers[peerId];
+              final isNewOrChanged = existing == null || existing.status != status;
+              _peers[peerId] = WifiDirectSyntheticPeer(
+                peerId: peerId,
+                status: status,
+                firstSeenElapsedMs: existing?.firstSeenElapsedMs ?? now,
+                lastSeenElapsedMs: now,
+              );
+              if (isNewOrChanged) {
+                _record(
+                  WifiDirectLabEventKind.peerSeen,
+                  layer: WifiDirectEvidenceLayer.system,
+                  data: <String, Object?>{
+                    'peer_id': peerId,
+                    'status': status,
+                    'peer_count': rawPeers.length,
+                  },
+                );
+              }
+            }
+          }
+        }
+        _peers.removeWhere((id, _) => !seenIds.contains(id));
+        _notify();
+        break;
+
+      case 'group_formed':
+        final role = WifiDirectGroupRole.fromWire(event['role']?.toString());
+        final clientCount = (event['client_count'] as num?)?.toInt() ?? 0;
+        final ownerHost = event['group_owner_host']?.toString().trim() ?? '';
+        final port = (event['port'] as num?)?.toInt() ?? labPort;
+        _isConnecting = false;
+        _isGroupFormed = true;
+        _groupRole = role;
+        _activePort = port;
+
+        // Log group_formed WITHOUT storing IP/MAC/SSID in the diagnostic log.
+        _record(
+          WifiDirectLabEventKind.groupFormed,
+          layer: WifiDirectEvidenceLayer.system,
+          data: <String, Object?>{
+            'role': role.wireName,
+            'client_count': clientCount,
+            if (_selectedPeerId != null) 'peer_id': _selectedPeerId,
+          },
+        );
+        unawaited(_openSocketForGroup(role: role, ownerHost: ownerHost, port: port));
+        break;
+
+      case 'p2p_disconnected':
+        final reason = event['reason']?.toString() ?? 'p2p_disconnected';
+        unawaited(_closeTransportOnDisconnect(reason));
+        break;
+
+      case 'native_error':
+        final stage = event['stage']?.toString() ?? 'native';
+        final code = event['code']?.toString() ?? 'NATIVE_ERROR';
+        final msg = event['message']?.toString() ?? 'Errore nativo Wi-Fi Direct';
+        _recordError(stage: stage, code: code, message: msg);
+        break;
+    }
+  }
+
+  Future<void> _openSocketForGroup({
+    required WifiDirectGroupRole role,
+    required String ownerHost,
+    required int port,
+  }) async {
+    if (_disposed) return;
+    if (role == WifiDirectGroupRole.groupOwner) {
+      await _socket.startGroupOwnerServer(
+        port: port,
+        onSocketOpen: (boundPort) {
+          _activePort = boundPort;
+          _isSocketOpen = true;
+          _lastError = null;
+          _record(
+            WifiDirectLabEventKind.socketOpen,
+            layer: WifiDirectEvidenceLayer.transport,
+            data: <String, Object?>{
+              'role': role.wireName,
+              'port': boundPort,
+              'transport': 'tcp_p2p',
+            },
+          );
+        },
+        onLineReceived: _handleIncomingJsonLine,
+        onSocketDisconnected: (reason) {
+          unawaited(_handleSocketClosed(reason));
+        },
+        onSocketError: (code, message) {
+          _recordError(
+            stage: 'socket_group_owner',
+            code: code,
+            message: message,
+            layer: WifiDirectEvidenceLayer.transport,
+          );
+        },
+      );
+    } else if (role == WifiDirectGroupRole.client) {
+      await _socket.connectAsClient(
+        host: ownerHost,
+        port: port,
+        onSocketOpen: (connectedPort) {
+          _activePort = connectedPort;
+          _isSocketOpen = true;
+          _lastError = null;
+          _record(
+            WifiDirectLabEventKind.socketOpen,
+            layer: WifiDirectEvidenceLayer.transport,
+            data: <String, Object?>{
+              'role': role.wireName,
+              'port': connectedPort,
+              'transport': 'tcp_p2p',
+            },
+          );
+        },
+        onLineReceived: _handleIncomingJsonLine,
+        onSocketDisconnected: (reason) {
+          unawaited(_handleSocketClosed(reason));
+        },
+        onSocketError: (code, message) {
+          _recordError(
+            stage: 'socket_client',
+            code: code,
+            message: message,
+            layer: WifiDirectEvidenceLayer.transport,
+          );
+        },
+      );
+    }
+  }
+
+  void _handleIncomingJsonLine(String rawLine) {
+    if (_disposed) return;
+    WifiDirectSyntheticFrame frame;
+    try {
+      frame = WifiDirectSyntheticFrame.parseJsonLine(rawLine);
+    } catch (e) {
+      _invalidFramesRejected++;
+      _recordError(
+        stage: 'frame_parse',
+        code: 'INVALID_SYNTHETIC_FRAME',
+        message: e.toString(),
+        layer: WifiDirectEvidenceLayer.application,
+      );
+      return;
+    }
+
+    if (frame.type == WifiDirectFrameType.probe) {
+      _handleIncomingProbe(frame);
+    } else if (frame.type == WifiDirectFrameType.ack) {
+      _handleIncomingAck(frame);
+    }
+  }
+
+  void _handleIncomingProbe(WifiDirectSyntheticFrame probe) {
+    if (probe.senderNodeId == _localNodeId) {
+      _invalidFramesRejected++;
+      _recordError(
+        stage: 'probe_rx',
+        code: 'SELF_PROBE_REJECTED',
+        message: 'Ricevuto probe con lo stesso localNodeId',
+        layer: WifiDirectEvidenceLayer.application,
+      );
+      return;
+    }
+
+    final dedupKey = '${probe.senderNodeId}:${probe.seq}';
+    final existingNonce = _deliveredProbesByRemote[dedupKey];
+    var isDuplicate = false;
+
+    if (existingNonce != null) {
+      if (existingNonce != probe.nonce) {
+        _invalidFramesRejected++;
+        _recordError(
+          stage: 'probe_rx',
+          code: 'CONFLICTING_SEQ_NONCE',
+          message:
+              'Ricevuto probe seq=${probe.seq} da ${probe.senderNodeId} con nonce differente dal precedente',
+          layer: WifiDirectEvidenceLayer.application,
+        );
+        return;
+      }
+      isDuplicate = true;
+      _duplicateProbesSuppressed++;
+    } else {
+      _deliveredProbesByRemote[dedupKey] = probe.nonce;
+      _uniqueProbesDelivered++;
+    }
+
+    _record(
+      WifiDirectLabEventKind.probeReceived,
+      layer: WifiDirectEvidenceLayer.application,
+      data: <String, Object?>{
+        'remote_node': probe.senderNodeId,
+        'seq': probe.seq,
+        'nonce': probe.nonce,
+        'synthetic_state':
+            probe.syntheticState ?? WifiDirectSyntheticFrame.defaultSyntheticState,
+        'duplicate': isDuplicate,
+        'unique_delivered_total': _uniqueProbesDelivered,
+        'duplicates_suppressed_total': _duplicateProbesSuppressed,
+      },
+    );
+
+    // Always reply with the matching ACK (even for a duplicate retransmission
+    // after link recovery, so the sender can complete its ACK state without
+    // duplicating delivery on the receiver).
+    final ackFrame = WifiDirectSyntheticFrame.ack(
+      senderNodeId: _localNodeId,
+      ackForSenderNodeId: probe.senderNodeId,
+      seq: probe.seq,
+      nonce: probe.nonce,
+      rxElapsedMs: _elapsedMs(),
+    );
+    unawaited(
+      _socket.sendJsonLine(ackFrame.toJsonLine()).then((_) {
+        _acksSentCount++;
+        _notify();
+      }).catchError((Object e) {
+        _recordError(
+          stage: 'send_ack',
+          code: 'ACK_SEND_FAILED',
+          message: 'Errore invio ACK per seq=${probe.seq}: $e',
+          layer: WifiDirectEvidenceLayer.transport,
+        );
+      }),
+    );
+  }
+
+  void _handleIncomingAck(WifiDirectSyntheticFrame ack) {
+    if (ack.ackForSenderNodeId != _localNodeId) {
+      _falseAcksRejected++;
+      _recordError(
+        stage: 'ack_rx',
+        code: 'ACK_TARGET_MISMATCH',
+        message:
+            'ACK destinato a ${ack.ackForSenderNodeId} anziché $_localNodeId (seq=${ack.seq})',
+        layer: WifiDirectEvidenceLayer.application,
+      );
+      return;
+    }
+
+    final sent = _sentProbes[ack.seq];
+    if (sent == null) {
+      _falseAcksRejected++;
+      _recordError(
+        stage: 'ack_rx',
+        code: 'ACK_UNKNOWN_SEQ',
+        message: 'ACK ricevuto per seq=${ack.seq} mai inviato',
+        layer: WifiDirectEvidenceLayer.application,
+      );
+      return;
+    }
+
+    if (sent.nonce != ack.nonce) {
+      _falseAcksRejected++;
+      _recordError(
+        stage: 'ack_rx',
+        code: 'ACK_NONCE_MISMATCH',
+        message: 'ACK ricevuto per seq=${ack.seq} con nonce non corrispondente',
+        layer: WifiDirectEvidenceLayer.application,
+      );
+      return;
+    }
+
+    if (sent.ackConfirmed) {
+      _duplicateAcksIgnored++;
+      _notify();
+      return;
+    }
+
+    final nowElapsed = _elapsedMs();
+    final rtt = max(0, nowElapsed - sent.lastSentElapsedMs);
+    sent.ackConfirmed = true;
+    sent.ackReceivedElapsedMs = nowElapsed;
+    sent.localRttMs = rtt;
+
+    _record(
+      WifiDirectLabEventKind.ackReceived,
+      layer: WifiDirectEvidenceLayer.application,
+      data: <String, Object?>{
+        'remote_node': ack.senderNodeId,
+        'seq': ack.seq,
+        'nonce': ack.nonce,
+        'local_rtt_ms': rtt,
+        'confirmed_total': acksConfirmedCount,
+        'unconfirmed_total': unconfirmedProbesCount,
+      },
+    );
+  }
+
+  Future<void> _handleSocketClosed(String reason) async {
+    if (_disposed) return;
+    _batchEpoch++;
+    _isSendingBatch = false;
+    final wasOpen = _isSocketOpen;
+    _isSocketOpen = false;
+    if (wasOpen) {
+      _record(
+        WifiDirectLabEventKind.disconnect,
+        layer: WifiDirectEvidenceLayer.transport,
+        data: <String, Object?>{
+          'reason': reason,
+          'probes_sent': probesSentCount,
+          'acks_confirmed': acksConfirmedCount,
+          'unconfirmed_probes': unconfirmedProbesCount,
+        },
+      );
+    } else {
+      _notify();
+    }
+  }
+
+  Future<void> _closeTransportOnDisconnect(String reason) async {
+    if (_disposed) return;
+    _batchEpoch++;
+    _isSendingBatch = false;
+    final wasActive = _isGroupFormed || _isSocketOpen || _socket.isSocketOpen;
+    _isConnecting = false;
+    _isGroupFormed = false;
+    _isSocketOpen = false;
+    _groupRole = WifiDirectGroupRole.none;
+    await _socket.close();
+    if (wasActive) {
+      _record(
+        WifiDirectLabEventKind.disconnect,
+        layer: WifiDirectEvidenceLayer.transport,
+        data: <String, Object?>{
+          'reason': reason,
+          'probes_sent': probesSentCount,
+          'acks_confirmed': acksConfirmedCount,
+          'unconfirmed_probes': unconfirmedProbesCount,
+        },
+      );
+    } else {
+      _notify();
+    }
+  }
+
+  (String, String)? _checkPreflightCodeAndMessage() {
+    if (!_environment.wifiDirectFeatureSupported ||
+        !_environment.wifiP2pServiceAvailable) {
+      return (
+        'WIFI_DIRECT_UNSUPPORTED',
+        'Wi-Fi Direct non supportato dal dispositivo (PackageManager).'
+      );
+    }
+    if (!_environment.manifestPermissionsOk) {
+      return (
+        'MANIFEST_PERMISSIONS_MISSING',
+        'Permessi AndroidManifest Wi-Fi Direct mancanti.'
+      );
+    }
+    if (_environment.bluetoothEnabled) {
+      return (
+        'BLUETOOTH_MUST_BE_OFF',
+        'Bluetooth attivo: spegnere il Bluetooth prima di usare il laboratorio Wi-Fi Direct.'
+      );
+    }
+    if (!_environment.wifiEnabled || !_environment.p2pStateEnabled) {
+      return (
+        'WIFI_DISABLED',
+        'Wi-Fi spento o P2P disabilitato: attivare il Wi-Fi (senza connessione Internet).'
+      );
+    }
+    if (!_environment.requiredRuntimePermissionGranted) {
+      return (
+        'PERMISSION_DENIED',
+        'Permesso runtime ${_environment.requiredPermissionName} non concesso.'
+      );
+    }
+    if (_environment.requiresLegacyLocationToggle &&
+        !_environment.locationServiceEnabled) {
+      return (
+        'LOCATION_SERVICES_DISABLED_LEGACY_P2P',
+        'Su Android <= 12 il sistema operativo richiede il toggle Posizione attivo per WifiP2pManager.'
+      );
+    }
+    if (_environment.foregroundServiceRunning) {
+      return (
+        'FOREGROUND_SERVICE_ACTIVE',
+        'Servizio foreground attivo: il laboratorio Wi-Fi Direct richiede zero servizi in background.'
+      );
+    }
+    return null;
+  }
+
+  void _recordError({
+    required String stage,
+    required String code,
+    required String message,
+    WifiDirectEvidenceLayer layer = WifiDirectEvidenceLayer.system,
+  }) {
+    _lastError = '[$code] $message';
+    _record(
+      WifiDirectLabEventKind.error,
+      layer: layer,
+      data: <String, Object?>{
+        'stage': stage,
+        'code': code,
+        'message': message,
+      },
+    );
+  }
+
+  void _record(
+    WifiDirectLabEventKind kind, {
+    WifiDirectEvidenceLayer? layer,
+    Map<String, Object?> data = const {},
+  }) {
+    if (_disposed) return;
+    final entry = WifiDirectLabLogEntry(
+      index: _logs.length,
+      sessionId: _sessionId,
+      localNodeId: _localNodeId,
+      kind: kind,
+      layer: layer ?? kind.defaultLayer,
+      elapsedMs: _elapsedMs(),
+      timestampUtcIso: _nowUtc().toIso8601String(),
+      data: data,
+    );
+    _logs.add(entry);
+    _notify();
+  }
+
+  void _notify() {
+    if (!_disposed) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _batchEpoch++;
+    _platformEventSub?.cancel();
+    _platformEventSub = null;
+    unawaited(_socket.close());
+    unawaited(_platform.stopAll(reason: 'controller_disposed'));
+    super.dispose();
+  }
+}

@@ -11,7 +11,7 @@ on:
   push:
     # The experimental PR targets fix/v0.4-stability, so only this push event
     # builds it. Avoid duplicate push + pull_request candidate artifacts.
-    branches: [ main, experiment/pedestrian-acquisition-v1, experiment/manual-ping-20261114, experiment/diagnostic-control-20261114, experiment/frontend-design-studio ]
+    branches: [ main, experiment/pedestrian-acquisition-v1, experiment/manual-ping-20261114, experiment/diagnostic-control-20261114, experiment/frontend-design-studio, experiment/wifi-direct-offline-lab-20261121 ]
     paths:
       - 'ConvoyMeshApp/**'
       - 'tools/android_smoke.sh'
@@ -189,8 +189,7 @@ jobs:
           ORG_GRADLE_PROJECT_convoyPingLab: ${{ github.ref_name == 'experiment/manual-ping-20261114' && 'true' || 'false' }}
           ORG_GRADLE_PROJECT_convoyDiagnosticLab: ${{ github.ref_name == 'experiment/diagnostic-control-20261114' && 'true' || 'false' }}
           ORG_GRADLE_PROJECT_convoyOutdoorLab: ${{ github.ref_name == 'experiment/frontend-design-studio' && 'true' || 'false' }}
-          # Existing repo-level LAB project ingestion token; never a personal API key.
-          CONVOY_LAB_POSTHOG_TOKEN: ${{ secrets.CONVOY_LAB_POSTHOG_TOKEN }}
+          # This branch's integrated Wi-Fi build receives no PostHog secret.
         run: |
           if [[ "$GITHUB_REF_NAME" == "experiment/manual-ping-20261114" || "$GITHUB_REF_NAME" == "experiment/diagnostic-control-20261114" || "$GITHUB_REF_NAME" == "experiment/frontend-design-studio" ]]; then
             if [[ ! "$CONVOY_LAB_POSTHOG_TOKEN" =~ ^phc_[A-Za-z0-9_-]{16,200}$ || "$CONVOY_LAB_POSTHOG_TOKEN" == "phc_synthetic_local_only" ]]; then
@@ -218,7 +217,12 @@ jobs:
               flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define-from-file="$PING_DEFINES_FILE"
             fi
           else
-            flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }}
+            if [[ "$GITHUB_REF_NAME" == "experiment/wifi-direct-offline-lab-20261121" ]]; then
+              export ORG_GRADLE_PROJECT_convoyOutdoorLab=true
+              flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+21 --dart-define=CONVOY_DEFAULT_OUTDOOR=true --dart-define=CONVOY_WIFI_DIRECT_LAB_INTEGRATED=true --dart-define=CONVOY_POSTHOG_TEMPORARILY_DISABLED=true
+            else
+              flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }}
+            fi
           fi
 
       - name: Verify APK identity, signature and compatibility
@@ -235,11 +239,12 @@ jobs:
           from pathlib import Path
           info = Path('build-evidence/apk-badging.txt').read_text()
           ref = os.environ.get('GITHUB_REF_NAME', '')
-          outdoor_lab = ref == 'experiment/frontend-design-studio'
+          integrated_wifi_lab = ref == 'experiment/wifi-direct-offline-lab-20261121'
+          outdoor_lab = ref in ('experiment/frontend-design-studio', 'experiment/wifi-direct-offline-lab-20261121')
           diag_lab = ref == 'experiment/diagnostic-control-20261114'
           ping_lab = ref == 'experiment/manual-ping-20261114'
           app_id = 'com.example.convoy_mesh.outdoor' if outdoor_lab else ('com.example.convoy_mesh.diaglab' if diag_lab else ('com.example.convoy_mesh.pinglab2' if ping_lab else 'com.example.convoy_mesh.pedestrianexp1'))
-          version_code = '20' if outdoor_lab else ('15' if diag_lab else ('11' if ping_lab else '9'))
+          version_code = '21' if integrated_wifi_lab else ('20' if outdoor_lab else ('15' if diag_lab else ('11' if ping_lab else '9')))
           version_name = '0.7.7-outdoor' if outdoor_lab else ('0.7.7-diaglab' if diag_lab else ('0.7.7-pinglab' if ping_lab else '0.7.7-exp1'))
           app_label = 'Convoy Outdoor LAB' if outdoor_lab else ('Convoy Diagnostics LAB' if diag_lab else ('Convoy Ping LAB 2' if ping_lab else 'Convoy Mesh Exp'))
           assert f"package: name='{app_id}'" in info
@@ -251,7 +256,11 @@ jobs:
           PY
           sha256sum "$APK" > build-evidence/apk-sha256.txt
           printf '%s\n' 'Candidate debug APK. Automated checks are not real-device BLE/GNSS certification.' > build-evidence/validation-scope.txt
+          if [[ "$GITHUB_REF_NAME" == "experiment/wifi-direct-offline-lab-20261121" ]]; then
+            printf '%s\n' 'Integrated Wi-Fi debug candidate: package outdoor and version 21, but DEBUG certificate differs from permanent beta. Do not replace the signed beta or uninstall anything. This is not yet the deliverable.' > build-evidence/install-policy.txt
+          else
           printf '%s\n' 'Side-by-side package: not an update of com.example.convoy_mesh. Old app/data remain installed. Independent permissions, identity and storage. Use only one Convoy app at a time. Debug key is not retained; future rebuilds are not guaranteed compatible updates. Baseline run #105 APK is unavailable (artifact 10300013706 returns 404); its certificate cannot be compared.' > build-evidence/install-policy.txt
+          fi
 
       # One authorized synthetic transmission only, on the integration checkpoint.
       # Ordinary builds, test reruns, and future commits never send cloud events.
@@ -476,8 +485,7 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: EXPECTED_OUTDOOR_VERSION=0.7.7-outdoor+20 EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/frontend-design-studio' && 'com.example.convoy_mesh.outdoor' || (github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1')) }}
-
+          script: EXPECTED_OUTDOOR_VERSION=${{ github.ref_name == 'experiment/wifi-direct-offline-lab-20261121' && '0.7.7-outdoor+21' || '0.7.7-outdoor+20' }} EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ (github.ref_name == 'experiment/wifi-direct-offline-lab-20261121' || github.ref_name == 'experiment/frontend-design-studio') && 'com.example.convoy_mesh.outdoor' || (github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1')) }}
       - name: Remove duplicate APK from diagnostics
         if: always()
         run: rm -f emulator-artifacts/candidate.apk

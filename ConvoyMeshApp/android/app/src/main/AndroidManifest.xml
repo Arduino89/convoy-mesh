@@ -14,7 +14,13 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" tools:remove="android:usesPermissionFlags" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Do not declare neverForLocation: future transport evaluation may relate peers to physical proximity. -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" tools:remove="android:usesPermissionFlags" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi.direct" android:required="false" />
     <application android:label="${convoyAppLabel}" android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher" android:allowBackup="false"
         android:enableOnBackInvokedCallback="true">
