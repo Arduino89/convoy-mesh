@@ -39,9 +39,12 @@ class WifiDirectLabPage extends StatefulWidget {
   const WifiDirectLabPage({
     super.key,
     this.controller,
+    this.integratedMode = false,
   });
 
   final WifiDirectLabController? controller;
+  /// When embedded in the Outdoor app, Stop must finish before route exit.
+  final bool integratedMode;
 
   @override
   State<WifiDirectLabPage> createState() => _WifiDirectLabPageState();
@@ -52,6 +55,20 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
   late WifiDirectLabController _controller;
   late bool _ownsController;
   bool _probeSendConsented = false;
+  bool _exitInProgress = false;
+
+  Future<void> _returnToOutdoor() async {
+    if (_exitInProgress) return;
+    _exitInProgress = true;
+    try {
+      await _controller.stopAll(reason: 'return_to_outdoor');
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      _exitInProgress = false;
+    }
+  }
 
   @override
   void initState() {
@@ -151,8 +168,23 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
     final env = _controller.environment;
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
+    return PopScope(
+      canPop: !widget.integratedMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && widget.integratedMode) {
+          unawaited(_returnToOutdoor());
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
+        leading: widget.integratedMode
+            ? IconButton(
+                key: const Key('wfd_return_to_outdoor'),
+                tooltip: 'Chiudi LAB e torna a Convoy',
+                onPressed: _exitInProgress ? null : _returnToOutdoor,
+                icon: const Icon(Icons.arrow_back),
+              )
+            : null,
         title: const Text('Convoy Wi-Fi Direct LAB • Gate 1'),
         actions: [
           IconButton(
@@ -183,6 +215,7 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
             _buildEventLogCard(scheme),
           ],
         ),
+      ),
       ),
     );
   }
