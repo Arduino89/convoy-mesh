@@ -209,6 +209,14 @@ class WifiDirectLabController extends ChangeNotifier {
   /// Bluetooth is enabled, Wi-Fi is off, Wi-Fi Direct is unsupported, or the
   /// required permission is missing.
   Future<bool> requestDiscovery() async {
+    if (_isConnecting || _isGroupFormed) {
+      _recordError(
+        stage: 'discover_preflight',
+        code: 'P2P_CONNECTION_ACTIVE',
+        message: 'Connessione Wi-Fi Direct in corso: attendere oppure usare Stop prima di cercare altri peer.',
+      );
+      return false;
+    }
     await refreshEnvironment();
     _record(
       WifiDirectLabEventKind.discoverRequested,
@@ -305,6 +313,16 @@ class WifiDirectLabController extends ChangeNotifier {
       return false;
     }
 
+    // The environment check is asynchronous: recheck here to prevent two
+    // taps from starting concurrent P2P negotiations with the same radio.
+    if (_isConnecting || _isGroupFormed) {
+      _recordError(
+        stage: 'connect_preflight',
+        code: 'P2P_CONNECTION_ACTIVE',
+        message: 'Una richiesta Wi-Fi Direct è già in corso. Attendere oppure usare Stop prima di riprovare.',
+      );
+      return false;
+    }
     _selectedPeerId = peerId;
     _isConnecting = true;
     _record(
