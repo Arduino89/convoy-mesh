@@ -1,5 +1,7 @@
 # Convoy Mesh
 
+**Ramo Wi-Fi Direct LAB separato (2026-11-21):** [contratto e gate sperimentale](experiments/wifi_direct_offline_lab/README.md). Esperimento con Bluetooth spento, senza Internet, scambio sintetico e ACK fra due Android. Da implementare e provare; nessun effetto sulla +20 firmata, nessuna prova telefono né rete mesh dichiarata.
+
 Android/Flutter for **walking and hiking groups in low-connectivity areas**: offline BLE exchanges and GNSS coordinates. No vehicle assumptions or road snapping. Not a replacement for mountain-safety precautions.
 
 ## Download on both phones
