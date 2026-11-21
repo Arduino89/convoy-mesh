@@ -148,7 +148,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       }
 
       if (!mounted || _wifiLabActive || _wifiLabSwitching ||
-          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+        return;
+      }
       if (!_mesh.isRunning) {
         await _mesh.startNearby();
       }
@@ -163,7 +165,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   /// is temporarily suspending Nearby while the synthetic Wi-Fi LAB is open.
   Future<void> _openWifiLab() async {
     if (!kConvoyWifiDirectIntegrated || _index != 2 ||
-        _wifiLabActive || _wifiLabSwitching || _busy) return;
+        _wifiLabActive || _wifiLabSwitching || _busy) {
+      return;
+    }
     if (_runtime.isRunning || DiagnosticRecorder.instance.isActive) {
       if (mounted) {
         setState(() => _error =
