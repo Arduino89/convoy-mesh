@@ -229,7 +229,9 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Laboratorio Wi-Fi Direct Offline (Separato da Outdoor +20)',
+              widget.integratedMode
+                  ? 'Wi-Fi Direct LAB — opzione sperimentale Outdoor'
+                  : 'Laboratorio Wi-Fi Direct Offline (app separata)',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: scheme.onSecondaryContainer,
@@ -416,7 +418,9 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
             const SizedBox(height: 6),
             const Text(
               'I peer scoperti usano solo slot sintetici di sessione (peer-01, peer-02…). '
-              'Nessun indirizzo MAC, nome dispositivo o SSID viene salvato o mostrato.',
+              'Nessun indirizzo MAC, nome dispositivo o SSID viene salvato o mostrato. '
+              'Il nome utente Convoy NON identifica i peer in questo LAB: '
+              'peer-01 è un ID temporaneo, non il nome impostato.',
               style: TextStyle(fontSize: 12.5),
             ),
             const SizedBox(height: 10),
@@ -426,7 +430,9 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
               children: [
                 FilledButton.icon(
                   key: const Key('wfd_discover_button'),
-                  onPressed: _controller.requestDiscovery,
+                  onPressed: (_controller.isConnecting || _controller.isGroupFormed)
+                      ? null
+                      : _controller.requestDiscovery,
                   icon: const Icon(Icons.radar),
                   label: Text(
                     _controller.isDiscovering
@@ -466,7 +472,9 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
                       ),
                       trailing: FilledButton.tonal(
                         key: Key('wfd_connect_${peer.peerId}'),
-                        onPressed: () => _confirmAndConnectPeer(peer.peerId),
+                        onPressed: (_controller.isConnecting || _controller.isGroupFormed)
+                            ? null
+                            : () => _confirmAndConnectPeer(peer.peerId),
                         child: const Text('Connetti'),
                       ),
                     ),
