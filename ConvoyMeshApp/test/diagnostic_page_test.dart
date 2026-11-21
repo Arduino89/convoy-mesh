@@ -73,4 +73,27 @@ void main() {
     expect(recorder.lastContent, contains('"event":"marker"'));
     expect(recorder.lastContent, contains('Francesca non vede più Cama'));
   });
+
+  testWidgets('Wi-Fi LAB entry is opt-in and delegates without changing recorder', (tester) async {
+    var openCount = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: DiagnosticPage(
+        deviceIdOverride: 42,
+        deviceNameOverride: 'Synthetic',
+        onOpenWifiDirectLab: () { openCount++; },
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final entry = find.byKey(const Key('diag-open-wifi-lab-btn'));
+    expect(entry, findsOneWidget);
+    await tester.tap(entry);
+    await tester.pump();
+    expect(openCount, 1);
+    expect(DiagnosticRecorder.instance.isActive, isFalse);
+    await tester.pumpWidget(const MaterialApp(
+      home: DiagnosticPage(deviceIdOverride: 42, deviceNameOverride: 'Synthetic'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('diag-open-wifi-lab-btn')), findsNothing);
+  });
 }
