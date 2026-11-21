@@ -486,7 +486,12 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: EXPECTED_OUTDOOR_VERSION=0.7.7-outdoor+20 EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/wifi-direct-offline-lab-20261121' && 'com.example.convoy_mesh.wifilab' || (github.ref_name == 'experiment/frontend-design-studio' && 'com.example.convoy_mesh.outdoor' || (github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1'))) }}
+          script: |
+            if [[ "$GITHUB_REF_NAME" == "experiment/wifi-direct-offline-lab-20261121" ]]; then
+              EXPECTED_OUTDOOR_VERSION=0.7.7-outdoor+21 EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk com.example.convoy_mesh.outdoor
+            else
+              script: EXPECTED_OUTDOOR_VERSION=0.7.7-outdoor+20 EXPECTED_BUILD_COMMIT=${{ github.event.pull_request.head.sha || github.sha }} bash tools/android_smoke.sh emulator-artifacts/candidate.apk ${{ github.ref_name == 'experiment/wifi-direct-offline-lab-20261121' && 'com.example.convoy_mesh.wifilab' || (github.ref_name == 'experiment/frontend-design-studio' && 'com.example.convoy_mesh.outdoor' || (github.ref_name == 'experiment/diagnostic-control-20261114' && 'com.example.convoy_mesh.diaglab' || (github.ref_name == 'experiment/manual-ping-20261114' && 'com.example.convoy_mesh.pinglab2' || 'com.example.convoy_mesh.pedestrianexp1'))) }}
+            fi
 
       - name: Remove duplicate APK from diagnostics
         if: always()
