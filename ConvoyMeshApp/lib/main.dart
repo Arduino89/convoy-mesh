@@ -180,6 +180,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       // Do not stop Bluetooth at OS level: user explicitly disables BT for the test.
       await _mesh.disposeService();
       await LocationFusionService.instance.disposeService();
+      // A diagnostic recording may have been started while cleanup awaited.
+      if (_runtime.isRunning || DiagnosticRecorder.instance.isActive) {
+        throw StateError('Uscita o Test log avviato durante la preparazione del LAB.');
+      }
       if (!mounted) return;
       setState(() => _wifiLabActive = true);
       await Navigator.of(context).push<void>(
