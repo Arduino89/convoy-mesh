@@ -247,8 +247,11 @@ void main() {
         reason: 'New outing cannot inherit previous outing history');
     h.walk(from: 125, until: 185, origin: 175);
     expect(h.service.trackPoints, isNotEmpty);
-    expect(h.service.trackPoints.every((p) =>
-      p.ts.isAfter(_Harness.epoch.add(const Duration(seconds: 120))), isTrue);
+    expect(
+      h.service.trackPoints.every((p) =>
+        p.ts.isAfter(_Harness.epoch.add(const Duration(seconds: 120)))),
+      isTrue,
+    );
   });
 
   contractTest('outing stop off-map fully releases foreground GPS preview', (
