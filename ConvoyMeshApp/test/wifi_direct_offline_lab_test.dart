@@ -46,12 +46,15 @@ class FakeWifiDirectPlatformBridge implements WifiDirectPlatformBridge {
   bool grantPermissionOnRequest = true;
   Object? discoverError;
   Object? connectError;
+  String? sessionId;
+  Completer<void>? discoveryReply;
+  Completer<void>? connectReply;
 
   @override
   Stream<Map<String, Object?>> get events => _events.stream;
 
   void emit(Map<String, Object?> event) {
-    _events.add(event);
+    _events.add({'session_id': sessionId, ...event});
   }
 
   @override
@@ -80,15 +83,18 @@ class FakeWifiDirectPlatformBridge implements WifiDirectPlatformBridge {
   Future<void> openAppSettings() async {}
 
   @override
-  Future<void> discoverPeers() async {
+  Future<void> discoverPeers({required String sessionId}) async {
+    this.sessionId = sessionId;
     discoverCalls++;
     if (discoverError != null) {
       throw discoverError!;
     }
+    await discoveryReply?.future;
   }
 
   @override
   Future<void> connectPeer({
+    required String sessionId,
     required String peerId,
     required bool userConsented,
   }) async {
@@ -98,10 +104,11 @@ class FakeWifiDirectPlatformBridge implements WifiDirectPlatformBridge {
     if (connectError != null) {
       throw connectError!;
     }
+    await connectReply?.future;
   }
 
   @override
-  Future<void> stopAll({String reason = 'manual_stop'}) async {
+  Future<void> stopAll({required String? sessionId, String reason = 'manual_stop'}) async {
     stopCalls++;
     lastStopReason = reason;
   }
@@ -573,6 +580,8 @@ void main() {
         await bridgeB.dispose();
       });
 
+      expect(await phoneA.requestDiscovery(), isTrue);
+      expect(await phoneB.requestDiscovery(), isTrue);
       // Form group and open paired sockets:
       bridgeA.emit(<String, Object?>{
         'type': 'group_formed',
@@ -886,6 +895,110 @@ void main() {
     });
   });
  
+  test('Stop drops queued peer, group and disconnect events across rediscovery', () async {
+    final bridge = FakeWifiDirectPlatformBridge();
+    final (socket, _) = PairedInMemorySocketTransport.createPair();
+    final controller = WifiDirectLabController(platform: bridge, socketTransport: socket);
+    addTearDown(() async {
+      controller.dispose();
+      await bridge.dispose();
+    });
+    Map<String, Object?> peers(String id) => {
+      'type': 'peers_updated',
+      'peers': [{'peer_id': id, 'status': 'available'}],
+    };
+    const group = {
+      'type': 'group_formed',
+      'role': 'group_owner',
+      'client_count': 1,
+    };
+
+    expect(await controller.requestDiscovery(), isTrue);
+    final old = bridge.sessionId;
+    bridge.emit(peers('peer-01'));
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.peers.single.peerId, 'peer-01');
+
+    bridge.emit(peers('peer-02'));
+    bridge.emit(group);
+    final stopping = controller.stopAll();
+    bridge.emit(group);
+    await stopping;
+    expect(controller.peers, isEmpty);
+    expect(controller.isGroupFormed, isFalse);
+    expect(socket.boundPort, isNull);
+
+    expect(await controller.requestDiscovery(), isTrue);
+    expect(bridge.sessionId, isNot(old));
+    bridge.emit({...peers('peer-02'), 'session_id': old});
+    bridge.emit({...group, 'session_id': old});
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.peers, isEmpty);
+    expect(controller.isGroupFormed, isFalse);
+    expect(socket.boundPort, isNull);
+    expect(controller.logs.where((e) => e.kind == WifiDirectLabEventKind.groupFormed), isEmpty);
+
+    bridge.emit(peers('peer-01'));
+    bridge.emit(group);
+    bridge.emit({'type': 'p2p_disconnected', 'session_id': old});
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.peers.single.peerId, 'peer-01');
+    expect(controller.isGroupFormed, isTrue);
+    expect(socket.boundPort, isNotNull);
+    expect(controller.logs.where((e) => e.kind == WifiDirectLabEventKind.groupFormed), hasLength(1));
+  });
+
+  test('Stop ignores old discovery and connect replies', () async {
+    final bridge = FakeWifiDirectPlatformBridge();
+    final controller = WifiDirectLabController(platform: bridge);
+    addTearDown(() async {
+      controller.dispose();
+      await bridge.dispose();
+    });
+    final discoveryReply = Completer<void>();
+    bridge.discoveryReply = discoveryReply;
+    final oldDiscovery = controller.requestDiscovery();
+    await Future<void>.delayed(Duration.zero);
+    expect(bridge.discoverCalls, 1);
+    await controller.stopAll();
+    bridge.discoveryReply = null;
+    expect(await controller.requestDiscovery(), isTrue);
+    discoveryReply.completeError(StateError('stale discovery error'));
+    expect(await oldDiscovery, isFalse);
+    expect(controller.isDiscovering, isTrue);
+
+    bridge.emit({
+      'type': 'peers_updated',
+      'peers': [{'peer_id': 'peer-01', 'status': 'available'}],
+    });
+    await Future<void>.delayed(Duration.zero);
+    final connectReply = Completer<void>();
+    bridge.connectReply = connectReply;
+    final oldConnect = controller.requestConnect(peerId: 'peer-01', userConsented: true);
+    await Future<void>.delayed(Duration.zero);
+    expect(bridge.connectCalls, 1);
+    await controller.stopAll();
+    expect(await controller.requestDiscovery(), isTrue);
+    connectReply.complete();
+    expect(await oldConnect, isFalse);
+    expect(controller.isConnecting, isFalse);
+    expect(controller.peers, isEmpty);
+  });
+
+  test('TCP Stop cancels a queued server bind', () async {
+    final socket = TcpWifiDirectSocketTransport();
+    final opening = socket.startGroupOwnerServer(
+      port: 0,
+      onSocketOpen: (_) => fail('stopped server opened a socket'),
+      onLineReceived: (_) => fail('stopped server received data'),
+      onSocketDisconnected: (_) {},
+      onSocketError: (code, message) => fail('$code: $message'),
+    );
+    await socket.close();
+    await opening;
+    expect(socket.boundPort, isNull);
+  });
+
   test('P2P pairing is serialized: no duplicate connect or discovery while connecting', () async {
     final bridge = FakeWifiDirectPlatformBridge();
     final controller = WifiDirectLabController(platform: bridge, random: Random(989));

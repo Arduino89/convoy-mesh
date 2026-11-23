@@ -23,15 +23,15 @@ void main() {
     expect(
       stop,
       stringContainsInOrder([
-        'p2pOperationEpoch++',
+        'p2pSession?.invalidate()',
+        'pendingDiscoverResult?.error("DISCOVERY_CANCELLED"',
         'pendingConnectResult?.error("CONNECT_CANCELLED"',
         'pendingConnectResult = null',
         'manager.stopPeerDiscovery(channel, null)',
         'manager.cancelConnect(channel, null)',
         'manager.removeGroup(channel, null)',
         'channel.close()',
-        'app.unregisterReceiver(p2pReceiver)',
-        'syntheticIdToAddress.clear()',
+        'app.unregisterReceiver(receiver)',
       ]),
     );
   });

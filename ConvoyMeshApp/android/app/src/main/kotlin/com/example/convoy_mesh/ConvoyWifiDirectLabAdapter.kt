@@ -55,22 +55,17 @@ class ConvoyWifiDirectLabAdapter(
 
     private var p2pManager: WifiP2pManager? = null
     private var p2pChannel: WifiP2pManager.Channel? = null
-    private var receiverRegistered = false
+    private var p2pReceiver: BroadcastReceiver? = null
     private var p2pBroadcastEnabled: Boolean? = null
-    private var wasGroupFormed = false
-    // Invalidates asynchronous discovery/connection callbacks after Stop.
-    private var p2pOperationEpoch = 0
+    private var p2pSession: WifiDirectSession? = null
+    private var pendingDiscoverResult: MethodChannel.Result? = null
     private var pendingConnectResult: MethodChannel.Result? = null
-
-    // Session-scoped in-memory translation table. Cleared on stopAll/dispose.
-    private val addressToSyntheticId = linkedMapOf<String, String>()
-    private val syntheticIdToAddress = linkedMapOf<String, String>()
-    private var nextPeerIndex = 1
 
     private var pendingPermissionResult: MethodChannel.Result? = null
 
-    private val p2pReceiver = object : BroadcastReceiver() {
+    private fun createReceiver(session: WifiDirectSession) = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            if (!session.isActive) return
             when (intent?.action) {
                 WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
                     val state = intent.getIntExtra(
@@ -80,6 +75,7 @@ class ConvoyWifiDirectLabAdapter(
                     val enabled = state == WifiP2pManager.WIFI_P2P_STATE_ENABLED
                     p2pBroadcastEnabled = enabled
                     emitEvent(
+                        session,
                         mapOf(
                             "type" to "p2p_state_changed",
                             "enabled" to enabled,
@@ -88,11 +84,11 @@ class ConvoyWifiDirectLabAdapter(
                 }
 
                 WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
-                    requestCurrentPeers()
+                    requestCurrentPeers(session)
                 }
 
                 WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
-                    requestCurrentConnectionInfo()
+                    requestCurrentConnectionInfo(session)
                 }
             }
         }
@@ -137,11 +133,11 @@ class ConvoyWifiDirectLabAdapter(
                     app.startActivity(intent)
                     result.success(true)
                 }
-                "discoverPeers" -> handleDiscoverPeers(result)
+                "discoverPeers" -> handleDiscoverPeers(call, result)
                 "connectPeer" -> handleConnectPeer(call, result)
                 "stopAll" -> {
-                    val reason = (call.argument<String>("reason")) ?: "manual_stop"
-                    stopAllInternal(reason = reason, notifyEvent = true)
+                    val sessionId = call.argument<String>("sessionId")
+                    if (sessionId != null && p2pSession?.id == sessionId) stopAllInternal()
                     result.success(true)
                 }
                 else -> result.notImplemented()
@@ -165,7 +161,7 @@ class ConvoyWifiDirectLabAdapter(
 
     fun dispose() {
         pendingPermissionResult = null
-        stopAllInternal(reason = "activity_destroyed", notifyEvent = false)
+        stopAllInternal()
         eventSink = null
     }
 
@@ -242,63 +238,65 @@ class ConvoyWifiDirectLabAdapter(
     }
 
     @SuppressLint("MissingPermission")
-    private fun handleDiscoverPeers(result: MethodChannel.Result) {
+    private fun handleDiscoverPeers(call: MethodCall, result: MethodChannel.Result) {
+        val sessionId = call.argument<String>("sessionId")
+        if (sessionId.isNullOrBlank()) {
+            result.error("INVALID_SESSION", "Sessione Wi-Fi Direct mancante", null)
+            return
+        }
         val preflightError = checkP2pPreflight()
         if (preflightError != null) {
-            emitEvent(
-                mapOf(
-                    "type" to "native_error",
-                    "stage" to "discover_preflight",
-                    "code" to preflightError.first,
-                    "message" to preflightError.second,
-                ),
-            )
             result.error(preflightError.first, preflightError.second, null)
             return
         }
-        val (manager, channel) = ensureP2pChannelAndReceiver()
+        if (p2pSession?.id != sessionId) stopAllInternal()
+        val session = p2pSession ?: WifiDirectSession(sessionId).also { p2pSession = it }
+        if (pendingDiscoverResult != null) {
+            result.error("DISCOVERY_IN_PROGRESS", "Richiesta di scoperta già in corso", null)
+            return
+        }
+        val (manager, channel) = ensureP2pChannelAndReceiver(session)
             ?: run {
-                result.error(
-                    "WIFI_P2P_UNAVAILABLE",
-                    "Canale WifiP2pManager non inizializzabile su questo dispositivo",
-                    null,
-                )
+                result.error("WIFI_P2P_UNAVAILABLE", "Canale WifiP2pManager non inizializzabile", null)
                 return
             }
 
-        manager.discoverPeers(
-            channel,
-            object : WifiP2pManager.ActionListener {
-                override fun onSuccess() {
-                    handler.post {
-                        result.success(mapOf("accepted" to true))
+        pendingDiscoverResult = result
+        try {
+            manager.discoverPeers(
+                channel,
+                object : WifiP2pManager.ActionListener {
+                    override fun onSuccess() {
+                        session.post(handler::post) {
+                            if (pendingDiscoverResult !== result) return@post
+                            pendingDiscoverResult = null
+                            result.success(mapOf("accepted" to true))
+                        }
                     }
-                }
 
-                override fun onFailure(reasonCode: Int) {
-                    val reasonText = p2pReasonToText(reasonCode)
-                    handler.post {
-                        emitEvent(
-                            mapOf(
-                                "type" to "native_error",
-                                "stage" to "discover_peers",
-                                "code" to "DISCOVER_PEERS_FAILED_$reasonCode",
-                                "message" to "discoverPeers fallito: $reasonText (code=$reasonCode)",
-                            ),
-                        )
-                        result.error(
-                            "DISCOVER_PEERS_FAILED",
-                            "discoverPeers fallito: $reasonText (code=$reasonCode)",
-                            reasonCode,
-                        )
+                    override fun onFailure(reasonCode: Int) {
+                        session.post(handler::post) {
+                            if (pendingDiscoverResult !== result) return@post
+                            pendingDiscoverResult = null
+                            val reason = p2pReasonToText(reasonCode)
+                            result.error("DISCOVER_PEERS_FAILED_$reasonCode", "discoverPeers fallito: $reason", reasonCode)
+                        }
                     }
-                }
-            },
-        )
+                },
+            )
+        } catch (e: Exception) {
+            pendingDiscoverResult = null
+            throw e
+        }
     }
 
     @SuppressLint("MissingPermission")
     private fun handleConnectPeer(call: MethodCall, result: MethodChannel.Result) {
+        val session = p2pSession
+        if (session == null || session.id != call.argument<String>("sessionId")) {
+            result.error("INVALID_SESSION", "Ripetere la scoperta Wi-Fi Direct", null)
+            return
+        }
         val peerId = call.argument<String>("peerId")?.trim().orEmpty()
         val userConsented = call.argument<Boolean>("userConsented") == true
         if (!userConsented) {
@@ -316,6 +314,7 @@ class ConvoyWifiDirectLabAdapter(
         val preflightError = checkP2pPreflight()
         if (preflightError != null) {
             emitEvent(
+                session,
                 mapOf(
                     "type" to "native_error",
                     "stage" to "connect_preflight",
@@ -326,7 +325,7 @@ class ConvoyWifiDirectLabAdapter(
             result.error(preflightError.first, preflightError.second, null)
             return
         }
-        val rawAddress = syntheticIdToAddress[peerId]
+        val rawAddress = session.addressForPeer(peerId)
         if (rawAddress.isNullOrBlank()) {
             result.error(
                 "PEER_NOT_FOUND",
@@ -335,19 +334,19 @@ class ConvoyWifiDirectLabAdapter(
             )
             return
         }
-        val (manager, channel) = ensureP2pChannelAndReceiver()
+        val (manager, channel) = ensureP2pChannelAndReceiver(session)
             ?: run {
                 result.error("WIFI_P2P_UNAVAILABLE", "Canale WifiP2pManager non disponibile", null)
                 return
             }
 
-        val epoch = p2pOperationEpoch
         pendingConnectResult = result
 
         fun reject(code: String, message: String, reasonCode: Int? = null) {
-            if (epoch != p2pOperationEpoch || pendingConnectResult !== result) return
+            if (!session.isActive || pendingConnectResult !== result) return
             pendingConnectResult = null
             emitEvent(
+                session,
                 mapOf(
                     "type" to "native_error",
                     "stage" to "connect_peer",
@@ -370,8 +369,8 @@ class ConvoyWifiDirectLabAdapter(
                 config,
                 object : WifiP2pManager.ActionListener {
                     override fun onSuccess() {
-                        handler.post {
-                            if (epoch != p2pOperationEpoch || pendingConnectResult !== result) return@post
+                        session.post(handler::post) {
+                            if (!session.isActive || pendingConnectResult !== result) return@post
                             pendingConnectResult = null
                             result.success(
                                 mapOf(
@@ -383,7 +382,7 @@ class ConvoyWifiDirectLabAdapter(
                     }
 
                     override fun onFailure(reasonCode: Int) {
-                        handler.post {
+                        session.post(handler::post) {
                             reject(
                                 "CONNECT_PEER_FAILED_$reasonCode",
                                 "connect($peerId) fallito: ${p2pReasonToText(reasonCode)} " +
@@ -401,28 +400,24 @@ class ConvoyWifiDirectLabAdapter(
     }
 
     @SuppressLint("MissingPermission")
-    private fun requestCurrentPeers() {
+    private fun requestCurrentPeers(session: WifiDirectSession) {
         val manager = p2pManager ?: return
         val channel = p2pChannel ?: return
         if (checkP2pPreflight() != null) return
         try {
             manager.requestPeers(channel) { peerList ->
+                if (!session.isActive) return@requestPeers
                 val devices = peerList?.deviceList ?: emptyList()
                 val syntheticPeers = devices.mapNotNull { device ->
                     val rawAddress = device.deviceAddress?.trim().orEmpty()
-                    if (rawAddress.isEmpty()) return@mapNotNull null
-                    val syntheticId = addressToSyntheticId.getOrPut(rawAddress) {
-                        val allocated = "peer-${nextPeerIndex.toString().padStart(2, '0')}"
-                        nextPeerIndex++
-                        syntheticIdToAddress[allocated] = rawAddress
-                        allocated
-                    }
+                    val syntheticId = session.peerForAddress(rawAddress) ?: return@mapNotNull null
                     mapOf(
                         "peer_id" to syntheticId,
                         "status" to deviceStatusToText(device.status),
                     )
                 }
                 emitEvent(
+                    session,
                     mapOf(
                         "type" to "peers_updated",
                         "peer_count" to syntheticPeers.size,
@@ -432,6 +427,7 @@ class ConvoyWifiDirectLabAdapter(
             }
         } catch (e: SecurityException) {
             emitEvent(
+                session,
                 mapOf(
                     "type" to "native_error",
                     "stage" to "request_peers",
@@ -443,19 +439,22 @@ class ConvoyWifiDirectLabAdapter(
     }
 
     @SuppressLint("MissingPermission")
-    private fun requestCurrentConnectionInfo() {
+    private fun requestCurrentConnectionInfo(session: WifiDirectSession) {
         val manager = p2pManager ?: return
         val channel = p2pChannel ?: return
         try {
             manager.requestConnectionInfo(channel) { info ->
+                if (!session.isActive) return@requestConnectionInfo
                 if (info != null && info.groupFormed && info.groupOwnerAddress != null) {
-                    wasGroupFormed = true
+                    session.wasGroupFormed = true
                     val role = if (info.isGroupOwner) "group_owner" else "client"
                     val ownerHost = info.groupOwnerAddress?.hostAddress.orEmpty()
                     try {
                         manager.requestGroupInfo(channel) { group ->
+                            if (!session.isActive || !session.wasGroupFormed) return@requestGroupInfo
                             val clientCount = group?.clientList?.size ?: 0
                             emitEvent(
+                                session,
                                 mapOf(
                                     "type" to "group_formed",
                                     "role" to role,
@@ -467,6 +466,7 @@ class ConvoyWifiDirectLabAdapter(
                         }
                     } catch (_: SecurityException) {
                         emitEvent(
+                            session,
                             mapOf(
                                 "type" to "group_formed",
                                 "role" to role,
@@ -476,9 +476,10 @@ class ConvoyWifiDirectLabAdapter(
                             ),
                         )
                     }
-                } else if (wasGroupFormed) {
-                    wasGroupFormed = false
+                } else if (session.wasGroupFormed) {
+                    session.wasGroupFormed = false
                     emitEvent(
+                        session,
                         mapOf(
                             "type" to "p2p_disconnected",
                             "reason" to "p2p_group_lost",
@@ -513,7 +514,7 @@ class ConvoyWifiDirectLabAdapter(
         return null
     }
 
-    private fun ensureP2pChannelAndReceiver(): Pair<WifiP2pManager, WifiP2pManager.Channel>? {
+    private fun ensureP2pChannelAndReceiver(session: WifiDirectSession): Pair<WifiP2pManager, WifiP2pManager.Channel>? {
         var manager = p2pManager
         if (manager == null) {
             manager = app.getSystemService(Context.WIFI_P2P_SERVICE) as? WifiP2pManager ?: return null
@@ -522,19 +523,20 @@ class ConvoyWifiDirectLabAdapter(
         var channel = p2pChannel
         if (channel == null) {
             channel = manager.initialize(app, Looper.getMainLooper()) {
-                handler.post {
-                    p2pChannel = null
-                    emitEvent(
-                        mapOf(
-                            "type" to "p2p_disconnected",
-                            "reason" to "p2p_channel_disconnected",
-                        ),
+                session.post(handler::post) {
+                    // This is terminal for the session. Send it while the token is valid;
+                    // every other callback and queued event is then invalidated.
+                    eventSink?.success(
+                        mapOf("type" to "p2p_disconnected", "reason" to "p2p_channel_disconnected",
+                            "session_ended" to true, "session_id" to session.id),
                     )
+                    stopAllInternal()
                 }
             } ?: return null
             p2pChannel = channel
         }
-        if (!receiverRegistered) {
+        if (p2pReceiver == null) {
+            val receiver = createReceiver(session)
             val filter = IntentFilter().apply {
                 addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
                 addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
@@ -542,18 +544,20 @@ class ConvoyWifiDirectLabAdapter(
                 addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
             }
             if (Build.VERSION.SDK_INT >= 33) {
-                app.registerReceiver(p2pReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+                app.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
             } else {
-                app.registerReceiver(p2pReceiver, filter)
+                app.registerReceiver(receiver, filter)
             }
-            receiverRegistered = true
+            p2pReceiver = receiver
         }
         return manager to channel
     }
 
-    private fun stopAllInternal(reason: String, notifyEvent: Boolean) {
-        p2pOperationEpoch++
-        // Ignore a late connect callback and complete its pending reply on Stop.
+    private fun stopAllInternal() {
+        p2pSession?.invalidate()
+        p2pSession = null
+        pendingDiscoverResult?.error("DISCOVERY_CANCELLED", "Scoperta P2P annullata: Stop", null)
+        pendingDiscoverResult = null
         pendingConnectResult?.error("CONNECT_CANCELLED", "Connessione P2P annullata: Stop", null)
         pendingConnectResult = null
         val manager = p2pManager
@@ -578,26 +582,15 @@ class ConvoyWifiDirectLabAdapter(
                 }
             }
         }
-        if (receiverRegistered) {
+        p2pReceiver?.let { receiver ->
             try {
-                app.unregisterReceiver(p2pReceiver)
+                app.unregisterReceiver(receiver)
             } catch (_: Exception) {
             }
-            receiverRegistered = false
         }
+        p2pReceiver = null
         p2pChannel = null
-        wasGroupFormed = false
-        addressToSyntheticId.clear()
-        syntheticIdToAddress.clear()
-        nextPeerIndex = 1
-        if (notifyEvent) {
-            emitEvent(
-                mapOf(
-                    "type" to "p2p_disconnected",
-                    "reason" to reason,
-                ),
-            )
-        }
+        p2pBroadcastEnabled = null
     }
 
     private fun hasPermission(permission: String): Boolean =
@@ -671,9 +664,10 @@ class ConvoyWifiDirectLabAdapter(
         else -> "unknown_reason"
     }
 
-    private fun emitEvent(payload: Map<String, Any?>) {
-        handler.post {
-            eventSink?.success(payload)
+    private fun emitEvent(session: WifiDirectSession, payload: Map<String, Any?>) {
+        val sink = eventSink ?: return
+        session.post(handler::post) {
+            if (eventSink === sink) sink.success(payload + ("session_id" to session.id))
         }
     }
 }

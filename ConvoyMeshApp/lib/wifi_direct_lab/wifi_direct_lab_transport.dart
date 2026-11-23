@@ -16,12 +16,13 @@ abstract class WifiDirectPlatformBridge {
   Future<void> openBluetoothSettings();
   Future<void> openLocationSettings();
   Future<void> openAppSettings();
-  Future<void> discoverPeers();
+  Future<void> discoverPeers({required String sessionId});
   Future<void> connectPeer({
+    required String sessionId,
     required String peerId,
     required bool userConsented,
   });
-  Future<void> stopAll({String reason = 'manual_stop'});
+  Future<void> stopAll({required String? sessionId, String reason = 'manual_stop'});
 }
 
 /// Production [MethodChannel] + [EventChannel] bridge to
@@ -84,18 +85,23 @@ class MethodChannelWifiDirectPlatformBridge implements WifiDirectPlatformBridge 
   }
 
   @override
-  Future<void> discoverPeers() async {
-    await _method.invokeMapMethod<String, Object?>('discoverPeers');
+  Future<void> discoverPeers({required String sessionId}) async {
+    await _method.invokeMapMethod<String, Object?>(
+      'discoverPeers',
+      <String, Object?>{'sessionId': sessionId},
+    );
   }
 
   @override
   Future<void> connectPeer({
+    required String sessionId,
     required String peerId,
     required bool userConsented,
   }) async {
     await _method.invokeMapMethod<String, Object?>(
       'connectPeer',
       <String, Object?>{
+        'sessionId': sessionId,
         'peerId': peerId,
         'userConsented': userConsented,
       },
@@ -103,10 +109,10 @@ class MethodChannelWifiDirectPlatformBridge implements WifiDirectPlatformBridge 
   }
 
   @override
-  Future<void> stopAll({String reason = 'manual_stop'}) async {
+  Future<void> stopAll({required String? sessionId, String reason = 'manual_stop'}) async {
     await _method.invokeMethod<bool>(
       'stopAll',
-      <String, Object?>{'reason': reason},
+      <String, Object?>{'sessionId': sessionId, 'reason': reason},
     );
   }
 }
@@ -175,8 +181,10 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
     required void Function(String reason) onSocketDisconnected,
     required void Function(String code, String message) onSocketError,
   }) async {
-    await close();
-    final myEpoch = ++_epoch;
+    final closing = close();
+    final myEpoch = _epoch;
+    await closing;
+    if (myEpoch != _epoch) return;
     try {
       final server = await ServerSocket.bind(
         defaultBindHost,
@@ -227,8 +235,10 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
     required void Function(String reason) onSocketDisconnected,
     required void Function(String code, String message) onSocketError,
   }) async {
-    await close();
-    final myEpoch = ++_epoch;
+    final closing = close();
+    final myEpoch = _epoch;
+    await closing;
+    if (myEpoch != _epoch) return;
     final cleanHost = host.trim();
     if (cleanHost.isEmpty || port <= 0) {
       onSocketError('INVALID_GROUP_OWNER_ENDPOINT', 'Indirizzo Group Owner o porta non validi');
@@ -359,22 +369,19 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
   Future<void> close() async {
     _epoch++;
     final sub = _socketSub;
-    _socketSub = null;
-    await sub?.cancel();
-
     final sock = _activeSocket;
+    final srvSub = _serverSub;
+    final srv = _serverSocket;
+    _socketSub = null;
     _activeSocket = null;
+    _serverSub = null;
+    _serverSocket = null;
+    _boundPort = null;
     try {
       sock?.destroy();
     } catch (_) {}
-
-    final srvSub = _serverSub;
-    _serverSub = null;
+    await sub?.cancel();
     await srvSub?.cancel();
-
-    final srv = _serverSocket;
-    _serverSocket = null;
-    _boundPort = null;
     try {
       await srv?.close();
     } catch (_) {}

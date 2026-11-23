@@ -271,7 +271,7 @@ timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 wait_and_tap_text 'Test log' open-test-log
 # The integrated branch uses the same Outdoor package; the Wi-Fi LAB is a
 # separate route, not a second installed app or an always-running transport.
-if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+22" ]]; then
+if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+23" ]]; then
   wait_and_tap_text 'Apri Wi-Fi Direct LAB (solo probe sintetici)' open-integrated-wifi
   sleep 3
   assert_no_runtime wifi-lab-open

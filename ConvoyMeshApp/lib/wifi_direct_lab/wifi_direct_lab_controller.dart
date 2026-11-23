@@ -81,6 +81,16 @@ class WifiDirectLabController extends ChangeNotifier {
   bool _isSocketOpen = false;
   bool _isSendingBatch = false;
   bool _disposed = false;
+  static int _nextRadioSession = 0;
+  String? _radioSessionId;
+  int _radioEpoch = 0;
+  int _stopsInProgress = 0;
+  bool _discoveryPending = false;
+
+  bool _isRadioEpochCurrent(int epoch) => !_disposed && _radioEpoch == epoch;
+
+  bool _isRadioSessionCurrent(String sessionId) =>
+      !_disposed && _radioSessionId == sessionId;
   String? _selectedPeerId;
   String? _lastError;
   WifiDirectGroupRole _groupRole = WifiDirectGroupRole.none;
@@ -209,6 +219,7 @@ class WifiDirectLabController extends ChangeNotifier {
   /// Bluetooth is enabled, Wi-Fi is off, Wi-Fi Direct is unsupported, or the
   /// required permission is missing.
   Future<bool> requestDiscovery() async {
+    if (_disposed || _stopsInProgress > 0 || _discoveryPending) return false;
     if (_isConnecting || _isGroupFormed) {
       _recordError(
         stage: 'discover_preflight',
@@ -217,7 +228,18 @@ class WifiDirectLabController extends ChangeNotifier {
       );
       return false;
     }
+    final epoch = _radioEpoch;
+    _discoveryPending = true;
+    try {
+      return await _discoverInEpoch(epoch);
+    } finally {
+      if (_isRadioEpochCurrent(epoch)) _discoveryPending = false;
+    }
+  }
+
+  Future<bool> _discoverInEpoch(int epoch) async {
     await refreshEnvironment();
+    if (!_isRadioEpochCurrent(epoch)) return false;
     _record(
       WifiDirectLabEventKind.discoverRequested,
       layer: WifiDirectEvidenceLayer.system,
@@ -240,13 +262,18 @@ class WifiDirectLabController extends ChangeNotifier {
       return false;
     }
 
+    if (!_isRadioEpochCurrent(epoch)) return false;
+    final sessionId = _radioSessionId ??=
+        '${DateTime.now().microsecondsSinceEpoch}-${++_nextRadioSession}';
     try {
-      await _platform.discoverPeers();
+      await _platform.discoverPeers(sessionId: sessionId);
+      if (!_isRadioSessionCurrent(sessionId)) return false;
       _isDiscovering = true;
       _lastError = null;
       _notify();
       return true;
     } catch (e) {
+      if (!_isRadioSessionCurrent(sessionId)) return false;
       _isDiscovering = false;
       _recordError(
         stage: 'discover_peers',
@@ -276,6 +303,7 @@ class WifiDirectLabController extends ChangeNotifier {
     required String peerId,
     required bool userConsented,
   }) async {
+    if (_disposed || _stopsInProgress > 0) return false;
     if (!userConsented) {
       _recordError(
         stage: 'connect_preflight',
@@ -302,7 +330,10 @@ class WifiDirectLabController extends ChangeNotifier {
       return false;
     }
 
+    final sessionId = _radioSessionId;
+    if (sessionId == null) return false;
     await refreshEnvironment();
+    if (!_isRadioSessionCurrent(sessionId) || !_peers.containsKey(peerId)) return false;
     final preflightFailure = _checkPreflightCodeAndMessage();
     if (preflightFailure != null) {
       _recordError(
@@ -334,15 +365,19 @@ class WifiDirectLabController extends ChangeNotifier {
       },
     );
 
+    if (!_isRadioSessionCurrent(sessionId)) return false;
     try {
       await _platform.connectPeer(
+        sessionId: sessionId,
         peerId: peerId,
         userConsented: true,
       );
+      if (!_isRadioSessionCurrent(sessionId)) return false;
       _lastError = null;
       _notify();
       return true;
     } catch (e) {
+      if (!_isRadioSessionCurrent(sessionId)) return false;
       _isConnecting = false;
       _recordError(
         stage: 'connect_peer',
@@ -587,6 +622,8 @@ class WifiDirectLabController extends ChangeNotifier {
   /// Step 5: Stop discovery, close TCP sockets, tear down Wi-Fi Direct group,
   /// and unregister native receivers.
   Future<void> stopAll({String reason = 'manual_stop'}) async {
+    final sessionId = _invalidateRadioSession();
+    _stopsInProgress++;
     _batchEpoch++;
     _isSendingBatch = false;
     final hadActiveResources =
@@ -600,10 +637,14 @@ class WifiDirectLabController extends ChangeNotifier {
     _selectedPeerId = null;
     _peers.clear();
 
-    await _socket.close();
     try {
-      await _platform.stopAll(reason: reason);
-    } catch (_) {}
+      await Future.wait([
+        _socket.close(),
+        _platform.stopAll(sessionId: sessionId, reason: reason).catchError((Object _) {}),
+      ]);
+    } finally {
+      _stopsInProgress--;
+    }
 
     if (hadActiveResources) {
       _record(
@@ -637,8 +678,17 @@ class WifiDirectLabController extends ChangeNotifier {
   String exportJsonl() =>
       _logs.isEmpty ? '' : '${_logs.map((e) => e.toJsonLine()).join('\n')}\n';
 
+  String? _invalidateRadioSession() {
+    final sessionId = _radioSessionId;
+    _radioSessionId = null;
+    _radioEpoch++;
+    _discoveryPending = false;
+    return sessionId;
+  }
+
   void _handlePlatformEvent(Map<String, Object?> event) {
-    if (_disposed) return;
+    final sessionId = event['session_id'];
+    if (sessionId is! String || !_isRadioSessionCurrent(sessionId)) return;
     final type = event['type'] as String?;
     switch (type) {
       case 'p2p_state_changed':
@@ -715,10 +765,16 @@ class WifiDirectLabController extends ChangeNotifier {
             if (_selectedPeerId != null) 'peer_id': _selectedPeerId,
           },
         );
-        unawaited(_openSocketForGroup(role: role, ownerHost: ownerHost, port: port));
+        unawaited(_openSocketForGroup(sessionId: sessionId, role: role, ownerHost: ownerHost, port: port));
         break;
 
       case 'p2p_disconnected':
+        if (event['session_ended'] == true) {
+          _invalidateRadioSession();
+          _isDiscovering = false;
+          _peers.clear();
+          _selectedPeerId = null;
+        }
         final reason = event['reason']?.toString() ?? 'p2p_disconnected';
         unawaited(_closeTransportOnDisconnect(reason));
         break;
@@ -733,15 +789,18 @@ class WifiDirectLabController extends ChangeNotifier {
   }
 
   Future<void> _openSocketForGroup({
+    required String sessionId,
     required WifiDirectGroupRole role,
     required String ownerHost,
     required int port,
   }) async {
-    if (_disposed) return;
+    bool isCurrent() => _isRadioSessionCurrent(sessionId) && _isGroupFormed;
+    if (!isCurrent()) return;
     if (role == WifiDirectGroupRole.groupOwner) {
       await _socket.startGroupOwnerServer(
         port: port,
         onSocketOpen: (boundPort) {
+          if (!isCurrent()) return;
           _activePort = boundPort;
           _isSocketOpen = true;
           _lastError = null;
@@ -755,11 +814,14 @@ class WifiDirectLabController extends ChangeNotifier {
             },
           );
         },
-        onLineReceived: _handleIncomingJsonLine,
+        onLineReceived: (line) {
+          if (isCurrent()) _handleIncomingJsonLine(line);
+        },
         onSocketDisconnected: (reason) {
-          unawaited(_handleSocketClosed(reason));
+          if (isCurrent()) unawaited(_handleSocketClosed(reason));
         },
         onSocketError: (code, message) {
+          if (!isCurrent()) return;
           _recordError(
             stage: 'socket_group_owner',
             code: code,
@@ -773,6 +835,7 @@ class WifiDirectLabController extends ChangeNotifier {
         host: ownerHost,
         port: port,
         onSocketOpen: (connectedPort) {
+          if (!isCurrent()) return;
           _activePort = connectedPort;
           _isSocketOpen = true;
           _lastError = null;
@@ -786,11 +849,14 @@ class WifiDirectLabController extends ChangeNotifier {
             },
           );
         },
-        onLineReceived: _handleIncomingJsonLine,
+        onLineReceived: (line) {
+          if (isCurrent()) _handleIncomingJsonLine(line);
+        },
         onSocketDisconnected: (reason) {
-          unawaited(_handleSocketClosed(reason));
+          if (isCurrent()) unawaited(_handleSocketClosed(reason));
         },
         onSocketError: (code, message) {
+          if (!isCurrent()) return;
           _recordError(
             stage: 'socket_client',
             code: code,
@@ -988,12 +1054,14 @@ class WifiDirectLabController extends ChangeNotifier {
     if (_disposed) return;
     _batchEpoch++;
     _isSendingBatch = false;
+    final epoch = _radioEpoch;
     final wasActive = _isGroupFormed || _isSocketOpen || _socket.isSocketOpen;
     _isConnecting = false;
     _isGroupFormed = false;
     _isSocketOpen = false;
     _groupRole = WifiDirectGroupRole.none;
     await _socket.close();
+    if (!_isRadioEpochCurrent(epoch)) return;
     if (wasActive) {
       _record(
         WifiDirectLabEventKind.disconnect,
@@ -1109,7 +1177,8 @@ class WifiDirectLabController extends ChangeNotifier {
     _platformEventSub?.cancel();
     _platformEventSub = null;
     unawaited(_socket.close());
-    unawaited(_platform.stopAll(reason: 'controller_disposed'));
+    final sessionId = _invalidateRadioSession();
+    unawaited(_platform.stopAll(sessionId: sessionId, reason: 'controller_disposed'));
     super.dispose();
   }
 }
