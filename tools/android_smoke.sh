@@ -491,7 +491,9 @@ assert len(handoff) == 1, 'WARM_STOP_HANDOFF: expected one visible-map outing->p
 t = handoff[0]
 assert t['data']['record_track'] is False and t['data']['fresh'] is True, 'WARM_STOP_FRESH: fresh original source fix must survive stop'
 assert not [r for r in tail if r['category']=='gps' and r['event']=='position_request'], 'WARM_STOP_RESTART: GPS provider must not be restarted'
-fixes = [r['data'] for r in tail if r['category']=='gps' and r['event']=='fix']
+# The pre-tap capture precedes UI lookup and input. The mode transition is
+# emitted when the service switches off track recording.
+fixes = [r['data'] for r in tail if r['event_index'] > t['event_index'] and r['category']=='gps' and r['event']=='fix']
 assert fixes and any(f['fresh'] for f in fixes), 'WARM_STOP_FRESH: new physical provider callback required'
 assert all(f['record_track'] is False and f['track_added'] is False for f in fixes), 'WARM_STOP_TRAIL: after-stop fixes must not extend outing'
 assert not [r for r in tail if r['category']=='runtime' and r['event']=='foreground_service_started'], 'WARM_STOP_FOREGROUND: stopped outing must not restart FGS'
