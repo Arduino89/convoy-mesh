@@ -27,7 +27,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: ${{ github.ref_name == 'experiment/wifi-direct-offline-lab-20261121' && 45 || 25 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -302,6 +302,7 @@ jobs:
           retention-days: 90
 
       - name: Upload APK artifact
+        if: github.ref_name != 'experiment/wifi-direct-offline-lab-20261121'
         uses: actions/upload-artifact@v7
         with:
           name: convoy-mesh-debug-apk
@@ -312,6 +313,7 @@ jobs:
           retention-days: 90
 
       - name: Split the exact APK for bounded downloads
+        if: github.ref_name != 'experiment/wifi-direct-offline-lab-20261121'
         run: |
           # Transport parts only: no second build, signing or APK variant.
           python3 - <<'PY'
@@ -438,7 +440,28 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      # Test the Wi-Fi LAB build on this runner without uploading the APK.
+      - name: Prepare KVM for Wi-Fi LAB smoke
+        if: github.ref_name == 'experiment/wifi-direct-offline-lab-20261121'
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+          sha256sum --check build-evidence/apk-sha256.txt
+
+      - name: Exercise Wi-Fi LAB and Outdoor on API 35
+        if: github.ref_name == 'experiment/wifi-direct-offline-lab-20261121'
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          disable-animations: true
+          script: EXPECTED_OUTDOOR_VERSION=0.7.7-outdoor+22 EXPECTED_BUILD_COMMIT=${{ github.sha }} bash tools/android_smoke.sh ConvoyMeshApp/build/app/outputs/flutter-apk/app-debug.apk com.example.convoy_mesh.outdoor
+
   android-emulator-smoke:
+    if: github.ref_name != 'experiment/wifi-direct-offline-lab-20261121'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 20

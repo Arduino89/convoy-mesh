@@ -344,13 +344,13 @@ class ConvoyWifiDirectLabAdapter(
         val epoch = p2pOperationEpoch
         pendingConnectResult = result
 
-        fun reject(stage: String, code: String, message: String, reasonCode: Int? = null) {
+        fun reject(code: String, message: String, reasonCode: Int? = null) {
             if (epoch != p2pOperationEpoch || pendingConnectResult !== result) return
             pendingConnectResult = null
             emitEvent(
                 mapOf(
                     "type" to "native_error",
-                    "stage" to stage,
+                    "stage" to "connect_peer",
                     "code" to code,
                     "message" to message,
                 ),
@@ -358,68 +358,37 @@ class ConvoyWifiDirectLabAdapter(
             result.error(code, message, reasonCode)
         }
 
-        fun requestConnectionAfterDiscoveryStopped() {
-            if (epoch != p2pOperationEpoch || pendingConnectResult !== result) return
-            val config = WifiP2pConfig().apply {
-                deviceAddress = rawAddress
-                wps.setup = WpsInfo.PBC
-            }
-            try {
-                manager.connect(
-                    channel,
-                    config,
-                    object : WifiP2pManager.ActionListener {
-                        override fun onSuccess() {
-                            handler.post {
-                                if (epoch != p2pOperationEpoch || pendingConnectResult !== result) return@post
-                                pendingConnectResult = null
-                                result.success(
-                                    mapOf(
-                                        "accepted" to true,
-                                        "peer_id" to peerId,
-                                    ),
-                                )
-                            }
-                        }
-
-                        override fun onFailure(reasonCode: Int) {
-                            handler.post {
-                                reject(
-                                    "connect_peer",
-                                    "CONNECT_PEER_FAILED_$reasonCode",
-                                    "connect($peerId) fallito: ${p2pReasonToText(reasonCode)} " +
-                                        "(code=$reasonCode). Usare Stop su entrambi i telefoni, " +
-                                        "ripetere la scoperta e connettere da uno solo.",
-                                    reasonCode,
-                                )
-                            }
-                        }
-                    },
-                )
-            } catch (e: Exception) {
-                reject("connect_peer", "CONNECT_REQUEST_EXCEPTION", "Connessione P2P non avviata: ${e.javaClass.simpleName}")
-            }
+        // Let Android stop discovery as part of connect. An explicit
+        // stopPeerDiscovery() can flush supplicant peer state before negotiation.
+        val config = WifiP2pConfig().apply {
+            deviceAddress = rawAddress
+            wps.setup = WpsInfo.PBC
         }
-
-        // Android can reject connect(BUSY=2) if discovery/negotiation is still
-        // active. Await the platform callback instead of issuing both calls at
-        // once. This mitigates one race; it cannot guarantee an OEM radio link.
         try {
-            manager.stopPeerDiscovery(
+            manager.connect(
                 channel,
+                config,
                 object : WifiP2pManager.ActionListener {
                     override fun onSuccess() {
-                        handler.post { requestConnectionAfterDiscoveryStopped() }
+                        handler.post {
+                            if (epoch != p2pOperationEpoch || pendingConnectResult !== result) return@post
+                            pendingConnectResult = null
+                            result.success(
+                                mapOf(
+                                    "accepted" to true,
+                                    "peer_id" to peerId,
+                                ),
+                            )
+                        }
                     }
 
                     override fun onFailure(reasonCode: Int) {
                         handler.post {
                             reject(
-                                "stop_discovery_before_connect",
-                                "STOP_DISCOVERY_FAILED_$reasonCode",
-                                "Android non ha fermato la scoperta Wi-Fi Direct: " +
-                                    "${p2pReasonToText(reasonCode)} (code=$reasonCode). " +
-                                    "Usare Stop su entrambi i telefoni e riprovare da uno solo.",
+                                "CONNECT_PEER_FAILED_$reasonCode",
+                                "connect($peerId) fallito: ${p2pReasonToText(reasonCode)} " +
+                                    "(code=$reasonCode). Usare Stop su entrambi i telefoni, " +
+                                    "ripetere la scoperta e connettere da uno solo.",
                                 reasonCode,
                             )
                         }
@@ -427,11 +396,7 @@ class ConvoyWifiDirectLabAdapter(
                 },
             )
         } catch (e: Exception) {
-            reject(
-                "stop_discovery_before_connect",
-                "STOP_DISCOVERY_EXCEPTION",
-                "Impossibile preparare il collegamento P2P: ${e.javaClass.simpleName}",
-            )
+            reject("CONNECT_REQUEST_EXCEPTION", "Connessione P2P non avviata: ${e.javaClass.simpleName}")
         }
     }
 
@@ -588,7 +553,7 @@ class ConvoyWifiDirectLabAdapter(
 
     private fun stopAllInternal(reason: String, notifyEvent: Boolean) {
         p2pOperationEpoch++
-        // A pending stop-discovery callback must not initiate connect after Stop.
+        // Ignore a late connect callback and complete its pending reply on Stop.
         pendingConnectResult?.error("CONNECT_CANCELLED", "Connessione P2P annullata: Stop", null)
         pendingConnectResult = null
         val manager = p2pManager
