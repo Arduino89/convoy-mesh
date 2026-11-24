@@ -83,6 +83,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(controller.isSocketOpen, isFalse);
       expect(bridge.lastStopReason, 'app_backgrounded_paused');
+      // Flutter suppresses frames while paused; check the presented state on resume.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('wfd_retained_stop')), findsNothing);
     } finally {
       await tester.pumpWidget(const SizedBox.shrink());
