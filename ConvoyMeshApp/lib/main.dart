@@ -182,7 +182,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   // when the LAB route is popped and the user is browsing another tab.
   Future<void> _openWifiLab() async {
     if (!widget.wifiDirectIntegrated || _wifiLabRouteOpen || _wifiLabSwitching || _busy ||
-        (_wifiLab == null && _index != 2)) return;
+        (_wifiLab == null && _index != 2)) {
+      return;
+    }
     if (_runtime.isRunning || DiagnosticRecorder.instance.isActive) {
       setState(() => _error =
           'Termina uscita e registrazione Test log prima del Wi-Fi Direct LAB.');
@@ -201,7 +203,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         await LocationFusionService.instance.disposeService();
         if (!mounted) return;
         if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed ||
-            _runtime.isRunning || DiagnosticRecorder.instance.isActive) return;
+            _runtime.isRunning || DiagnosticRecorder.instance.isActive) {
+          return;
+        }
         _wifiLab = widget.wifiLabControllerFactory?.call() ?? WifiDirectLabController();
         _wifiLab!.addListener(_wifiLabChanged);
         _wifiLabActive = true;
@@ -416,28 +420,34 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                 ),
               ),
             ),
-          Expanded(child: IndexedStack(
-        index: _index,
-        // Keep page state mounted, but mute tickers in the two hidden tabs.
-        // This affects visual animations only, never BLE/GPS/outing services.
-        children: [
-          TickerMode(
-            enabled: _index == 0,
-            child: _wifiLabActive || _wifiLabSwitching ? _pausedLiveTab('Radar BLE') : const BlePage(),
-          ),
-          TickerMode(
-            enabled: _index == 1,
-            child: _wifiLabActive || _wifiLabSwitching ? _pausedLiveTab('Mappa') : const MapPage(),
-          ),
-          TickerMode(
-            enabled: _index == 2,
-            child: DiagnosticPage(
-              onOpenWifiDirectLab:
-                  widget.wifiDirectIntegrated ? _openWifiLab : null,
+          Expanded(
+            child: IndexedStack(
+              index: _index,
+              // Keep available tabs mounted and mute their hidden animations.
+              // During the LAB, replace the radio-owning tabs with placeholders.
+              children: [
+                TickerMode(
+                  enabled: _index == 0,
+                  child: _wifiLabActive || _wifiLabSwitching
+                      ? _pausedLiveTab('Radar BLE')
+                      : const BlePage(),
+                ),
+                TickerMode(
+                  enabled: _index == 1,
+                  child: _wifiLabActive || _wifiLabSwitching
+                      ? _pausedLiveTab('Mappa')
+                      : const MapPage(),
+                ),
+                TickerMode(
+                  enabled: _index == 2,
+                  child: DiagnosticPage(
+                    onOpenWifiDirectLab:
+                        widget.wifiDirectIntegrated ? _openWifiLab : null,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      )),
         ],
       ),
       bottomNavigationBar: tokens != null

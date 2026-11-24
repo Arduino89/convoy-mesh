@@ -316,9 +316,7 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
     void reportDisconnect(String reason) {
       if (notifiedDisconnect || epoch != _epoch || !identical(_activeSocket, socket)) return;
       notifiedDisconnect = true;
-      if (identical(_activeSocket, socket)) {
-        _activeSocket = null;
-      }
+      _activeSocket = null;
       onSocketDisconnected(reason);
     }
 
@@ -400,7 +398,7 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
     });
     // A failure belongs to the caller that enqueued it. Later writes still
     // run their own session check, including after Stop or socket replacement.
-    _writeTail = write.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _writeTail = write.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     await write;
   }
 
