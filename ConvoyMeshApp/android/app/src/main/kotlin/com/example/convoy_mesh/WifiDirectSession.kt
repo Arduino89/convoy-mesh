@@ -8,6 +8,10 @@ internal class WifiDirectSession(val id: String) {
     private val addressToPeer = linkedMapOf<String, String>()
     private val peerToAddress = linkedMapOf<String, String>()
     private val declaredNames = mutableMapOf<String, String>()
+    private val pendingNames = linkedMapOf<String, String>()
+    private var txtReceived = 0
+    private var domainMatched = 0
+    private var mapped = 0
     var wasGroupFormed = false
     var nameDiscoveryAllowed = false
     var nameQueryStarted = false
@@ -16,17 +20,49 @@ internal class WifiDirectSession(val id: String) {
     var advertisementRevision = 0
     var requestedName: String? = null
 
-    fun beginNameDiscovery() {
+    fun beginNameDiscovery(clearNames: Boolean = true) {
         nameDiscoveryRevision++
         nameDiscoveryAllowed = true
         nameQueryStarted = false
-        declaredNames.clear()
+        txtReceived = 0
+        domainMatched = 0
+        mapped = 0
+        pendingNames.clear()
+        if (clearNames) declaredNames.clear()
     }
 
-    fun receiveDeclaredName(address: String, name: String?): Boolean {
-        if (!isActive || !nameDiscoveryAllowed || address !in addressToPeer) return false
-        val clean = cleanDeclaredName(name) ?: return false
-        return declaredNames.put(address, clean) != clean
+    enum class NameMapping(val wireName: String) {
+        MAPPED("mapped"),
+        UNCHANGED("unchanged"),
+        WAITING_PEER("waiting_peer"),
+        INVALID_LABEL("invalid_label"),
+    }
+
+    fun receiveDeclaredName(address: String, name: String?): Boolean =
+        mapDeclaredName(address, name) == NameMapping.MAPPED
+
+    fun mapDeclaredName(address: String, name: String?): NameMapping {
+        if (!isActive || !nameDiscoveryAllowed || address.isBlank()) return NameMapping.INVALID_LABEL
+        val clean = cleanDeclaredName(name) ?: return NameMapping.INVALID_LABEL
+        if (address !in addressToPeer) {
+            if (pendingNames.size < 32 || address in pendingNames) pendingNames[address] = clean
+            return NameMapping.WAITING_PEER
+        }
+        return if (declaredNames.put(address, clean) != clean) NameMapping.MAPPED else NameMapping.UNCHANGED
+    }
+
+    fun countTxt(domainMatches: Boolean, mapping: NameMapping?): Map<String, Any?>? {
+        txtReceived++
+        if (domainMatches) domainMatched++
+        if (mapping == NameMapping.MAPPED || mapping == NameMapping.UNCHANGED) mapped++
+        // Bound exported diagnostics even if a nearby device floods TXT responses.
+        if (txtReceived > 32) return null
+        return mapOf(
+            "txt_received" to txtReceived,
+            "domain_matched" to domainMatched,
+            "peer_mapped" to mapped,
+            "mapping" to (mapping?.wireName ?: "other_domain"),
+        )
     }
 
     fun declaredNameForAddress(address: String): String? = declaredNames[address]
@@ -57,6 +93,7 @@ internal class WifiDirectSession(val id: String) {
         return addressToPeer.getOrPut(address) {
             val id = "peer-${(addressToPeer.size + 1).toString().padStart(2, '0')}"
             peerToAddress[id] = address
+            if (nameDiscoveryAllowed) pendingNames.remove(address)?.let { declaredNames[address] = it }
             id
         }
     }
@@ -64,6 +101,7 @@ internal class WifiDirectSession(val id: String) {
     fun addressForPeer(peerId: String): String? = peerToAddress[peerId]
 
     fun invalidate() {
+        pendingNames.clear()
         isActive = false
         wasGroupFormed = false
         declaredNames.clear()

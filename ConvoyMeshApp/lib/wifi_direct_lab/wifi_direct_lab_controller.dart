@@ -844,6 +844,23 @@ class WifiDirectLabController extends ChangeNotifier {
         unawaited(_closeTransportOnDisconnect(reason));
         break;
 
+      case 'dns_sd_status':
+        final stage = event['stage'];
+        final outcome = event['outcome'];
+        const stages = {'clear_advertisement', 'advertisement', 'clear_request',
+          'add_request', 'query', 'txt', 'peer_mapping'};
+        const outcomes = {'accepted', 'rejected', 'unavailable', 'received', 'mapped'};
+        const mappings = {'mapped', 'unchanged', 'waiting_peer', 'invalid_label', 'other_domain'};
+        if (!stages.contains(stage) || !outcomes.contains(outcome)) break;
+        _record(WifiDirectLabEventKind.dnsSdStatus, data: {
+          'stage': stage,
+          'outcome': outcome,
+          if (mappings.contains(event['mapping'])) 'mapping': event['mapping'],
+          for (final key in ['android_code', 'txt_received', 'domain_matched', 'peer_mapped'])
+            if (event[key] is int) key: event[key],
+        });
+        break;
+
       case 'native_error':
         final stage = event['stage']?.toString() ?? 'native';
         final code = event['code']?.toString() ?? 'NATIVE_ERROR';
@@ -1244,7 +1261,9 @@ class WifiDirectLabController extends ChangeNotifier {
     _platformEventSub = null;
     unawaited(_socket.close());
     final sessionId = _invalidateRadioSession();
-    unawaited(_platform.stopAll(sessionId: sessionId, reason: 'controller_disposed'));
+    if (sessionId != null) {
+      unawaited(_platform.stopAll(sessionId: sessionId, reason: 'controller_disposed'));
+    }
     super.dispose();
   }
 }

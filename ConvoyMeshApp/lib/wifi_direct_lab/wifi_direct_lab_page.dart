@@ -40,11 +40,13 @@ class WifiDirectLabPage extends StatefulWidget {
     super.key,
     this.controller,
     this.integratedMode = false,
+    this.shellOwnsSession = false,
   });
 
   final WifiDirectLabController? controller;
-  /// When embedded in the Outdoor app, Stop must finish before route exit.
   final bool integratedMode;
+  /// The integrated shell is the sole owner of cleanup and app lifecycle.
+  final bool shellOwnsSession;
 
   @override
   State<WifiDirectLabPage> createState() => _WifiDirectLabPageState();
@@ -61,7 +63,9 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
     if (_exitInProgress) return;
     _exitInProgress = true;
     try {
-      await _controller.stopAll(reason: 'return_to_outdoor');
+      if (!widget.shellOwnsSession) {
+        await _controller.stopAll(reason: 'return_to_outdoor');
+      }
       if (mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
@@ -73,7 +77,7 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+    if (!widget.shellOwnsSession) WidgetsBinding.instance.addObserver(this);
     _ownsController = widget.controller == null;
     _controller = widget.controller ?? WifiDirectLabController();
     _controller.addListener(_onChanged);
@@ -110,7 +114,7 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
     _controller.removeListener(_onChanged);
     if (_ownsController) {
       _controller.dispose();
-    } else {
+    } else if (!widget.shellOwnsSession) {
       unawaited(_controller.stopAll(reason: 'page_disposed'));
     }
     super.dispose();
@@ -187,6 +191,13 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
             : null,
         title: const Text('Convoy Wi-Fi Direct LAB • Gate 1'),
         actions: [
+          if (widget.shellOwnsSession && _controller.isGroupFormed)
+            IconButton(
+              key: const Key('wfd_keep_group'),
+              tooltip: 'Torna a Convoy mantenendo il gruppo',
+              onPressed: () => Navigator.of(context).pop(true),
+              icon: const Icon(Icons.apps),
+            ),
           IconButton(
             key: const Key('wfd_appbar_stop_button'),
             tooltip: 'Stop e chiudi risorse',
@@ -405,6 +416,8 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
     ColorScheme scheme,
   ) {
     final peers = _controller.peers;
+    final convoyPeers = peers.where((peer) => peer.declaredName != null).toList();
+    final otherPeers = peers.where((peer) => peer.declaredName == null).toList();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -456,44 +469,47 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
               ],
             ),
             const SizedBox(height: 10),
-            if (peers.isEmpty)
-              const Text(
-                'Nessun peer sintetico in elenco. Avvia la scoperta su entrambi i telefoni.',
-                style: TextStyle(fontStyle: FontStyle.italic, fontSize: 13),
-              )
+            Text('Servizio Convoy rilevato (${convoyPeers.length})'),
+            if (convoyPeers.isEmpty)
+              const Text('Per vedere i nomi, attiva l’annuncio e la scoperta su entrambi i telefoni.')
             else
-              Column(
-                children: [
-                  for (final peer in peers)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.phonelink_ring),
-                      title: Text(
-                        peer.declaredName == null
-                            ? '${peer.peerId} (${peer.status})'
-                            : '${peer.declaredName} — ${peer.peerId} (${peer.status})',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(
-                        '${peer.declaredName == null ? '' : 'Nome dichiarato, non autenticato.\n'}'
-                        'Rilevato a t=${peer.firstSeenElapsedMs} ms • agg. ${peer.lastSeenElapsedMs} ms',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: FilledButton.tonal(
-                        key: Key('wfd_connect_${peer.peerId}'),
-                        onPressed: (_controller.isConnecting || _controller.isGroupFormed)
-                            ? null
-                            : () => _confirmAndConnectPeer(peer.peerId),
-                        child: const Text('Connetti'),
-                      ),
-                    ),
-                ],
+              for (final peer in convoyPeers) _buildPeerRow(peer),
+            if (otherPeers.isNotEmpty)
+              ExpansionTile(
+                key: const Key('wfd_other_p2p'),
+                tilePadding: EdgeInsets.zero,
+                title: Text('Altri dispositivi P2P (${otherPeers.length})'),
+                subtitle: const Text('Diagnostica. Servizio Convoy non rilevato.'),
+                children: [for (final peer in otherPeers) _buildPeerRow(peer)],
               ),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildPeerRow(WifiDirectSyntheticPeer peer) => ListTile(
+    contentPadding: EdgeInsets.zero,
+    leading: const Icon(Icons.phonelink_ring),
+    title: Text(
+      peer.declaredName == null
+          ? '${peer.peerId} (${peer.status})'
+          : '${peer.declaredName} — ${peer.peerId} (${peer.status})',
+      style: const TextStyle(fontWeight: FontWeight.w600),
+    ),
+    subtitle: Text(
+      '${peer.declaredName == null ? '' : 'Nome dichiarato, non autenticato.\n'}'
+      'Rilevato a t=${peer.firstSeenElapsedMs} ms • agg. ${peer.lastSeenElapsedMs} ms',
+      style: const TextStyle(fontSize: 12),
+    ),
+    trailing: FilledButton.tonal(
+      key: Key('wfd_connect_${peer.peerId}'),
+      onPressed: (_controller.isConnecting || _controller.isGroupFormed)
+          ? null
+          : () => _confirmAndConnectPeer(peer.peerId),
+      child: const Text('Connetti'),
+    ),
+  );
 
   Widget _buildSocketAndProbesCard(ColorScheme scheme) {
     final rttMean = _controller.meanRttMs;

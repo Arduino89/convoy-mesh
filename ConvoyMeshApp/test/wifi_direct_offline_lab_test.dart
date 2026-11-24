@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:convoy_mesh/services/background_runtime_service.dart';
@@ -477,12 +478,12 @@ void main() {
         phoneA.sendProbeBatch(
           userConsented: true,
           count: 20,
-          interval: const Duration(milliseconds: 5),
+          interval: Duration.zero,
         ),
         phoneB.sendProbeBatch(
           userConsented: true,
           count: 20,
-          interval: const Duration(milliseconds: 5),
+          interval: Duration.zero,
         ),
       ]);
       expect(results, [20, 20]);
@@ -517,6 +518,7 @@ void main() {
 
       // Verify every sent probe on Phone A and Phone B matched its exact nonce in ack_received:
       for (final controller in [phoneA, phoneB]) {
+        expect(controller.logs.where((e) => e.kind == WifiDirectLabEventKind.error), isEmpty);
         final ackEvents = controller.logs
             .where((e) => e.kind == WifiDirectLabEventKind.ackReceived)
             .toList();
@@ -562,6 +564,47 @@ void main() {
         );
       }
     });
+  });
+
+  test('ordered concurrent TCP writes and queued cancellation do not reach a replacement socket', () async {
+    final transport = TcpWifiDirectSocketTransport(defaultBindHost: '127.0.0.1');
+    final server = await ServerSocket.bind('127.0.0.1', 0);
+    final connections = StreamIterator(server);
+    addTearDown(() async {
+      await transport.close();
+      await connections.cancel();
+      await server.close();
+    });
+    Future<Socket> connect() async {
+      final incoming = connections.moveNext();
+      await transport.connectAsClient(
+        host: '127.0.0.1',
+        port: server.port,
+        onSocketOpen: (_) {},
+        onLineReceived: (_) {},
+        onSocketDisconnected: (_) {},
+        onSocketError: (code, _) => fail(code),
+      );
+      expect(await incoming, isTrue);
+      return connections.current;
+    }
+
+    final first = await connect();
+    final frames = List.generate(40, (i) => '{"sequence":$i}');
+    final received = first.cast<List<int>>().transform(utf8.decoder).transform(const LineSplitter()).take(frames.length).toList();
+    await Future.wait(frames.map(transport.sendJsonLine));
+    expect(await received.timeout(const Duration(seconds: 3)), frames);
+
+    final queued = List.generate(40, (i) =>
+      transport.sendJsonLine('stale-$i').then((_) => false, onError: (Object error) => error is SocketException));
+    await transport.close();
+    expect(await Future.wait(queued), everyElement(isTrue));
+    first.destroy();
+    final next = await connect();
+    addTearDown(next.destroy);
+    final newLine = next.cast<List<int>>().transform(utf8.decoder).transform(const LineSplitter()).first;
+    await transport.sendJsonLine('fresh');
+    expect(await newLine.timeout(const Duration(seconds: 3)), 'fresh');
   });
 
   group('Wi-Fi Direct Offline Lab — Anti-False-ACK, Link Loss Recovery & Deduplication', () {
@@ -824,6 +867,11 @@ void main() {
         ],
       });
       await tester.pumpAndSettle();
+      expect(find.text('Servizio Convoy rilevato (0)'), findsOneWidget);
+      final otherDevices = find.byKey(const Key('wfd_other_p2p'));
+      await tester.ensureVisible(otherDevices);
+      await tester.tap(otherDevices);
+      await tester.pumpAndSettle();
       expect(find.text('peer-01 (available)'), findsOneWidget);
 
       // Tap Connetti -> verify consent dialog appears and confirm:
@@ -967,6 +1015,22 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(controller.peers.map((p) => p.declaredName), ['Nome Finto', 'Nome Finto', null, null]);
     expect(bridge.connectCalls, 0);
+    bridge.emit({
+      'type': 'dns_sd_status',
+      'stage': 'txt',
+      'outcome': 'received',
+      'mapping': 'mapped',
+      'txt_received': 2,
+      'domain_matched': 2,
+      'peer_mapped': 1,
+      'declared_name': 'Nome Finto',
+      'device_address': '00:00:00:00:00:00',
+    });
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.logs.last.data, {
+      'stage': 'txt', 'outcome': 'received', 'mapping': 'mapped',
+      'txt_received': 2, 'domain_matched': 2, 'peer_mapped': 1,
+    });
     expect(controller.exportJsonl(), isNot(contains('Nome Finto')));
     expect(controller.exportJsonl(), isNot(contains('Nome Origi')));
     await controller.setShareConvoyName(false);

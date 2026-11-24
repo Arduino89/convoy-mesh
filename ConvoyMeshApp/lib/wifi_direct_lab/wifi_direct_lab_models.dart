@@ -13,6 +13,7 @@ enum WifiDirectLabEventKind {
   probeReceived('probe_received', WifiDirectEvidenceLayer.application),
   ackReceived('ack_received', WifiDirectEvidenceLayer.application),
   lifecycle('lifecycle', WifiDirectEvidenceLayer.system),
+  dnsSdStatus('dns_sd_status', WifiDirectEvidenceLayer.system),
   disconnect('disconnect', WifiDirectEvidenceLayer.transport),
   error('error', WifiDirectEvidenceLayer.system);
 

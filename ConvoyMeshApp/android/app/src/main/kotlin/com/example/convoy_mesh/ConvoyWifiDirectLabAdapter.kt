@@ -426,14 +426,17 @@ class ConvoyWifiDirectLabAdapter(
                 val devices = peerList?.deviceList ?: emptyList()
                 val syntheticPeers = devices.mapNotNull { device ->
                     val rawAddress = device.deviceAddress?.trim()?.lowercase(Locale.ROOT).orEmpty()
+                    val nameWasPending = session.declaredNameForAddress(rawAddress) == null
                     val syntheticId = session.peerForAddress(rawAddress) ?: return@mapNotNull null
+                    val name = session.declaredNameForAddress(rawAddress)
+                    if (nameWasPending && name != null) emitDnsSdStatus(session, "peer_mapping", "mapped")
                     mapOf(
                         "peer_id" to syntheticId,
                         "status" to deviceStatusToText(device.status),
-                        "declared_name" to session.declaredNameForAddress(rawAddress),
+                        "declared_name" to name,
                     )
                 }
-                if (syntheticPeers.isNotEmpty()) discoverConvoyNames(manager, channel, session)
+                discoverConvoyNames(manager, channel, session)
                 emitEvent(
                     session,
                     mapOf(
@@ -521,10 +524,41 @@ class ConvoyWifiDirectLabAdapter(
             result.success(false)
             return
         }
-        updateNameAdvertisement(
-            manager, channel, session, WifiDirectSession.cleanDeclaredName(call.argument<String>("declaredName")),
-        )
+        val name = WifiDirectSession.cleanDeclaredName(call.argument<String>("declaredName"))
+        if (session.requestedName != name) {
+            val rediscover = session.nameDiscoveryAllowed && !session.wasGroupFormed
+            if (rediscover) session.beginNameDiscovery(clearNames = false)
+            updateNameAdvertisement(manager, channel, session, name)
+            if (rediscover) discoverConvoyNames(manager, channel, session)
+        }
         result.success(true)
+    }
+
+    private fun emitDnsSdStatus(
+        session: WifiDirectSession,
+        stage: String,
+        outcome: String,
+        details: Map<String, Any?> = emptyMap(),
+    ) {
+        emitEvent(session, mapOf("type" to "dns_sd_status", "stage" to stage, "outcome" to outcome) + details)
+    }
+
+    private fun dnsSdListener(
+        session: WifiDirectSession,
+        stage: String,
+        isCurrent: () -> Boolean,
+        onAccepted: () -> Unit = {},
+    ) = object : WifiP2pManager.ActionListener {
+        override fun onSuccess() {
+            if (!session.isActive || !isCurrent()) return
+            emitDnsSdStatus(session, stage, "accepted")
+            onAccepted()
+        }
+
+        override fun onFailure(reason: Int) {
+            if (!session.isActive || !isCurrent()) return
+            emitDnsSdStatus(session, stage, "rejected", mapOf("android_code" to reason))
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -537,27 +571,28 @@ class ConvoyWifiDirectLabAdapter(
         if (session.requestedName == name) return
         session.requestedName = name
         val revision = ++session.advertisementRevision
+        val isCurrent = { session.advertisementRevision == revision }
         try {
-            manager.clearLocalServices(channel, object : WifiP2pManager.ActionListener {
-                override fun onSuccess() {
-                    if (!session.isActive || session.advertisementRevision != revision || name == null) return
-                    if (checkP2pPreflight() != null) return
-                    try {
-                        manager.addLocalService(
-                            channel,
-                            WifiP2pDnsSdServiceInfo.newInstance(
-                                CONVOY_NAME_INSTANCE, CONVOY_NAME_SERVICE, mapOf(CONVOY_NAME_FIELD to name),
-                            ),
-                            null,
-                        )
-                    } catch (_: RuntimeException) {
-                        // The peer discovery path is independent of optional DNS-SD.
-                    }
+            manager.clearLocalServices(channel, dnsSdListener(session, "clear_advertisement", isCurrent) {
+                if (name == null) return@dnsSdListener
+                if (checkP2pPreflight() != null) {
+                    emitDnsSdStatus(session, "advertisement", "unavailable")
+                    return@dnsSdListener
                 }
-                override fun onFailure(reason: Int) = Unit
+                try {
+                    manager.addLocalService(
+                        channel,
+                        WifiP2pDnsSdServiceInfo.newInstance(
+                            CONVOY_NAME_INSTANCE, CONVOY_NAME_SERVICE, mapOf(CONVOY_NAME_FIELD to name),
+                        ),
+                        dnsSdListener(session, "advertisement", isCurrent),
+                    )
+                } catch (_: RuntimeException) {
+                    emitDnsSdStatus(session, "advertisement", "unavailable")
+                }
             })
         } catch (_: RuntimeException) {
-            // Some devices do not implement DNS-SD.
+            emitDnsSdStatus(session, "clear_advertisement", "unavailable")
         }
     }
 
@@ -567,39 +602,43 @@ class ConvoyWifiDirectLabAdapter(
         channel: WifiP2pManager.Channel,
         session: WifiDirectSession,
     ) {
-        if (!session.isActive || !session.nameDiscoveryAllowed || session.nameQueryStarted) return
+        if (!session.isActive || !session.nameDiscoveryAllowed ||
+            session.wasGroupFormed || session.nameQueryStarted
+        ) return
         session.nameQueryStarted = true
         val revision = session.nameDiscoveryRevision
+        val isCurrent = { session.nameDiscoveryAllowed && !session.wasGroupFormed &&
+            session.nameDiscoveryRevision == revision }
         try {
             manager.setDnsSdResponseListeners(channel, { _, _, _ -> }) { domain, txt, peer ->
-                if (session.nameDiscoveryRevision != revision ||
-                    !domain.trimEnd('.').equals(CONVOY_NAME_DOMAIN, ignoreCase = true)
-                ) {
-                    return@setDnsSdResponseListeners
-                }
-                val address = peer.deviceAddress?.trim()?.lowercase(Locale.ROOT).orEmpty()
-                if (session.receiveDeclaredName(address, txt[CONVOY_NAME_FIELD])) requestCurrentPeers(session)
+                if (!session.isActive || !isCurrent()) return@setDnsSdResponseListeners
+                val matches = domain.trimEnd('.').equals(CONVOY_NAME_DOMAIN, ignoreCase = true)
+                val mapping = if (matches) {
+                    val address = peer.deviceAddress?.trim()?.lowercase(Locale.ROOT).orEmpty()
+                    session.mapDeclaredName(address, txt[CONVOY_NAME_FIELD])
+                } else null
+                session.countTxt(matches, mapping)?.let { emitDnsSdStatus(session, "txt", "received", it) }
+                if (mapping == WifiDirectSession.NameMapping.MAPPED) requestCurrentPeers(session)
             }
-            manager.clearServiceRequests(channel, null)
-            manager.addServiceRequest(
-                channel,
-                WifiP2pDnsSdServiceRequest.newInstance(CONVOY_NAME_INSTANCE, CONVOY_NAME_SERVICE),
-                object : WifiP2pManager.ActionListener {
-                    override fun onSuccess() {
-                        if (!session.isActive || !session.nameDiscoveryAllowed ||
-                            session.nameDiscoveryRevision != revision
-                        ) return
-                        try {
-                            manager.discoverServices(channel, null)
-                        } catch (_: RuntimeException) {
-                            // Keep synthetic peer IDs when service discovery is unavailable.
-                        }
-                    }
-                    override fun onFailure(reason: Int) = Unit
-                },
-            )
+            manager.clearServiceRequests(channel, dnsSdListener(session, "clear_request", isCurrent) {
+                try {
+                    manager.addServiceRequest(
+                        channel,
+                        WifiP2pDnsSdServiceRequest.newInstance(CONVOY_NAME_INSTANCE, CONVOY_NAME_SERVICE),
+                        dnsSdListener(session, "add_request", isCurrent) {
+                            try {
+                                manager.discoverServices(channel, dnsSdListener(session, "query", isCurrent))
+                            } catch (_: RuntimeException) {
+                                emitDnsSdStatus(session, "query", "unavailable")
+                            }
+                        },
+                    )
+                } catch (_: RuntimeException) {
+                    emitDnsSdStatus(session, "add_request", "unavailable")
+                }
+            })
         } catch (_: RuntimeException) {
-            // Ordinary peer discovery and direct connect remain available.
+            emitDnsSdStatus(session, "query", "unavailable")
         }
     }
 

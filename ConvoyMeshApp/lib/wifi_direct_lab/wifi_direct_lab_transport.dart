@@ -175,6 +175,7 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
   StreamSubscription<List<int>>? _socketSub;
   int? _boundPort;
   int _epoch = 0;
+  Future<void> _writeTail = Future<void>.value();
 
   @override
   bool get isSocketOpen => _activeSocket != null;
@@ -306,12 +307,14 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
     _activeSocket?.destroy();
     socket.setOption(SocketOption.tcpNoDelay, true);
     _activeSocket = socket;
+    _writeTail = Future<void>.value();
 
     final buffer = StringBuffer();
     var notifiedDisconnect = false;
+    var discardUntilNewline = false;
 
     void reportDisconnect(String reason) {
-      if (notifiedDisconnect || epoch != _epoch) return;
+      if (notifiedDisconnect || epoch != _epoch || !identical(_activeSocket, socket)) return;
       notifiedDisconnect = true;
       if (identical(_activeSocket, socket)) {
         _activeSocket = null;
@@ -321,7 +324,7 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
 
     _socketSub = socket.listen(
       (List<int> chunk) {
-        if (epoch != _epoch) return;
+        if (epoch != _epoch || !identical(_activeSocket, socket)) return;
         String decoded;
         try {
           decoded = utf8.decode(chunk, allowMalformed: false);
@@ -329,20 +332,32 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
           onSocketError('SOCKET_UTF8_INVALID', 'Dati non UTF-8 ricevuti sul socket');
           return;
         }
-        buffer.write(decoded);
-        if (buffer.length > WifiDirectSyntheticFrame.maxWireBytes * 8) {
-          buffer.clear();
-          onSocketError(
-            'SOCKET_FRAME_TOO_LARGE',
-            'Riga ricevuta oltre il limite massimo consentito',
-          );
-          return;
+        if (discardUntilNewline) {
+          final delimiter = decoded.indexOf('\n');
+          if (delimiter == -1) return;
+          decoded = decoded.substring(delimiter + 1);
+          discardUntilNewline = false;
         }
+        buffer.write(decoded);
         final current = buffer.toString();
         final lines = current.split('\n');
         buffer.clear();
-        buffer.write(lines.removeLast());
+        final partial = lines.removeLast();
+        void reportOversizedFrame() => onSocketError(
+          'SOCKET_FRAME_TOO_LARGE',
+          'Riga ricevuta oltre il limite massimo consentito',
+        );
+        if (partial.length <= WifiDirectSyntheticFrame.maxWireBytes) {
+          buffer.write(partial);
+        } else {
+          discardUntilNewline = true;
+          reportOversizedFrame();
+        }
         for (final line in lines) {
+          if (line.length > WifiDirectSyntheticFrame.maxWireBytes) {
+            reportOversizedFrame();
+            continue;
+          }
           final trimmed = line.trim();
           if (trimmed.isNotEmpty) {
             onLineReceived(trimmed);
@@ -350,7 +365,7 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
         }
       },
       onError: (Object error) {
-        if (epoch != _epoch) return;
+        if (epoch != _epoch || !identical(_activeSocket, socket)) return;
         onSocketError('SOCKET_STREAM_ERROR', error.toString());
         reportDisconnect('socket_stream_error');
       },
@@ -370,13 +385,29 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
       throw const SocketException('Socket TCP Wi-Fi Direct non aperto');
     }
     final normalized = jsonLine.endsWith('\n') ? jsonLine : '$jsonLine\n';
-    socket.add(utf8.encode(normalized));
-    await socket.flush();
+    final epoch = _epoch;
+    void requireCurrentSocket() {
+      if (epoch != _epoch || !identical(_activeSocket, socket)) {
+        throw const SocketException('Invio annullato: sessione TCP chiusa');
+      }
+    }
+
+    final write = _writeTail.then((_) async {
+      requireCurrentSocket();
+      socket.add(utf8.encode(normalized));
+      await socket.flush();
+      requireCurrentSocket();
+    });
+    // A failure belongs to the caller that enqueued it. Later writes still
+    // run their own session check, including after Stop or socket replacement.
+    _writeTail = write.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    await write;
   }
 
   @override
   Future<void> close() async {
     _epoch++;
+    _writeTail = Future<void>.value();
     final sub = _socketSub;
     final sock = _activeSocket;
     final srvSub = _serverSub;

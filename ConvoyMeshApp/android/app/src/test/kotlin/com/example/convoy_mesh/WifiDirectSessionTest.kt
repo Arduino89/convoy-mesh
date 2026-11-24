@@ -58,4 +58,25 @@ class WifiDirectSessionTest {
         assertEquals("peer-01", next.peerForAddress("first"))
         assertNull(next.declaredNameForAddress("first"))
     }
+    @Test
+    fun txtBeforePeerListingIsMappedOnlyAfterDiscoveryAndCountersAreAnonymous() {
+        val session = WifiDirectSession("lab")
+        session.beginNameDiscovery()
+        val waiting = session.mapDeclaredName("radio", "Convoy")
+        assertEquals(WifiDirectSession.NameMapping.WAITING_PEER, waiting)
+        assertNull(session.declaredNameForAddress("radio"))
+        assertEquals(mapOf(
+            "txt_received" to 1, "domain_matched" to 1, "peer_mapped" to 0,
+            "mapping" to "waiting_peer",
+        ), session.countTxt(true, waiting))
+        assertEquals("peer-01", session.peerForAddress("radio"))
+        assertEquals("Convoy", session.declaredNameForAddress("radio"))
+        session.mapDeclaredName("late", "Convoy")
+        session.beginNameDiscovery(clearNames = false)
+        assertEquals("Convoy", session.declaredNameForAddress("radio"))
+        session.peerForAddress("late")
+        assertNull(session.declaredNameForAddress("late"))
+        session.invalidate()
+        assertNull(session.declaredNameForAddress("radio"))
+    }
 }
