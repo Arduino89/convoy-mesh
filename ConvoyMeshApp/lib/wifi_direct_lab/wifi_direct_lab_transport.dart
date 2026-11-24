@@ -16,7 +16,8 @@ abstract class WifiDirectPlatformBridge {
   Future<void> openBluetoothSettings();
   Future<void> openLocationSettings();
   Future<void> openAppSettings();
-  Future<void> discoverPeers({required String sessionId});
+  Future<void> discoverPeers({required String sessionId, String? declaredName});
+  Future<void> advertiseConvoyName({required String sessionId, required String? declaredName});
   Future<void> connectPeer({
     required String sessionId,
     required String peerId,
@@ -85,10 +86,18 @@ class MethodChannelWifiDirectPlatformBridge implements WifiDirectPlatformBridge 
   }
 
   @override
-  Future<void> discoverPeers({required String sessionId}) async {
+  Future<void> discoverPeers({required String sessionId, String? declaredName}) async {
     await _method.invokeMapMethod<String, Object?>(
       'discoverPeers',
-      <String, Object?>{'sessionId': sessionId},
+      <String, Object?>{'sessionId': sessionId, 'declaredName': declaredName},
+    );
+  }
+
+  @override
+  Future<void> advertiseConvoyName({required String sessionId, required String? declaredName}) async {
+    await _method.invokeMethod<bool>(
+      'advertiseConvoyName',
+      <String, Object?>{'sessionId': sessionId, 'declaredName': declaredName},
     );
   }
 

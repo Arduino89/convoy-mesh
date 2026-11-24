@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'wifi_direct_lab_models.dart';
 import 'wifi_direct_lab_transport.dart';
@@ -86,6 +87,11 @@ class WifiDirectLabController extends ChangeNotifier {
   int _radioEpoch = 0;
   int _stopsInProgress = 0;
   bool _discoveryPending = false;
+  String? _advertisedName;
+  bool _nameSettingPending = false;
+
+  bool get sharesConvoyName => _advertisedName != null;
+  bool get nameSettingPending => _nameSettingPending;
 
   bool _isRadioEpochCurrent(int epoch) => !_disposed && _radioEpoch == epoch;
 
@@ -213,6 +219,47 @@ class WifiDirectLabController extends ChangeNotifier {
   Future<void> openLocationSettings() => _platform.openLocationSettings();
   Future<void> openAppSettings() => _platform.openAppSettings();
 
+  Future<void> setShareConvoyName(bool enabled) async {
+    if (_disposed || _nameSettingPending || _stopsInProgress > 0) return;
+    final epoch = _radioEpoch;
+    _nameSettingPending = true;
+    _notify();
+    try {
+      final name = enabled
+          ? WifiDirectSyntheticPeer.cleanDeclaredName(
+              (await SharedPreferences.getInstance()).getString('my_name'))
+          : null;
+      if (!_isRadioEpochCurrent(epoch)) return;
+      if (enabled && name == null) {
+        _recordError(
+          stage: 'name_advertisement',
+          code: 'NO_SHAREABLE_CONVOY_NAME',
+          message: 'Imposta un nome Convoy con lettere, numeri, spazi, trattini o apostrofi.',
+        );
+        return;
+      }
+      _advertisedName = name;
+      final sessionId = _radioSessionId;
+      if (sessionId != null) {
+        await _platform.advertiseConvoyName(
+          sessionId: sessionId,
+          declaredName: name,
+        );
+      }
+    } catch (_) {
+      if (!_isRadioEpochCurrent(epoch)) return;
+      _advertisedName = null;
+      _recordError(
+        stage: 'name_advertisement',
+        code: 'NAME_ADVERTISEMENT_UNAVAILABLE',
+        message: 'Annuncio del nome non disponibile.',
+      );
+    } finally {
+      _nameSettingPending = false;
+      _notify();
+    }
+  }
+
   /// Step 1: Request Wi-Fi Direct peer discovery.
   ///
   /// Fails closed (with an explicit `error` event and zero BLE fallback) if
@@ -266,7 +313,7 @@ class WifiDirectLabController extends ChangeNotifier {
     final sessionId = _radioSessionId ??=
         '${DateTime.now().microsecondsSinceEpoch}-${++_nextRadioSession}';
     try {
-      await _platform.discoverPeers(sessionId: sessionId);
+      await _platform.discoverPeers(sessionId: sessionId, declaredName: _advertisedName);
       if (!_isRadioSessionCurrent(sessionId)) return false;
       _isDiscovering = true;
       _lastError = null;
@@ -627,7 +674,8 @@ class WifiDirectLabController extends ChangeNotifier {
     _batchEpoch++;
     _isSendingBatch = false;
     final hadActiveResources =
-        _isDiscovering || _isConnecting || _isGroupFormed || _isSocketOpen || _socket.isSocketOpen;
+        sessionId != null || _isDiscovering || _isConnecting || _isGroupFormed || _isSocketOpen || _socket.isSocketOpen;
+    final stateBeforeStop = _radioLogState;
 
     _isDiscovering = false;
     _isConnecting = false;
@@ -652,6 +700,8 @@ class WifiDirectLabController extends ChangeNotifier {
         layer: WifiDirectEvidenceLayer.transport,
         data: <String, Object?>{
           'reason': reason,
+          'source': 'local_stop',
+          ...stateBeforeStop,
           'probes_sent': probesSentCount,
           'acks_confirmed': acksConfirmedCount,
           'unconfirmed_probes': unconfirmedProbesCount,
@@ -662,14 +712,25 @@ class WifiDirectLabController extends ChangeNotifier {
     }
   }
 
-  /// Automatically stops sockets, receivers, and P2P group when the app goes to
-  /// background (`paused`, `inactive`, `detached`, `hidden`).
+  Map<String, Object?> get _radioLogState => {
+    'discovering': _isDiscovering,
+    'connecting': _isConnecting,
+    'group_formed': _isGroupFormed,
+    'socket_open': _isSocketOpen,
+  };
+
+  /// Losing window focus to an Android system dialog keeps the LAB session.
+  /// Hidden, paused and detached indicate that its route is no longer visible.
   Future<void> onAppLifecycleStateChanged(AppLifecycleState state) async {
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.hidden) {
       await stopAll(reason: 'app_backgrounded_${state.name}');
+    } else if (state == AppLifecycleState.inactive && _radioSessionId != null) {
+      _record(WifiDirectLabEventKind.lifecycle, data: {
+        'state': state.name,
+        ..._radioLogState,
+      });
     } else if (state == AppLifecycleState.resumed) {
       await refreshEnvironment();
     }
@@ -681,6 +742,7 @@ class WifiDirectLabController extends ChangeNotifier {
   String? _invalidateRadioSession() {
     final sessionId = _radioSessionId;
     _radioSessionId = null;
+    _advertisedName = null;
     _radioEpoch++;
     _discoveryPending = false;
     return sessionId;
@@ -726,6 +788,9 @@ class WifiDirectLabController extends ChangeNotifier {
                 status: status,
                 firstSeenElapsedMs: existing?.firstSeenElapsedMs ?? now,
                 lastSeenElapsedMs: now,
+                declaredName: WifiDirectSyntheticPeer.cleanDeclaredName(
+                  item['declared_name'] is String ? item['declared_name'] as String : null,
+                ),
               );
               if (isNewOrChanged) {
                 _record(
@@ -1033,6 +1098,7 @@ class WifiDirectLabController extends ChangeNotifier {
     _batchEpoch++;
     _isSendingBatch = false;
     final wasOpen = _isSocketOpen;
+    final stateBeforeClose = _radioLogState;
     _isSocketOpen = false;
     if (wasOpen) {
       _record(
@@ -1040,6 +1106,8 @@ class WifiDirectLabController extends ChangeNotifier {
         layer: WifiDirectEvidenceLayer.transport,
         data: <String, Object?>{
           'reason': reason,
+          'source': 'socket',
+          ...stateBeforeClose,
           'probes_sent': probesSentCount,
           'acks_confirmed': acksConfirmedCount,
           'unconfirmed_probes': unconfirmedProbesCount,
@@ -1055,27 +1123,25 @@ class WifiDirectLabController extends ChangeNotifier {
     _batchEpoch++;
     _isSendingBatch = false;
     final epoch = _radioEpoch;
-    final wasActive = _isGroupFormed || _isSocketOpen || _socket.isSocketOpen;
+    final stateBeforeClose = _radioLogState;
     _isConnecting = false;
     _isGroupFormed = false;
     _isSocketOpen = false;
     _groupRole = WifiDirectGroupRole.none;
     await _socket.close();
     if (!_isRadioEpochCurrent(epoch)) return;
-    if (wasActive) {
-      _record(
-        WifiDirectLabEventKind.disconnect,
-        layer: WifiDirectEvidenceLayer.transport,
-        data: <String, Object?>{
-          'reason': reason,
-          'probes_sent': probesSentCount,
-          'acks_confirmed': acksConfirmedCount,
-          'unconfirmed_probes': unconfirmedProbesCount,
-        },
-      );
-    } else {
-      _notify();
-    }
+    _record(
+      WifiDirectLabEventKind.disconnect,
+      layer: WifiDirectEvidenceLayer.system,
+      data: <String, Object?>{
+        'reason': reason,
+        'source': 'android_p2p',
+        ...stateBeforeClose,
+        'probes_sent': probesSentCount,
+        'acks_confirmed': acksConfirmedCount,
+        'unconfirmed_probes': unconfirmedProbesCount,
+      },
+    );
   }
 
   (String, String)? _checkPreflightCodeAndMessage() {

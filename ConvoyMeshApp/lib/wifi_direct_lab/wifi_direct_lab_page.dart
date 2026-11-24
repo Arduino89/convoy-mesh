@@ -125,7 +125,7 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
           'Stai per richiedere una connessione Wi-Fi Direct locale a $peerId.\n\n'
           '• Nessuna connessione automatica a sconosciuti.\n'
           '• Verranno scambiati solo probe sintetici e ACK con nonce.\n'
-          '• Nessuna coordinata GPS, nickname o ID persistente verrà trasmesso.',
+          '• Il collegamento scambia solo dati sintetici. Il nome Convoy è visibile in scoperta solo a scelta dell’utente e non autentica il peer.',
         ),
         actions: [
           TextButton(
@@ -417,13 +417,19 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
             ),
             const SizedBox(height: 6),
             const Text(
-              'I peer scoperti usano solo slot sintetici di sessione (peer-01, peer-02…). '
-              'Nessun indirizzo MAC, nome dispositivo o SSID viene salvato o mostrato. '
-              'Il nome utente Convoy NON identifica i peer in questo LAB: '
-              'peer-01 è un ID temporaneo, non il nome impostato.',
+              'Ogni peer ha un ID temporaneo. Un nome Convoy dichiarato può '
+              'essere condiviso o imitato da più dispositivi e non autentica il peer.',
               style: TextStyle(fontSize: 12.5),
             ),
             const SizedBox(height: 10),
+            SwitchListTile(
+              key: const Key('wfd_share_convoy_name'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Mostra il mio nome Convoy ai dispositivi vicini'),
+              subtitle: const Text('Solo nel LAB. Puoi disattivarlo qui o usare Stop.'),
+              value: _controller.sharesConvoyName,
+              onChanged: _controller.nameSettingPending ? null : _controller.setShareConvoyName,
+            ),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -463,10 +469,13 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.phonelink_ring),
                       title: Text(
-                        '${peer.peerId} (${peer.status})',
+                        peer.declaredName == null
+                            ? '${peer.peerId} (${peer.status})'
+                            : '${peer.declaredName} — ${peer.peerId} (${peer.status})',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
+                        '${peer.declaredName == null ? '' : 'Nome dichiarato, non autenticato.\n'}'
                         'Rilevato a t=${peer.firstSeenElapsedMs} ms • agg. ${peer.lastSeenElapsedMs} ms',
                         style: const TextStyle(fontSize: 12),
                       ),

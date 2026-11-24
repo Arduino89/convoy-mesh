@@ -11,6 +11,7 @@ import 'package:convoy_mesh/wifi_direct_lab/wifi_direct_lab_page.dart';
 import 'package:convoy_mesh/wifi_direct_lab/wifi_direct_lab_transport.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeWifiDirectPlatformBridge implements WifiDirectPlatformBridge {
   FakeWifiDirectPlatformBridge({
@@ -83,13 +84,23 @@ class FakeWifiDirectPlatformBridge implements WifiDirectPlatformBridge {
   Future<void> openAppSettings() async {}
 
   @override
-  Future<void> discoverPeers({required String sessionId}) async {
+  Future<void> discoverPeers({required String sessionId, String? declaredName}) async {
+    discoveryNames.add(declaredName);
     this.sessionId = sessionId;
     discoverCalls++;
     if (discoverError != null) {
       throw discoverError!;
     }
     await discoveryReply?.future;
+  }
+
+  final discoveryNames = <String?>[];
+  final advertisementChanges = <String?>[];
+
+  @override
+  Future<void> advertiseConvoyName({required String sessionId, required String? declaredName}) async {
+    expect(sessionId, this.sessionId);
+    advertisementChanges.add(declaredName);
   }
 
   @override
@@ -895,6 +906,103 @@ void main() {
     });
   });
  
+  test('focus loss preserves pairing and the group, while hidden and paused stop', () async {
+    for (final background in [AppLifecycleState.hidden, AppLifecycleState.paused]) {
+      final bridge = FakeWifiDirectPlatformBridge();
+      final (socket, _) = PairedInMemorySocketTransport.createPair();
+      final controller = WifiDirectLabController(platform: bridge, socketTransport: socket);
+      expect(await controller.requestDiscovery(), isTrue);
+      bridge.emit({'type': 'peers_updated', 'peers': [{'peer_id': 'peer-01'}]});
+      await Future<void>.delayed(Duration.zero);
+      expect(await controller.requestConnect(peerId: 'peer-01', userConsented: true), isTrue);
+      await controller.onAppLifecycleStateChanged(AppLifecycleState.inactive);
+      expect(controller.isConnecting, isTrue);
+      expect(controller.logs.last.data['connecting'], isTrue);
+      expect(bridge.stopCalls, 0);
+
+      bridge.emit({'type': 'group_formed', 'role': 'group_owner'});
+      await Future<void>.delayed(Duration.zero);
+      await controller.onAppLifecycleStateChanged(AppLifecycleState.inactive);
+      expect(controller.isGroupFormed, isTrue);
+      expect(controller.isSocketOpen, isTrue);
+      expect(controller.logs.last.data['group_formed'], isTrue);
+      expect(bridge.stopCalls, 0);
+
+      await controller.onAppLifecycleStateChanged(background);
+      expect(bridge.stopCalls, 1);
+      expect(controller.isGroupFormed, isFalse);
+      expect(controller.isSocketOpen, isFalse);
+      expect(controller.logs.last.data['reason'], 'app_backgrounded_${background.name}');
+      controller.dispose();
+      await bridge.dispose();
+    }
+  });
+
+  test('voluntary Convoy names are session-only, display-only and revocable', () async {
+    SharedPreferences.setMockInitialValues({'my_name': 'Nome Origine Lungo'});
+    final bridge = FakeWifiDirectPlatformBridge();
+    final controller = WifiDirectLabController(platform: bridge);
+    addTearDown(() async {
+      controller.dispose();
+      await bridge.dispose();
+    });
+    expect(controller.sharesConvoyName, isFalse);
+    expect(await controller.requestDiscovery(), isTrue);
+    expect(bridge.discoveryNames, [null]);
+    await controller.setShareConvoyName(true);
+    expect(controller.sharesConvoyName, isTrue);
+    expect(bridge.advertisementChanges, ['Nome Origi']);
+    expect(await controller.requestDiscovery(), isTrue);
+    expect(bridge.discoveryNames.last, 'Nome Origi');
+
+    bridge.emit({
+      'type': 'peers_updated',
+      'peers': [
+        {'peer_id': 'peer-01', 'declared_name': 'Nome Finto'},
+        {'peer_id': 'peer-02', 'declared_name': 'Nome Finto'},
+        {'peer_id': 'peer-03'},
+        {'peer_id': 'peer-04', 'declared_name': 'A\u202eB'},
+      ],
+    });
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.peers.map((p) => p.declaredName), ['Nome Finto', 'Nome Finto', null, null]);
+    expect(bridge.connectCalls, 0);
+    expect(controller.exportJsonl(), isNot(contains('Nome Finto')));
+    expect(controller.exportJsonl(), isNot(contains('Nome Origi')));
+    await controller.setShareConvoyName(false);
+    expect(controller.sharesConvoyName, isFalse);
+    expect(bridge.advertisementChanges, ['Nome Origi', null]);
+    await controller.setShareConvoyName(true);
+    await controller.stopAll();
+    expect(controller.peers, isEmpty);
+    expect(controller.sharesConvoyName, isFalse);
+    expect(await controller.requestDiscovery(), isTrue);
+    expect(bridge.discoveryNames.last, isNull);
+  });
+
+  test('Android group loss is distinct from local Stop and socket closure', () async {
+    final bridge = FakeWifiDirectPlatformBridge();
+    final (socket, _) = PairedInMemorySocketTransport.createPair();
+    final controller = WifiDirectLabController(platform: bridge, socketTransport: socket);
+    addTearDown(() async {
+      controller.dispose();
+      await bridge.dispose();
+    });
+    expect(await controller.requestDiscovery(), isTrue);
+    bridge.emit({'type': 'group_formed', 'role': 'group_owner'});
+    await Future<void>.delayed(Duration.zero);
+    socket.simulateLinkDrop('socket_closed');
+    bridge.emit({'type': 'p2p_disconnected', 'reason': 'p2p_group_lost'});
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.logs.where((e) => e.kind == WifiDirectLabEventKind.disconnect)
+      .map((e) => e.data['source']), ['socket', 'android_p2p']);
+    expect(controller.isGroupFormed, isFalse);
+    expect(bridge.stopCalls, 0);
+    await controller.stopAll();
+    expect(controller.logs.last.data['source'], 'local_stop');
+    expect(controller.logs.last.data['reason'], 'manual_stop');
+  });
+
   test('Stop drops queued peer, group and disconnect events across rediscovery', () async {
     final bridge = FakeWifiDirectPlatformBridge();
     final (socket, _) = PairedInMemorySocketTransport.createPair();

@@ -12,6 +12,7 @@ enum WifiDirectLabEventKind {
   probeSent('probe_sent', WifiDirectEvidenceLayer.application),
   probeReceived('probe_received', WifiDirectEvidenceLayer.application),
   ackReceived('ack_received', WifiDirectEvidenceLayer.application),
+  lifecycle('lifecycle', WifiDirectEvidenceLayer.system),
   disconnect('disconnect', WifiDirectEvidenceLayer.transport),
   error('error', WifiDirectEvidenceLayer.system);
 
@@ -207,19 +208,33 @@ class WifiDirectEnvironmentStatus {
 }
 
 /// Discovered peer represented strictly by an ephemeral session-scoped
-/// synthetic slot ID (`peer-01`, `peer-02`, ...).
+/// synthetic slot ID and an optional unverified, display-only DNS-SD label.
 class WifiDirectSyntheticPeer {
   const WifiDirectSyntheticPeer({
     required this.peerId,
     required this.status,
     required this.firstSeenElapsedMs,
     required this.lastSeenElapsedMs,
+    this.declaredName,
   });
 
   final String peerId;
   final String status;
   final int firstSeenElapsedMs;
   final int lastSeenElapsedMs;
+  final String? declaredName;
+
+  static String? cleanDeclaredName(String? value) {
+    if (value == null || value.length > 64) return null;
+    final trimmed = value.trim();
+    if (!RegExp(r"^[\p{L}\p{Nd} '-]+$", unicode: true).hasMatch(trimmed) ||
+        trimmed.toUpperCase().startsWith('DIRECT-') ||
+        RegExp(r'^(?:[0-9a-f]{2}-){5}[0-9a-f]{2}$', caseSensitive: false)
+            .hasMatch(trimmed)) {
+      return null;
+    }
+    return String.fromCharCodes(trimmed.runes.take(10)).trim();
+  }
 
   static final RegExp validSyntheticPeerId = RegExp(r'^peer-[0-9]{2,4}$');
 }
@@ -526,6 +541,8 @@ class WifiDirectLabPrivacyGuard {
     'longitude',
     'coordinates',
     'nickname',
+    'declared_name',
+    'label',
   };
 
   static Map<String, Object?> sanitizeData(Map<String, Object?> input) {
