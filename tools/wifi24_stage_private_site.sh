@@ -96,5 +96,5 @@ if ! git diff --cached --quiet; then
   git commit --quiet -m 'Prepare one owner-private signed Outdoor +24 download'
   git push --quiet origin HEAD:refs/heads/main
 fi
-unset GIT_CONFIG_VALUE_0
+unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_1
 printf 'Private Site source prepared at %s\n' "$(git rev-parse HEAD)"
