@@ -272,6 +272,7 @@ wait_and_tap_text 'Test log' open-test-log
 # The integrated branch uses the same Outdoor package; the Wi-Fi LAB is a
 # separate route, not a second installed app or an always-running transport.
 if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+26" ]]; then
+  timeout 15 adb shell cmd location set-location-enabled false
   wait_and_tap_text 'Apri Wi-Fi Direct LAB (solo probe sintetici)' open-integrated-wifi
   sleep 3
   assert_no_runtime wifi-lab-open
@@ -282,14 +283,18 @@ if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VER
     echo 'Retention offered without a Wi-Fi Direct group' >&2
     exit 1
   fi
-  timeout 15 adb shell cmd location set-location-enabled false
-  wait_and_tap_text 'Aggiorna stato' wifi-lab-location-off
-  sleep 2
-  timeout 15 adb shell uiautomator dump /sdcard/convoy-lab-location.xml >/dev/null
-  timeout 15 adb shell cat /sdcard/convoy-lab-location.xml > "$OUT/ui-wifi-lab-location-off.xml"
-  grep -Fq 'Impostazioni Posizione' "$OUT/ui-wifi-lab-location-off.xml"
+  read -r width height < <(timeout 15 adb shell wm size | tr -d '\r' |
+    awk -F '[: x]+' '/ size:/ {width=$(NF-1); height=$NF} END {print width, height}')
+  location_ui=$OUT/ui-wifi-lab-location-off.xml
+  for try in {1..5}; do
+    timeout 15 adb shell uiautomator dump /sdcard/convoy-lab-location.xml >/dev/null
+    timeout 15 adb shell cat /sdcard/convoy-lab-location.xml > "$location_ui"
+    if grep -Fq 'Impostazioni Posizione' "$location_ui"; then break; fi
+    timeout 15 adb shell input swipe "$((width / 2))" "$((height * 68 / 100))" \
+      "$((width / 2))" "$((height * 40 / 100))" 500
+  done
+  grep -Fq 'Impostazioni Posizione' "$location_ui"
   timeout 15 adb shell cmd location set-location-enabled true
-  wait_and_tap_text 'Aggiorna stato' wifi-lab-location-restored
   echo "PASS: LAB explains disabled Android Location Mode with a settings action on API 35"
   timeout 15 adb shell input keyevent KEYCODE_HOME
   sleep 2
