@@ -79,4 +79,15 @@ class WifiDirectSessionTest {
         session.invalidate()
         assertNull(session.declaredNameForAddress("radio"))
     }
+    @Test
+    fun actionDeadlineIgnoresLateAndroidReply() {
+        val outcomes = mutableListOf<Pair<String, Int?>>()
+        val timeout = WifiDirectActionReply { outcome, code -> outcomes.add(outcome to code) }
+        timeout.finish("unavailable")
+        timeout.finish("accepted")
+        val rejected = WifiDirectActionReply { outcome, code -> outcomes.add(outcome to code) }
+        rejected.finish("rejected", 2)
+        rejected.finish("unavailable")
+        assertEquals(listOf("unavailable" to null, "rejected" to 2), outcomes)
+    }
 }

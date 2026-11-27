@@ -66,6 +66,10 @@ class ConvoyWifiDirectLabAdapter(
     private var p2pBroadcastEnabled: Boolean? = null
     private var p2pSession: WifiDirectSession? = null
     private var pendingDiscoverResult: MethodChannel.Result? = null
+    private var pendingNameResult: MethodChannel.Result? = null
+    private var advertisedService: WifiP2pDnsSdServiceInfo? = null
+    private var cleaningSessionId: String? = null
+    private val cleanupReplies = mutableListOf<MethodChannel.Result>()
     private var pendingConnectResult: MethodChannel.Result? = null
 
     private var pendingPermissionResult: MethodChannel.Result? = null
@@ -145,8 +149,14 @@ class ConvoyWifiDirectLabAdapter(
                 "advertiseConvoyName" -> handleAdvertiseConvoyName(call, result)
                 "stopAll" -> {
                     val sessionId = call.argument<String>("sessionId")
-                    if (sessionId != null && p2pSession?.id == sessionId) stopAllInternal()
-                    result.success(true)
+                    when {
+                        sessionId != null && p2pSession?.id == sessionId -> {
+                            cleanupReplies.add(result)
+                            stopAllInternal()
+                        }
+                        sessionId != null && cleaningSessionId == sessionId -> cleanupReplies.add(result)
+                        else -> result.success(true)
+                    }
                 }
                 else -> result.notImplemented()
             }
@@ -257,10 +267,15 @@ class ConvoyWifiDirectLabAdapter(
             result.error(preflightError.first, preflightError.second, null)
             return
         }
-        if (p2pSession?.id != sessionId) stopAllInternal()
+        if (cleaningSessionId != null || (p2pSession != null && p2pSession?.id != sessionId)) {
+            result.error("P2P_CLEANUP_IN_PROGRESS", "Attendere la chiusura della sessione precedente", null)
+            return
+        }
         val session = p2pSession ?: WifiDirectSession(sessionId).also { p2pSession = it }
-        if (pendingDiscoverResult != null) {
-            result.error("DISCOVERY_IN_PROGRESS", "Richiesta di scoperta già in corso", null)
+        if (pendingDiscoverResult != null || pendingNameResult != null ||
+            pendingConnectResult != null || session.wasGroupFormed
+        ) {
+            result.error("DISCOVERY_IN_PROGRESS", "Operazione Wi-Fi Direct già in corso", null)
             return
         }
         val (manager, channel) = ensureP2pChannelAndReceiver(session)
@@ -269,39 +284,46 @@ class ConvoyWifiDirectLabAdapter(
                 return
             }
 
-        val chosenName = WifiDirectSession.cleanDeclaredName(call.argument<String>("declaredName"))
-        if (chosenName != null || session.requestedName != null) {
-            updateNameAdvertisement(manager, channel, session, chosenName)
-        }
-        session.nameDiscoveryAllowed = false
         pendingDiscoverResult = result
-        try {
-            manager.discoverPeers(
-                channel,
-                object : WifiP2pManager.ActionListener {
-                    override fun onSuccess() {
-                        session.post(handler::post) {
-                            if (pendingDiscoverResult !== result) return@post
-                            pendingDiscoverResult = null
-                            session.beginNameDiscovery()
-                            result.success(mapOf("accepted" to true))
-                            requestCurrentPeers(session)
-                        }
-                    }
+        session.beginNameDiscovery()
+        val revision = session.nameDiscoveryRevision
+        val current = { session.isActive && session.nameDiscoveryAllowed &&
+            session.nameDiscoveryRevision == revision && !session.wasGroupFormed }
+        val name = WifiDirectSession.cleanDeclaredName(call.argument<String>("declaredName"))
 
-                    override fun onFailure(reasonCode: Int) {
-                        session.post(handler::post) {
-                            if (pendingDiscoverResult !== result) return@post
-                            pendingDiscoverResult = null
-                            val reason = p2pReasonToText(reasonCode)
-                            result.error("DISCOVER_PEERS_FAILED_$reasonCode", "discoverPeers fallito: $reason", reasonCode)
-                        }
-                    }
-                },
-            )
-        } catch (e: Exception) {
+        fun finish(accepted: Boolean, code: Int? = null) {
+            if (pendingDiscoverResult !== result) return
             pendingDiscoverResult = null
-            throw e
+            if (accepted) {
+                result.success(mapOf("accepted" to true))
+                requestCurrentPeers(session)
+            } else {
+                session.nameDiscoveryAllowed = false
+                val reason = code?.let(::p2pReasonToText) ?: "callback_unavailable"
+                result.error("DISCOVER_PEERS_FAILED_${code ?: "UNAVAILABLE"}", "discoverPeers fallito: $reason", code)
+            }
+        }
+
+        // Service discovery already scans for peers on Android. Only start the
+        // generic scan if DNS-SD cannot be started, never alongside it.
+        updateNameAdvertisement(manager, channel, session, name) { safe ->
+            if (!safe || !current()) {
+                finish(false)
+                return@updateNameAdvertisement
+            }
+            discoverConvoyNames(manager, channel, session, current) { outcome ->
+                if (outcome == "timed_out") {
+                    finish(false)
+                    endSession(session, "dns_sd_callback_timed_out")
+                } else if (outcome == "accepted" || !current()) {
+                    finish(outcome == "accepted")
+                } else {
+                    runP2pAction(current, start = { manager.discoverPeers(channel, it) }) { outcome, code ->
+                        finish(outcome == "accepted", code)
+                        if (outcome == "timed_out") endSession(session, "peer_scan_callback_timed_out")
+                    }
+                }
+            }
         }
     }
 
@@ -322,7 +344,7 @@ class ConvoyWifiDirectLabAdapter(
             result.error("INVALID_PEER_ID", "ID peer sintetico mancante", null)
             return
         }
-        if (pendingConnectResult != null) {
+        if (pendingConnectResult != null || pendingDiscoverResult != null || pendingNameResult != null) {
             result.error("CONNECT_IN_PROGRESS", "Richiesta Wi-Fi Direct già in corso: attendere o usare Stop", null)
             return
         }
@@ -421,8 +443,9 @@ class ConvoyWifiDirectLabAdapter(
         val channel = p2pChannel ?: return
         if (checkP2pPreflight() != null) return
         try {
+            val revision = ++session.peerSnapshotRevision
             manager.requestPeers(channel) { peerList ->
-                if (!session.isActive) return@requestPeers
+                if (!session.isActive || session.peerSnapshotRevision != revision) return@requestPeers
                 val devices = peerList?.deviceList ?: emptyList()
                 val syntheticPeers = devices.mapNotNull { device ->
                     val rawAddress = device.deviceAddress?.trim()?.lowercase(Locale.ROOT).orEmpty()
@@ -436,7 +459,6 @@ class ConvoyWifiDirectLabAdapter(
                         "declared_name" to name,
                     )
                 }
-                discoverConvoyNames(manager, channel, session)
                 emitEvent(
                     session,
                     mapOf(
@@ -464,8 +486,9 @@ class ConvoyWifiDirectLabAdapter(
         val manager = p2pManager ?: return
         val channel = p2pChannel ?: return
         try {
+            val revision = ++session.connectionInfoRevision
             manager.requestConnectionInfo(channel) { info ->
-                if (!session.isActive) return@requestConnectionInfo
+                if (!session.isActive || session.connectionInfoRevision != revision) return@requestConnectionInfo
                 if (info != null && info.groupFormed && info.groupOwnerAddress != null) {
                     session.nameDiscoveryAllowed = false
                     session.wasGroupFormed = true
@@ -473,7 +496,9 @@ class ConvoyWifiDirectLabAdapter(
                     val ownerHost = info.groupOwnerAddress?.hostAddress.orEmpty()
                     try {
                         manager.requestGroupInfo(channel) { group ->
-                            if (!session.isActive || !session.wasGroupFormed) return@requestGroupInfo
+                            if (!session.isActive || !session.wasGroupFormed ||
+                                session.connectionInfoRevision != revision
+                            ) return@requestGroupInfo
                             val clientCount = group?.clientList?.size ?: 0
                             emitEvent(
                                 session,
@@ -524,14 +549,37 @@ class ConvoyWifiDirectLabAdapter(
             result.success(false)
             return
         }
-        val name = WifiDirectSession.cleanDeclaredName(call.argument<String>("declaredName"))
-        if (session.requestedName != name) {
-            val rediscover = session.nameDiscoveryAllowed && !session.wasGroupFormed
-            if (rediscover) session.beginNameDiscovery(clearNames = false)
-            updateNameAdvertisement(manager, channel, session, name)
-            if (rediscover) discoverConvoyNames(manager, channel, session)
+        if (pendingDiscoverResult != null || pendingConnectResult != null || pendingNameResult != null) {
+            result.error("P2P_OPERATION_IN_PROGRESS", "Attendere l'operazione Wi-Fi Direct corrente", null)
+            return
         }
-        result.success(true)
+        val name = WifiDirectSession.cleanDeclaredName(call.argument<String>("declaredName"))
+        // Register on the next scan if the group is already active.
+        if (name != null && !session.nameDiscoveryAllowed) {
+            result.success(true)
+            return
+        }
+        pendingNameResult = result
+        val scanActive = session.nameDiscoveryAllowed && !session.wasGroupFormed
+        fun finish(safe: Boolean) {
+            if (pendingNameResult !== result) return
+            pendingNameResult = null
+            if (safe) result.success(true)
+            else result.error("NAME_ADVERTISEMENT_UNAVAILABLE", "Annuncio del nome non disponibile", null)
+        }
+        updateNameAdvertisement(manager, channel, session, name) { safe ->
+            if (safe && scanActive && session.nameDiscoveryAllowed && !session.wasGroupFormed) {
+                session.beginNameDiscovery(clearNames = false)
+                val revision = session.nameDiscoveryRevision
+                discoverConvoyNames(manager, channel, session, {
+                    session.isActive && session.nameDiscoveryAllowed &&
+                        session.nameDiscoveryRevision == revision && !session.wasGroupFormed
+                }) { outcome ->
+                    finish(true)
+                    if (outcome == "timed_out") endSession(session, "dns_sd_callback_timed_out")
+                }
+            } else finish(safe)
+        }
     }
 
     private fun emitDnsSdStatus(
@@ -543,22 +591,45 @@ class ConvoyWifiDirectLabAdapter(
         emitEvent(session, mapOf("type" to "dns_sd_status", "stage" to stage, "outcome" to outcome) + details)
     }
 
-    private fun dnsSdListener(
-        session: WifiDirectSession,
-        stage: String,
-        isCurrent: () -> Boolean,
-        onAccepted: () -> Unit = {},
-    ) = object : WifiP2pManager.ActionListener {
-        override fun onSuccess() {
-            if (!session.isActive || !isCurrent()) return
-            emitDnsSdStatus(session, stage, "accepted")
-            onAccepted()
-        }
+    private fun runP2pAction(
+        current: () -> Boolean,
+        onBusyRetry: (() -> Unit)? = null,
+        start: (WifiP2pManager.ActionListener) -> Unit,
+        complete: (String, Int?) -> Unit,
+    ) {
+        fun attempt(mayRetry: Boolean) {
+            if (!current()) {
+                complete("unavailable", null)
+                return
+            }
+            val callback = WifiDirectActionReply { outcome, code ->
+                if (current() && mayRetry && code == WifiP2pManager.BUSY) {
+                    onBusyRetry?.invoke()
+                    handler.postDelayed({ attempt(false) }, 350L)
+                } else {
+                    complete(if (current()) outcome else "unavailable", code)
+                }
+            }
+            val timeout = Runnable { callback.finish("timed_out") }
+            handler.postDelayed(timeout, 1_500L)
+            try {
+                start(object : WifiP2pManager.ActionListener {
+                    override fun onSuccess() {
+                        handler.removeCallbacks(timeout)
+                        callback.finish("accepted")
+                    }
 
-        override fun onFailure(reason: Int) {
-            if (!session.isActive || !isCurrent()) return
-            emitDnsSdStatus(session, stage, "rejected", mapOf("android_code" to reason))
+                    override fun onFailure(reason: Int) {
+                        handler.removeCallbacks(timeout)
+                        callback.finish("rejected", reason)
+                    }
+                })
+            } catch (_: RuntimeException) {
+                handler.removeCallbacks(timeout)
+                callback.finish("unavailable")
+            }
         }
+        attempt(onBusyRetry != null)
     }
 
     @SuppressLint("MissingPermission")
@@ -567,33 +638,68 @@ class ConvoyWifiDirectLabAdapter(
         channel: WifiP2pManager.Channel,
         session: WifiDirectSession,
         name: String?,
+        complete: (Boolean) -> Unit,
     ) {
-        if (session.requestedName == name) return
-        session.requestedName = name
-        val revision = ++session.advertisementRevision
-        val isCurrent = { session.advertisementRevision == revision }
-        try {
-            manager.clearLocalServices(channel, dnsSdListener(session, "clear_advertisement", isCurrent) {
-                if (name == null) return@dnsSdListener
-                if (checkP2pPreflight() != null) {
-                    emitDnsSdStatus(session, "advertisement", "unavailable")
-                    return@dnsSdListener
-                }
-                try {
-                    manager.addLocalService(
-                        channel,
-                        WifiP2pDnsSdServiceInfo.newInstance(
-                            CONVOY_NAME_INSTANCE, CONVOY_NAME_SERVICE, mapOf(CONVOY_NAME_FIELD to name),
-                        ),
-                        dnsSdListener(session, "advertisement", isCurrent),
-                    )
-                } catch (_: RuntimeException) {
-                    emitDnsSdStatus(session, "advertisement", "unavailable")
-                }
-            })
-        } catch (_: RuntimeException) {
-            emitDnsSdStatus(session, "clear_advertisement", "unavailable")
+        if ((name == null && advertisedService == null) || (name != null && session.requestedName == name)) {
+            complete(true)
+            return
         }
+        val current = { session.isActive }
+        fun add() {
+            if (name == null || !current()) {
+                complete(current())
+                return
+            }
+            val info = WifiP2pDnsSdServiceInfo.newInstance(
+                CONVOY_NAME_INSTANCE, CONVOY_NAME_SERVICE, mapOf(CONVOY_NAME_FIELD to name),
+            )
+            runDnsAction(session, "advertisement", current, { manager.addLocalService(channel, info, it) }) { outcome ->
+                if (outcome == "accepted") {
+                    advertisedService = info
+                    session.requestedName = name
+                }
+                if (outcome == "timed_out") {
+                    complete(false)
+                    endSession(session, "name_advertisement_callback_timed_out")
+                } else {
+                    complete(current())
+                }
+            }
+        }
+        val previous = advertisedService
+        if (previous == null) {
+            add()
+            return
+        }
+        runDnsAction(session, "remove_advertisement", current, { manager.removeLocalService(channel, previous, it) }) { outcome ->
+            if (outcome == "accepted") {
+                session.requestedName = null
+                advertisedService = null
+                add()
+            } else {
+                // Do not retain an old name when Android cannot confirm removal.
+                complete(false)
+                endSession(session, "name_advertisement_cleanup_failed")
+            }
+        }
+    }
+
+    private fun runDnsAction(
+        session: WifiDirectSession,
+        stage: String,
+        current: () -> Boolean,
+        start: (WifiP2pManager.ActionListener) -> Unit,
+        complete: (String) -> Unit,
+    ) = runP2pAction(
+        current,
+        onBusyRetry = { emitDnsSdStatus(session, stage, "retrying", mapOf("android_code" to WifiP2pManager.BUSY)) },
+        start = start,
+    ) { outcome, code ->
+        if (current()) {
+            val details = if (code == null) emptyMap() else mapOf("android_code" to code)
+            emitDnsSdStatus(session, stage, outcome, details)
+        }
+        complete(outcome)
     }
 
     @SuppressLint("MissingPermission")
@@ -601,44 +707,37 @@ class ConvoyWifiDirectLabAdapter(
         manager: WifiP2pManager,
         channel: WifiP2pManager.Channel,
         session: WifiDirectSession,
+        current: () -> Boolean,
+        complete: (String) -> Unit,
     ) {
-        if (!session.isActive || !session.nameDiscoveryAllowed ||
-            session.wasGroupFormed || session.nameQueryStarted
-        ) return
-        session.nameQueryStarted = true
-        val revision = session.nameDiscoveryRevision
-        val isCurrent = { session.nameDiscoveryAllowed && !session.wasGroupFormed &&
-            session.nameDiscoveryRevision == revision }
         try {
             manager.setDnsSdResponseListeners(channel, { _, _, _ -> }) { domain, txt, peer ->
-                if (!session.isActive || !isCurrent()) return@setDnsSdResponseListeners
+                if (!current()) return@setDnsSdResponseListeners
                 val matches = domain.trimEnd('.').equals(CONVOY_NAME_DOMAIN, ignoreCase = true)
                 val mapping = if (matches) {
                     val address = peer.deviceAddress?.trim()?.lowercase(Locale.ROOT).orEmpty()
                     session.mapDeclaredName(address, txt[CONVOY_NAME_FIELD])
                 } else null
                 session.countTxt(matches, mapping)?.let { emitDnsSdStatus(session, "txt", "received", it) }
-                if (mapping == WifiDirectSession.NameMapping.MAPPED) requestCurrentPeers(session)
+                if (mapping == WifiDirectSession.NameMapping.MAPPED ||
+                    mapping == WifiDirectSession.NameMapping.WAITING_PEER
+                ) requestCurrentPeers(session)
             }
-            manager.clearServiceRequests(channel, dnsSdListener(session, "clear_request", isCurrent) {
-                try {
-                    manager.addServiceRequest(
-                        channel,
-                        WifiP2pDnsSdServiceRequest.newInstance(CONVOY_NAME_INSTANCE, CONVOY_NAME_SERVICE),
-                        dnsSdListener(session, "add_request", isCurrent) {
-                            try {
-                                manager.discoverServices(channel, dnsSdListener(session, "query", isCurrent))
-                            } catch (_: RuntimeException) {
-                                emitDnsSdStatus(session, "query", "unavailable")
-                            }
-                        },
-                    )
-                } catch (_: RuntimeException) {
-                    emitDnsSdStatus(session, "add_request", "unavailable")
+            fun query() {
+                runDnsAction(session, "query", current, { manager.discoverServices(channel, it) }) { outcome -> complete(outcome) }
+            }
+            if (session.nameRequestRegistered) {
+                query()
+            } else {
+                val request = WifiP2pDnsSdServiceRequest.newInstance(CONVOY_NAME_INSTANCE, CONVOY_NAME_SERVICE)
+                runDnsAction(session, "add_request", current, { manager.addServiceRequest(channel, request, it) }) { outcome ->
+                    session.nameRequestRegistered = outcome == "accepted"
+                    if (session.nameRequestRegistered) query() else complete(outcome)
                 }
-            })
+            }
         } catch (_: RuntimeException) {
-            emitDnsSdStatus(session, "query", "unavailable")
+            if (current()) emitDnsSdStatus(session, "query", "unavailable")
+            complete("unavailable")
         }
     }
 
@@ -657,10 +756,9 @@ class ConvoyWifiDirectLabAdapter(
             val perm = status["requiredPermissionName"] ?: "NEARBY_WIFI_DEVICES"
             return "PERMISSION_DENIED" to "Permesso runtime $perm non concesso"
         }
-        val sdkInt = (status["sdkInt"] as? Int) ?: Build.VERSION.SDK_INT
-        if (sdkInt < 33 && status["locationServiceEnabled"] != true) {
-            return "LOCATION_SERVICES_DISABLED_LEGACY_P2P" to
-                "Su Android <= 12 il sistema operativo richiede i servizi di Posizione attivi per la scansione Wi-Fi Direct"
+        if (status["locationServiceEnabled"] != true) {
+            return "LOCATION_SERVICES_DISABLED_P2P" to
+                "Attiva Posizione nelle impostazioni Android per la scoperta Wi-Fi Direct"
         }
         return null
     }
@@ -674,15 +772,7 @@ class ConvoyWifiDirectLabAdapter(
         var channel = p2pChannel
         if (channel == null) {
             channel = manager.initialize(app, Looper.getMainLooper()) {
-                session.post(handler::post) {
-                    // This is terminal for the session. Send it while the token is valid;
-                    // every other callback and queued event is then invalidated.
-                    eventSink?.success(
-                        mapOf("type" to "p2p_disconnected", "reason" to "p2p_channel_disconnected",
-                            "session_ended" to true, "session_id" to session.id),
-                    )
-                    stopAllInternal()
-                }
+                session.post(handler::post) { endSession(session, "p2p_channel_disconnected") }
             } ?: return null
             p2pChannel = channel
         }
@@ -704,52 +794,69 @@ class ConvoyWifiDirectLabAdapter(
         return manager to channel
     }
 
+    private fun endSession(session: WifiDirectSession, reason: String) {
+        if (!session.isActive) return
+        eventSink?.success(mapOf("type" to "p2p_disconnected", "reason" to reason,
+            "session_ended" to true, "session_id" to session.id))
+        stopAllInternal()
+    }
+
     private fun stopAllInternal() {
+        val sessionId = p2pSession?.id
         p2pSession?.invalidate()
         p2pSession = null
         pendingDiscoverResult?.error("DISCOVERY_CANCELLED", "Scoperta P2P annullata: Stop", null)
         pendingDiscoverResult = null
+        pendingNameResult?.error("NAME_ADVERTISEMENT_CANCELLED", "Annuncio annullato: Stop", null)
+        pendingNameResult = null
         pendingConnectResult?.error("CONNECT_CANCELLED", "Connessione P2P annullata: Stop", null)
         pendingConnectResult = null
+        advertisedService = null
         val manager = p2pManager
         val channel = p2pChannel
-        if (manager != null && channel != null) {
-            try {
-                manager.clearLocalServices(channel, null)
-            } catch (_: Exception) {
-            }
-            try {
-                manager.clearServiceRequests(channel, null)
-            } catch (_: Exception) {
-            }
-            try {
-                manager.stopPeerDiscovery(channel, null)
-            } catch (_: Exception) {
-            }
-            try {
-                manager.cancelConnect(channel, null)
-            } catch (_: Exception) {
-            }
-            try {
-                manager.removeGroup(channel, null)
-            } catch (_: Exception) {
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                try {
-                    channel.close()
-                } catch (_: Exception) {
-                }
-            }
-        }
+        p2pChannel = null
+        p2pBroadcastEnabled = null
         p2pReceiver?.let { receiver ->
             try {
                 app.unregisterReceiver(receiver)
-            } catch (_: Exception) {
+            } catch (_: IllegalArgumentException) {
             }
         }
         p2pReceiver = null
-        p2pChannel = null
-        p2pBroadcastEnabled = null
+        if (sessionId == null) return
+        cleaningSessionId = sessionId
+        fun finish() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                try {
+                    channel?.close()
+                } catch (_: RuntimeException) {
+                }
+            }
+            cleaningSessionId = null
+            val replies = cleanupReplies.toList()
+            cleanupReplies.clear()
+            replies.forEach { it.success(true) }
+        }
+        if (manager == null || channel == null) {
+            finish()
+            return
+        }
+        // Requests are sent over the same channel in order. Wait for the last
+        // reply (or its deadline) before closing it and admitting a new scan.
+        for (cleanup in listOf<() -> Unit>(
+            { manager.clearLocalServices(channel, null) },
+            { manager.clearServiceRequests(channel, null) },
+            { manager.stopPeerDiscovery(channel, null) },
+            { manager.cancelConnect(channel, null) },
+        )) {
+            try {
+                cleanup()
+            } catch (_: RuntimeException) {
+            }
+        }
+        runP2pAction({ cleaningSessionId == sessionId },
+            start = { manager.removeGroup(channel, it) },
+        ) { _, _ -> finish() }
     }
 
     private fun hasPermission(permission: String): Boolean =

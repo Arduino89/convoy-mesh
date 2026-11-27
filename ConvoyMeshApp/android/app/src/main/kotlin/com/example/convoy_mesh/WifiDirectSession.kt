@@ -14,16 +14,17 @@ internal class WifiDirectSession(val id: String) {
     private var mapped = 0
     var wasGroupFormed = false
     var nameDiscoveryAllowed = false
-    var nameQueryStarted = false
+    var nameRequestRegistered = false
+    var peerSnapshotRevision = 0
+    var connectionInfoRevision = 0
     var nameDiscoveryRevision = 0
         private set
-    var advertisementRevision = 0
     var requestedName: String? = null
 
     fun beginNameDiscovery(clearNames: Boolean = true) {
         nameDiscoveryRevision++
+        peerSnapshotRevision++
         nameDiscoveryAllowed = true
-        nameQueryStarted = false
         txtReceived = 0
         domainMatched = 0
         mapped = 0
@@ -116,5 +117,16 @@ internal class WifiDirectSession(val id: String) {
         enqueue(Runnable {
             if (isActive) action()
         })
+    }
+}
+
+/** Exactly one completion from Android, including when a callback misses its deadline. */
+internal class WifiDirectActionReply(private val complete: (String, Int?) -> Unit) {
+    private var finished = false
+
+    fun finish(outcome: String, code: Int? = null) {
+        if (finished) return
+        finished = true
+        complete(outcome, code)
     }
 }

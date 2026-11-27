@@ -89,9 +89,11 @@ class WifiDirectLabController extends ChangeNotifier {
   bool _discoveryPending = false;
   String? _advertisedName;
   bool _nameSettingPending = false;
+  Future<void>? _radioCleanup;
 
   bool get sharesConvoyName => _advertisedName != null;
-  bool get nameSettingPending => _nameSettingPending;
+  bool get radioOperationPending =>
+      _discoveryPending || _nameSettingPending || _stopsInProgress > 0;
 
   bool _isRadioEpochCurrent(int epoch) => !_disposed && _radioEpoch == epoch;
 
@@ -220,7 +222,7 @@ class WifiDirectLabController extends ChangeNotifier {
   Future<void> openAppSettings() => _platform.openAppSettings();
 
   Future<void> setShareConvoyName(bool enabled) async {
-    if (_disposed || _nameSettingPending || _stopsInProgress > 0) return;
+    if (_disposed || radioOperationPending || _isConnecting) return;
     final epoch = _radioEpoch;
     _nameSettingPending = true;
     _notify();
@@ -255,8 +257,10 @@ class WifiDirectLabController extends ChangeNotifier {
         message: 'Annuncio del nome non disponibile.',
       );
     } finally {
-      _nameSettingPending = false;
-      _notify();
+      if (_isRadioEpochCurrent(epoch)) {
+        _nameSettingPending = false;
+        _notify();
+      }
     }
   }
 
@@ -266,7 +270,7 @@ class WifiDirectLabController extends ChangeNotifier {
   /// Bluetooth is enabled, Wi-Fi is off, Wi-Fi Direct is unsupported, or the
   /// required permission is missing.
   Future<bool> requestDiscovery() async {
-    if (_disposed || _stopsInProgress > 0 || _discoveryPending) return false;
+    if (_disposed || radioOperationPending) return false;
     if (_isConnecting || _isGroupFormed) {
       _recordError(
         stage: 'discover_preflight',
@@ -277,10 +281,14 @@ class WifiDirectLabController extends ChangeNotifier {
     }
     final epoch = _radioEpoch;
     _discoveryPending = true;
+    _notify();
     try {
       return await _discoverInEpoch(epoch);
     } finally {
-      if (_isRadioEpochCurrent(epoch)) _discoveryPending = false;
+      if (_isRadioEpochCurrent(epoch)) {
+        _discoveryPending = false;
+        _notify();
+      }
     }
   }
 
@@ -295,6 +303,7 @@ class WifiDirectLabController extends ChangeNotifier {
         'wifi_enabled': _environment.wifiEnabled,
         'internet_absent': _environment.isOfflineClean,
         'permission_granted': _environment.requiredRuntimePermissionGranted,
+        'location_enabled': _environment.locationServiceEnabled,
       },
     );
 
@@ -350,7 +359,7 @@ class WifiDirectLabController extends ChangeNotifier {
     required String peerId,
     required bool userConsented,
   }) async {
-    if (_disposed || _stopsInProgress > 0) return false;
+    if (_disposed || radioOperationPending) return false;
     if (!userConsented) {
       _recordError(
         stage: 'connect_preflight',
@@ -380,7 +389,7 @@ class WifiDirectLabController extends ChangeNotifier {
     final sessionId = _radioSessionId;
     if (sessionId == null) return false;
     await refreshEnvironment();
-    if (!_isRadioSessionCurrent(sessionId) || !_peers.containsKey(peerId)) return false;
+    if (!_isRadioSessionCurrent(sessionId) || radioOperationPending || !_peers.containsKey(peerId)) return false;
     final preflightFailure = _checkPreflightCodeAndMessage();
     if (preflightFailure != null) {
       _recordError(
@@ -684,12 +693,11 @@ class WifiDirectLabController extends ChangeNotifier {
     _groupRole = WifiDirectGroupRole.none;
     _selectedPeerId = null;
     _peers.clear();
+    final cleanup = _releaseRadio(sessionId, reason);
+    _notify();
 
     try {
-      await Future.wait([
-        _socket.close(),
-        _platform.stopAll(sessionId: sessionId, reason: reason).catchError((Object _) {}),
-      ]);
+      await cleanup;
     } finally {
       _stopsInProgress--;
     }
@@ -745,6 +753,7 @@ class WifiDirectLabController extends ChangeNotifier {
     _advertisedName = null;
     _radioEpoch++;
     _discoveryPending = false;
+    _nameSettingPending = false;
     return sessionId;
   }
 
@@ -834,12 +843,6 @@ class WifiDirectLabController extends ChangeNotifier {
         break;
 
       case 'p2p_disconnected':
-        if (event['session_ended'] == true) {
-          _invalidateRadioSession();
-          _isDiscovering = false;
-          _peers.clear();
-          _selectedPeerId = null;
-        }
         final reason = event['reason']?.toString() ?? 'p2p_disconnected';
         unawaited(_closeTransportOnDisconnect(reason));
         break;
@@ -847,9 +850,9 @@ class WifiDirectLabController extends ChangeNotifier {
       case 'dns_sd_status':
         final stage = event['stage'];
         final outcome = event['outcome'];
-        const stages = {'clear_advertisement', 'advertisement', 'clear_request',
+        const stages = {'clear_advertisement', 'advertisement', 'remove_advertisement', 'clear_request',
           'add_request', 'query', 'txt', 'peer_mapping'};
-        const outcomes = {'accepted', 'rejected', 'unavailable', 'received', 'mapped'};
+        const outcomes = {'accepted', 'rejected', 'unavailable', 'received', 'mapped', 'retrying', 'timed_out'};
         const mappings = {'mapped', 'unchanged', 'waiting_peer', 'invalid_label', 'other_domain'};
         if (!stages.contains(stage) || !outcomes.contains(outcome)) break;
         _record(WifiDirectLabEventKind.dnsSdStatus, data: {
@@ -1139,26 +1142,47 @@ class WifiDirectLabController extends ChangeNotifier {
     if (_disposed) return;
     _batchEpoch++;
     _isSendingBatch = false;
-    final epoch = _radioEpoch;
+    final sessionId = _invalidateRadioSession();
     final stateBeforeClose = _radioLogState;
+    _stopsInProgress++;
+    _isDiscovering = false;
+    _peers.clear();
+    _selectedPeerId = null;
     _isConnecting = false;
     _isGroupFormed = false;
     _isSocketOpen = false;
     _groupRole = WifiDirectGroupRole.none;
-    await _socket.close();
-    if (!_isRadioEpochCurrent(epoch)) return;
-    _record(
-      WifiDirectLabEventKind.disconnect,
-      layer: WifiDirectEvidenceLayer.system,
-      data: <String, Object?>{
-        'reason': reason,
-        'source': 'android_p2p',
-        ...stateBeforeClose,
-        'probes_sent': probesSentCount,
-        'acks_confirmed': acksConfirmedCount,
-        'unconfirmed_probes': unconfirmedProbesCount,
-      },
-    );
+    final cleanup = _releaseRadio(sessionId, reason);
+    try {
+      _record(
+        WifiDirectLabEventKind.disconnect,
+        layer: WifiDirectEvidenceLayer.system,
+        data: <String, Object?>{
+          'reason': reason,
+          'source': 'android_p2p',
+          ...stateBeforeClose,
+          'probes_sent': probesSentCount,
+          'acks_confirmed': acksConfirmedCount,
+          'unconfirmed_probes': unconfirmedProbesCount,
+        },
+      );
+      await cleanup;
+    } finally {
+      _stopsInProgress--;
+      _notify();
+    }
+  }
+
+  Future<void> _releaseRadio(String? sessionId, String reason) async {
+    final cleanup = _radioCleanup ??= Future.wait([
+      _socket.close(),
+      _platform.stopAll(sessionId: sessionId, reason: reason).catchError((Object _) {}),
+    ]).then<void>((_) {});
+    try {
+      await cleanup;
+    } finally {
+      if (identical(_radioCleanup, cleanup)) _radioCleanup = null;
+    }
   }
 
   (String, String)? _checkPreflightCodeAndMessage() {
@@ -1193,11 +1217,10 @@ class WifiDirectLabController extends ChangeNotifier {
         'Permesso runtime ${_environment.requiredPermissionName} non concesso.'
       );
     }
-    if (_environment.requiresLegacyLocationToggle &&
-        !_environment.locationServiceEnabled) {
+    if (!_environment.locationServiceEnabled) {
       return (
-        'LOCATION_SERVICES_DISABLED_LEGACY_P2P',
-        'Su Android <= 12 il sistema operativo richiede il toggle Posizione attivo per WifiP2pManager.'
+        'LOCATION_SERVICES_DISABLED_P2P',
+        'Attiva Posizione nelle impostazioni Android per la scoperta Wi-Fi Direct.'
       );
     }
     if (_environment.foregroundServiceRunning) {

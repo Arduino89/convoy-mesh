@@ -1,13 +1,13 @@
-name: Wi-Fi +25 protected signing and update
+name: Wi-Fi +26 protected signing and update
 on:
   push:
     branches: [experiment/wifi-direct-offline-lab-20261121]
-    paths: ['.github/convoy-wifi25-signing-request.json']
+    paths: ['.github/convoy-wifi26-signing-request.json']
 permissions:
   actions: read
   contents: read
 concurrency:
-  group: convoy-wifi25-owner-signing
+  group: convoy-wifi26-owner-signing
 jobs:
   sign-and-upgrade:
     if: github.repository == 'Arduino89/convoy-mesh'
@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 45
     env:
       EXPECTED_CERT: dd058e998369d9e3b46ae91e60177b95a31aa096a6ed04b9f7ba29142480f965
-      BASE_HASH: 40f5c82911a18863684de1f9d701ef4d73215efe57718b74ef505019ed8aedc9
+      BASE_HASH: b7fbb50abdfefa2258b8e2c0a2757417748baa92f5d98df1b9460698e12153d5
       PACKAGE: com.example.convoy_mesh.outdoor
     steps:
       - uses: actions/checkout@v7
@@ -28,7 +28,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          request=.github/convoy-wifi25-signing-request.json
+          request=.github/convoy-wifi26-signing-request.json
           run=$(jq -er '.run | strings | select(test("^[0-9]+$"))' "$request")
           source=$(jq -er '.source_sha | strings | select(test("^[0-9a-f]{40}$"))' "$request")
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" |
@@ -51,7 +51,7 @@ jobs:
           channel: stable
           flutter-version: '3.47.4'
           cache: true
-      - name: Build the private +25 signing input from the reviewed source
+      - name: Build the private +26 signing input from the reviewed source
         working-directory: candidate-source/ConvoyMeshApp
         env:
           SOURCE_COMMIT: ${{ steps.gate.outputs.source }}
@@ -61,14 +61,14 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
           flutter pub get --enforce-lockfile
           flutter build apk --no-pub --debug --dart-define=BUILD_COMMIT="$SOURCE_COMMIT" \
-            --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+25 --dart-define=CONVOY_DEFAULT_OUTDOOR=true \
+            --dart-define=CONVOY_APP_VERSION=0.7.7-outdoor+26 --dart-define=CONVOY_DEFAULT_OUTDOOR=true \
             --dart-define=CONVOY_WIFI_DIRECT_LAB_INTEGRATED=true --dart-define=CONVOY_POSTHOG_TEMPORARILY_DISABLED=true
-      - name: Authorize private Sites transfer and recover the verified +24 baseline
+      - name: Authorize private Sites transfer and recover the verified +25 baseline
         env:
           GH_TOKEN: ${{ github.token }}
           WIFI23_RECIPIENT_PEM: ${{ secrets.CONVOY_WIFI23_RECIPIENT_PEM }}
           SOURCE_COMMIT: ${{ steps.gate.outputs.source }}
-        run: bash tools/wifi25_private_delivery.sh prepare
+        run: bash tools/wifi26_private_delivery.sh prepare
       - name: Sign with the pinned owner certificate and validate both APKs
         env:
           KEYSTORE_BASE64: ${{ secrets.CONVOY_KEYSTORE_BASE64 }}
@@ -78,7 +78,7 @@ jobs:
           set -euo pipefail
           umask 077
           : "${KEYSTORE_BASE64:?}" "${KEYSTORE_PASSWORD:?}"
-          temp=$(mktemp -d "$RUNNER_TEMP/convoy-wifi25.XXXXXX")
+          temp=$(mktemp -d "$RUNNER_TEMP/convoy-wifi26.XXXXXX")
           trap 'rm -rf -- "$temp"' EXIT
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$temp/owner.p12"
           unset KEYSTORE_BASE64
@@ -90,23 +90,23 @@ jobs:
             "$tools/aapt" dump badging "$1" > "$temp/badging"
             grep -Fq "package: name='$PACKAGE' versionCode='$2' versionName='0.7.7-outdoor'" "$temp/badging"
           }
-          base="$RUNNER_TEMP/convoy-wifi25-private/Convoy-Outdoor-Beta-24.apk"
+          base="$RUNNER_TEMP/convoy-wifi26-private/Convoy-Outdoor-Beta-25.apk"
           debug=candidate-source/ConvoyMeshApp/build/app/outputs/flutter-apk/app-debug.apk
-          identity "$base" 24
+          identity "$base" 25
           verify "$base"
-          identity "$debug" 25
+          identity "$debug" 26
           "$tools/apksigner" verify "$debug"
           "$tools/zipalign" -c -P 16 4 "$debug"
-          if verify "$debug"; then echo 'Signing input already carries the owner certificate'; exit 1; fi
+          if verify "$debug" >/dev/null 2>&1; then echo 'Signing input already carries the owner certificate'; exit 1; fi
           keytool -exportcert -keystore "$temp/owner.p12" -storetype PKCS12 -alias convoy-beta \
             -storepass:env KEYSTORE_PASSWORD -file "$temp/owner.der"
           printf '%s  %s\n' "$EXPECTED_CERT" "$temp/owner.der" | sha256sum --check -
           "$tools/apksigner" sign --ks "$temp/owner.p12" --ks-type PKCS12 --ks-key-alias convoy-beta \
-            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD --out Convoy-Outdoor-Beta-25.apk "$debug"
-          "$tools/zipalign" -c -P 16 4 Convoy-Outdoor-Beta-25.apk
-          identity Convoy-Outdoor-Beta-25.apk 25
-          verify Convoy-Outdoor-Beta-25.apk
-          sha256sum Convoy-Outdoor-Beta-25.apk > signed-25.sha256
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD --out Convoy-Outdoor-Beta-26.apk "$debug"
+          "$tools/zipalign" -c -P 16 4 Convoy-Outdoor-Beta-26.apk
+          identity Convoy-Outdoor-Beta-26.apk 26
+          verify Convoy-Outdoor-Beta-26.apk
+          sha256sum Convoy-Outdoor-Beta-26.apk > signed-26.sha256
       - name: Enable KVM
         run: |
           test -c /dev/kvm
@@ -120,7 +120,7 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: bash tools/android_wifi23_signed_upgrade.sh "$RUNNER_TEMP/convoy-wifi25-private/Convoy-Outdoor-Beta-24.apk" Convoy-Outdoor-Beta-25.apk 24 25
+          script: bash tools/android_wifi23_signed_upgrade.sh "$RUNNER_TEMP/convoy-wifi26-private/Convoy-Outdoor-Beta-25.apk" Convoy-Outdoor-Beta-26.apk 25 26
       - name: Record verified final APK provenance
         env:
           SOURCE_COMMIT: ${{ steps.gate.outputs.source }}
@@ -128,22 +128,22 @@ jobs:
         run: |
           set -euo pipefail
           grep -q '^PASS:' evidence/result.txt
-          sha256sum --check signed-25.sha256
+          sha256sum --check signed-26.sha256
           jq -n --arg source "$SOURCE_COMMIT" --arg ci "$CI_RUN" --arg run "$GITHUB_RUN_ID" \
             --arg attempt "$GITHUB_RUN_ATTEMPT" --arg pkg "$PACKAGE" --arg cert "$EXPECTED_CERT" \
-            --arg sha "$(cut -d' ' -f1 signed-25.sha256)" --argjson size "$(stat -c%s Convoy-Outdoor-Beta-25.apk)" \
-            '{source_sha:$source,ci_run:$ci,signing_run:$run,attempt:$attempt,package:$pkg,version_name:"0.7.7-outdoor",version_code:25,certificate_sha256:$cert,apk_sha256:$sha,apk_bytes:$size,upgrade_api:35}' \
-            | tee signed-25-receipt.json
+            --arg sha "$(cut -d' ' -f1 signed-26.sha256)" --argjson size "$(stat -c%s Convoy-Outdoor-Beta-26.apk)" \
+            '{source_sha:$source,ci_run:$ci,signing_run:$run,attempt:$attempt,package:$pkg,version_name:"0.7.7-outdoor",version_code:26,certificate_sha256:$cert,apk_sha256:$sha,apk_bytes:$size,upgrade_api:35}' \
+            | tee signed-26-receipt.json
       - name: Upload provenance only
         uses: actions/upload-artifact@v7
         with:
-          name: convoy-wifi25-signed-provenance
-          path: signed-25-receipt.json
+          name: convoy-wifi26-signed-provenance
+          path: signed-26-receipt.json
           if-no-files-found: error
       - name: Transfer the verified APK to the existing private Site source
         env:
           SOURCE_COMMIT: ${{ steps.gate.outputs.source }}
-        run: bash tools/wifi25_private_delivery.sh stage Convoy-Outdoor-Beta-25.apk signed-25-receipt.json
+        run: bash tools/wifi26_private_delivery.sh stage Convoy-Outdoor-Beta-26.apk signed-26-receipt.json
       - name: Clear runner-local transfer material
         if: always()
-        run: rm -rf -- "$RUNNER_TEMP/convoy-wifi25-private"
+        run: rm -rf -- "$RUNNER_TEMP/convoy-wifi26-private"

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Retrieve verified +24 and stage verified +25 on the existing private Site.
+# Retrieve verified +25 and stage verified +26 on the existing private Site.
 # Only a wrapped, short-lived transport credential may use the public repo.
 set -euo pipefail
 set +x
 umask 077
 site_id=appgprj_6b0475c8e9348191bd3b3a0715880f9c
 remote=https://git.chatgpt-team.site/58a70ba3-41f5-47ae-afae-59a6e052ab91/$site_id.git
-private="${RUNNER_TEMP:?}/convoy-wifi25-private"
+private="${RUNNER_TEMP:?}/convoy-wifi26-private"
 : "${SOURCE_COMMIT:?}"
 
 git_settings() {
@@ -31,7 +31,7 @@ if [[ ${1:?operation required} == prepare ]]; then
   deadline=$((SECONDS + 600))
   while (( SECONDS < deadline )); do
     if gh api -H 'Accept: application/vnd.github.raw+json' \
-        "repos/$GITHUB_REPOSITORY/contents/.github/convoy-wifi25-delivery.json?ref=$GITHUB_REF_NAME" \
+        "repos/$GITHUB_REPOSITORY/contents/.github/convoy-wifi26-delivery.json?ref=$GITHUB_REF_NAME" \
         > "$private/transport.json" 2>/dev/null &&
       jq -e --arg run "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" --arg source "$SOURCE_COMMIT" \
         '.run == $run and .attempt == $attempt and .source_sha == $source and
@@ -49,10 +49,10 @@ if [[ ${1:?operation required} == prepare ]]; then
   git clone --quiet --depth 1 --branch main "$remote" "$private/site"
   cd "$private/site"
   jq -e --arg id "$site_id" '.project_id == $id and .static.directory == "dist"' .openai/hosting.json >/dev/null
-  jq -e --arg sha "$BASE_HASH" '.apk_sha256 == $sha and .version_code == 24 and
-    .signing_run == "45336135101" and .attempt == "2"' dist/receipt.json >/dev/null
-  cat dist/beta24-45336135101-2/part-* > "$private/Convoy-Outdoor-Beta-24.apk"
-  printf '%s  %s\n' "$BASE_HASH" "$private/Convoy-Outdoor-Beta-24.apk" | sha256sum --check -
+  jq -e --arg sha "$BASE_HASH" '.apk_sha256 == $sha and .version_code == 25 and
+    .signing_run == "45431993912" and .attempt == "1"' dist/receipt.json >/dev/null
+  cat dist/beta25-45431993912-1/part-* > "$private/Convoy-Outdoor-Beta-25.apk"
+  printf '%s  %s\n' "$BASE_HASH" "$private/Convoy-Outdoor-Beta-25.apk" | sha256sum --check -
   exit
 fi
 
@@ -64,10 +64,10 @@ expected_size=$(jq -er '.apk_bytes | numbers' "$receipt")
 printf '%s  %s\n' "$expected_hash" "$apk" | sha256sum --check -
 test "$(stat -c%s "$apk")" = "$expected_size"
 jq -e --arg source "$SOURCE_COMMIT" --arg run "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" \
-  '.source_sha == $source and .signing_run == $run and .attempt == $attempt and .version_code == 25 and .upgrade_api == 35' "$receipt" >/dev/null
+  '.source_sha == $source and .signing_run == $run and .attempt == $attempt and .version_code == 26 and .upgrade_api == 35' "$receipt" >/dev/null
 git_settings
 cd "$private/site"
-parts_dir="dist/beta25-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+parts_dir="dist/beta26-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
 mkdir -p "$parts_dir"
 split -b 8388608 -d -a 2 "$apk" "$parts_dir/part-"
 test "$(cat "$parts_dir"/part-* | sha256sum | cut -d' ' -f1)" = "$expected_hash"
@@ -87,20 +87,20 @@ import sys
 digest, size, directory = sys.argv[1:]
 page = Path("dist/index.html")
 page.write_text(re.sub(r"[a-f0-9]{64}", digest, page.read_text())
-                .replace("+24", "+25").replace("dalla +23", "dalla +24"))
+                .replace("+25", "+26").replace("dalla +24", "dalla +25"))
 page.write_text(re.sub(r"\d+,\d+ MB", f"{int(size) / 1_000_000:.1f} MB".replace(".", ","), page.read_text()))
 script = Path("dist/download.js")
-text = script.read_text().replace("Convoy-Outdoor-Beta-24.apk", "Convoy-Outdoor-Beta-25.apk")
+text = script.read_text().replace("Convoy-Outdoor-Beta-25.apk", "Convoy-Outdoor-Beta-26.apk")
 text = re.sub(r"const expectedSize = \d+;", f"const expectedSize = {size};", text)
 text = re.sub(r"const expectedDigest = '[a-f0-9]{64}';", f"const expectedDigest = '{digest}';", text)
 text = re.sub(r"fetch\('[^']*/part-'", f"fetch('{directory.removeprefix('dist/')}/part-'", text)
-assert all(value in text for value in (size, digest, directory.removeprefix("dist/"), "Beta-25.apk"))
+assert all(value in text for value in (size, digest, directory.removeprefix("dist/"), "Beta-26.apk"))
 script.write_text(text)
 PY
 cp "$receipt" dist/receipt.json
-git rm -qr dist/beta24-45336135101-2
+git rm -qr dist/beta25-45431993912-1
 git add dist/index.html dist/download.js dist/receipt.json
-git commit --quiet -m 'Prepare owner-private signed Outdoor +25 download'
+git commit --quiet -m 'Prepare owner-private signed Outdoor +26 download'
 git push --quiet origin HEAD:refs/heads/main
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_1
 printf 'Private Site source prepared at %s\n' "$(git rev-parse HEAD)"

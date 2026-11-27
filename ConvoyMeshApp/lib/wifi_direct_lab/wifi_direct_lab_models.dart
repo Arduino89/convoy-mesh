@@ -123,7 +123,6 @@ class WifiDirectEnvironmentStatus {
 
   bool get isBluetoothOffClean => !bluetoothEnabled;
   bool get isOfflineClean => !internetValidated;
-  bool get requiresLegacyLocationToggle => sdkInt < 33;
 
   bool get canOperateP2p =>
       wifiDirectFeatureSupported &&
@@ -133,7 +132,7 @@ class WifiDirectEnvironmentStatus {
       p2pStateEnabled &&
       !bluetoothEnabled &&
       requiredRuntimePermissionGranted &&
-      (!requiresLegacyLocationToggle || locationServiceEnabled) &&
+      locationServiceEnabled &&
       !foregroundServiceRunning;
 
   List<String> get readinessBlockers {
@@ -153,9 +152,9 @@ class WifiDirectEnvironmentStatus {
     if (!requiredRuntimePermissionGranted) {
       reasons.add('Permesso runtime $requiredPermissionName non concesso.');
     }
-    if (requiresLegacyLocationToggle && !locationServiceEnabled) {
+    if (!locationServiceEnabled) {
       reasons.add(
-        'Su Android <= 12 il sistema operativo richiede il toggle Posizione attivo per WifiP2pManager.',
+        'Attiva Posizione per la scoperta Wi-Fi Direct. Il LAB non avvia la raccolta GPS.',
       );
     }
     if (foregroundServiceRunning) {

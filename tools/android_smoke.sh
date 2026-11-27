@@ -271,7 +271,7 @@ timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 wait_and_tap_text 'Test log' open-test-log
 # The integrated branch uses the same Outdoor package; the Wi-Fi LAB is a
 # separate route, not a second installed app or an always-running transport.
-if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+25" ]]; then
+if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+26" ]]; then
   wait_and_tap_text 'Apri Wi-Fi Direct LAB (solo probe sintetici)' open-integrated-wifi
   sleep 3
   assert_no_runtime wifi-lab-open
@@ -282,6 +282,15 @@ if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VER
     echo 'Retention offered without a Wi-Fi Direct group' >&2
     exit 1
   fi
+  timeout 15 adb shell cmd location set-location-enabled false
+  wait_and_tap_text 'Aggiorna stato' wifi-lab-location-off
+  sleep 2
+  timeout 15 adb shell uiautomator dump /sdcard/convoy-lab-location.xml >/dev/null
+  timeout 15 adb shell cat /sdcard/convoy-lab-location.xml > "$OUT/ui-wifi-lab-location-off.xml"
+  grep -Fq 'Impostazioni Posizione' "$OUT/ui-wifi-lab-location-off.xml"
+  timeout 15 adb shell cmd location set-location-enabled true
+  wait_and_tap_text 'Aggiorna stato' wifi-lab-location-restored
+  echo "PASS: LAB explains disabled Android Location Mode with a settings action on API 35"
   timeout 15 adb shell input keyevent KEYCODE_HOME
   sleep 2
   assert_no_runtime wifi-lab-background

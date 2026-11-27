@@ -30,7 +30,7 @@ class FakeWifiDirectPlatformBridge implements WifiDirectPlatformBridge {
               fineLocationPermissionGranted: false,
               requiredRuntimePermissionGranted: true,
               requiredPermissionName: 'NEARBY_WIFI_DEVICES',
-              locationServiceEnabled: false,
+              locationServiceEnabled: true,
               manifestPermissionsOk: true,
               foregroundServiceRunning: false,
             );
@@ -49,6 +49,7 @@ class FakeWifiDirectPlatformBridge implements WifiDirectPlatformBridge {
   Object? discoverError;
   Object? connectError;
   String? sessionId;
+  Completer<void>? stopReply;
   Completer<void>? discoveryReply;
   Completer<void>? connectReply;
 
@@ -123,6 +124,7 @@ class FakeWifiDirectPlatformBridge implements WifiDirectPlatformBridge {
   Future<void> stopAll({required String? sessionId, String reason = 'manual_stop'}) async {
     stopCalls++;
     lastStopReason = reason;
+    await stopReply?.future;
   }
 
   Future<void> dispose() async {
@@ -293,28 +295,21 @@ void main() {
       expect(bridge.discoverCalls, 0);
       expect(controller.logs.last.data['code'], 'PERMISSION_DENIED');
 
-      // Check Android <= 12 (API 29) legacy Location toggle requirement:
-      bridge.environment = const WifiDirectEnvironmentStatus(
-        sdkInt: 29,
-        wifiDirectFeatureSupported: true,
-        wifiP2pServiceAvailable: true,
-        wifiEnabled: true,
-        p2pStateEnabled: true,
-        bluetoothEnabled: false,
-        internetValidated: false,
-        fineLocationPermissionGranted: true,
-        requiredRuntimePermissionGranted: true,
-        requiredPermissionName: 'ACCESS_FINE_LOCATION',
-        locationServiceEnabled: false, // Toggle OFF on API 29
-        manifestPermissionsOk: true,
-      );
-      final legacyLocOffOk = await controller.requestDiscovery();
-      expect(legacyLocOffOk, isFalse);
-      expect(bridge.discoverCalls, 0);
-      expect(
-        controller.logs.last.data['code'],
-        'LOCATION_SERVICES_DISABLED_LEGACY_P2P',
-      );
+      // Android's location mode gate also applies with Nearby Wi-Fi granted.
+      for (final sdk in [29, 35]) {
+        bridge.environment = bridge.environment.copyWith(
+          sdkInt: sdk,
+          locationServiceEnabled: false,
+          requiredRuntimePermissionGranted: true,
+        );
+        expect(await controller.requestDiscovery(), isFalse);
+        expect(bridge.discoverCalls, 0);
+        expect(controller.logs.last.data['code'], 'LOCATION_SERVICES_DISABLED_P2P');
+        expect(controller.environment.readinessBlockers, isNotEmpty);
+      }
+      bridge.environment = bridge.environment.copyWith(locationServiceEnabled: true);
+      expect(await controller.requestDiscovery(), isTrue);
+      expect(bridge.discoverCalls, 1);
     });
 
     test('distinguishes system events from transport and application confirmations', () async {
@@ -1044,7 +1039,7 @@ void main() {
     expect(bridge.discoveryNames.last, isNull);
   });
 
-  test('Android group loss is distinct from local Stop and socket closure', () async {
+  test('Android group loss waits for teardown before a fresh discovery session', () async {
     final bridge = FakeWifiDirectPlatformBridge();
     final (socket, _) = PairedInMemorySocketTransport.createPair();
     final controller = WifiDirectLabController(platform: bridge, socketTransport: socket);
@@ -1053,15 +1048,29 @@ void main() {
       await bridge.dispose();
     });
     expect(await controller.requestDiscovery(), isTrue);
+    final oldSession = bridge.sessionId;
     bridge.emit({'type': 'group_formed', 'role': 'group_owner'});
     await Future<void>.delayed(Duration.zero);
     socket.simulateLinkDrop('socket_closed');
+    bridge.stopReply = Completer<void>();
     bridge.emit({'type': 'p2p_disconnected', 'reason': 'p2p_group_lost'});
     await Future<void>.delayed(Duration.zero);
     expect(controller.logs.where((e) => e.kind == WifiDirectLabEventKind.disconnect)
       .map((e) => e.data['source']), ['socket', 'android_p2p']);
     expect(controller.isGroupFormed, isFalse);
-    expect(bridge.stopCalls, 0);
+    expect(bridge.stopCalls, 1);
+    expect(bridge.lastStopReason, 'p2p_group_lost');
+    expect(await controller.requestDiscovery(), isFalse);
+    expect(bridge.discoverCalls, 1);
+    final stopping = controller.stopAll();
+    bridge.emit({'type': 'group_formed', 'role': 'group_owner', 'session_id': oldSession});
+    await Future<void>.delayed(Duration.zero);
+    expect(bridge.stopCalls, 1);
+    expect(controller.isSocketOpen, isFalse);
+    bridge.stopReply!.complete();
+    await stopping;
+    expect(await controller.requestDiscovery(), isTrue);
+    expect(bridge.sessionId, isNot(oldSession));
     await controller.stopAll();
     expect(controller.logs.last.data['source'], 'local_stop');
     expect(controller.logs.last.data['reason'], 'manual_stop');

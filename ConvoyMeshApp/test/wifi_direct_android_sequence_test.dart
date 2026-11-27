@@ -29,11 +29,30 @@ void main() {
         'pendingConnectResult = null',
         'manager.stopPeerDiscovery(channel, null)',
         'manager.cancelConnect(channel, null)',
-        'manager.removeGroup(channel, null)',
-        'channel.close()',
-        'app.unregisterReceiver(receiver)',
+        'manager.removeGroup(channel, it)',
       ]),
     );
+    expect(stop, contains('app.unregisterReceiver(receiver)'));
+    expect(stop, contains('channel?.close()'));
+    expect(stop, contains(') { _, _ -> finish() }'));
+  });
+
+  test('native discovery sets up the name before selecting one scan path', () {
+    final discover = _method(adapter, 'handleDiscoverPeers');
+    expect(discover, stringContainsInOrder([
+      'pendingDiscoverResult = result',
+      'updateNameAdvertisement(',
+      'discoverConvoyNames(',
+      'if (outcome == "timed_out")',
+      'endSession(session, "dns_sd_callback_timed_out")',
+      'else if (outcome == "accepted" || !current())',
+      'manager.discoverPeers(channel, it)',
+    ]));
+    final advertise = _method(adapter, 'updateNameAdvertisement');
+    expect(advertise, isNot(contains('clearLocalServices(')));
+    expect(advertise, contains('manager.removeLocalService('));
+    final peers = _method(adapter, 'requestCurrentPeers');
+    expect(peers, isNot(contains('discoverConvoyNames(')));
   });
 }
 

@@ -350,12 +350,11 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
                   : 'Non concesso',
               ok: env.requiredRuntimePermissionGranted,
             ),
-            if (env.requiresLegacyLocationToggle)
-              _statusRow(
-                label: 'Toggle Posizione Android <=12 (richiesto da OS per P2P)',
-                value: env.locationServiceEnabled ? 'Attivo (OK)' : 'Disattivato',
-                ok: env.locationServiceEnabled,
-              ),
+            _statusRow(
+              label: 'Posizione Android (richiesta per la scoperta)',
+              value: env.locationServiceEnabled ? 'Attiva' : 'Disattivata',
+              ok: env.locationServiceEnabled,
+            ),
             _statusRow(
               label: 'Servizio Foreground (FGS)',
               value: !env.foregroundServiceRunning
@@ -397,6 +396,13 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
                   icon: const Icon(Icons.bluetooth_disabled, size: 18),
                   label: const Text('Impostazioni BT'),
                 ),
+                if (!env.locationServiceEnabled)
+                  OutlinedButton.icon(
+                    key: const Key('wfd_open_location_settings_button'),
+                    onPressed: _controller.openLocationSettings,
+                    icon: const Icon(Icons.location_searching, size: 18),
+                    label: const Text('Impostazioni Posizione'),
+                  ),
                 OutlinedButton.icon(
                   key: const Key('wfd_open_wifi_settings_button'),
                   onPressed: _controller.openWifiSettings,
@@ -441,7 +447,9 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
               title: const Text('Mostra il mio nome Convoy ai dispositivi vicini'),
               subtitle: const Text('Solo nel LAB. Puoi disattivarlo qui o usare Stop.'),
               value: _controller.sharesConvoyName,
-              onChanged: _controller.nameSettingPending ? null : _controller.setShareConvoyName,
+              onChanged: (_controller.radioOperationPending || _controller.isConnecting)
+                  ? null
+                  : _controller.setShareConvoyName,
             ),
             Wrap(
               spacing: 8,
@@ -449,7 +457,7 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
               children: [
                 FilledButton.icon(
                   key: const Key('wfd_discover_button'),
-                  onPressed: (_controller.isConnecting || _controller.isGroupFormed)
+                  onPressed: (_controller.radioOperationPending || _controller.isConnecting || _controller.isGroupFormed)
                       ? null
                       : _controller.requestDiscovery,
                   icon: const Icon(Icons.radar),
@@ -504,7 +512,7 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
     ),
     trailing: FilledButton.tonal(
       key: Key('wfd_connect_${peer.peerId}'),
-      onPressed: (_controller.isConnecting || _controller.isGroupFormed)
+      onPressed: (_controller.radioOperationPending || _controller.isConnecting || _controller.isGroupFormed)
           ? null
           : () => _confirmAndConnectPeer(peer.peerId),
       child: const Text('Connetti'),
