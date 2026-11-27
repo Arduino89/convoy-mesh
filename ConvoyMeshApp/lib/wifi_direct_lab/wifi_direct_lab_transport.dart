@@ -26,9 +26,13 @@ abstract class WifiDirectPlatformBridge {
   Future<void> stopAll({required String? sessionId, String reason = 'manual_stop'});
 }
 
+abstract interface class WifiDirectBackgroundBridge {
+  Future<bool> startBackgroundLab(String sessionId);
+}
+
 /// Production [MethodChannel] + [EventChannel] bridge to
 /// `ConvoyWifiDirectLabAdapter.kt`.
-class MethodChannelWifiDirectPlatformBridge implements WifiDirectPlatformBridge {
+class MethodChannelWifiDirectPlatformBridge implements WifiDirectPlatformBridge, WifiDirectBackgroundBridge {
   MethodChannelWifiDirectPlatformBridge({
     MethodChannel? methodChannel,
     EventChannel? eventChannel,
@@ -118,6 +122,10 @@ class MethodChannelWifiDirectPlatformBridge implements WifiDirectPlatformBridge 
   }
 
   @override
+  Future<bool> startBackgroundLab(String sessionId) async =>
+      await _method.invokeMethod<bool>('startBackgroundLab', {'sessionId': sessionId}) ?? false;
+
+  @override
   Future<void> stopAll({required String? sessionId, String reason = 'manual_stop'}) async {
     await _method.invokeMethod<bool>(
       'stopAll',
@@ -165,6 +173,10 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
   static const int defaultLabPort = 41071;
 
   final String defaultBindHost;
+  String? pairedOwnerAddress;
+  bool pairedOnly = false;
+
+  int get _wireLimit => WifiDirectSyntheticFrame.maxWireBytes + (pairedOnly ? 70 : 0);
   final Duration clientConnectTimeout;
   final int clientMaxAttempts;
   final Duration clientRetryDelay;
@@ -197,9 +209,9 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
     if (myEpoch != _epoch) return;
     try {
       final server = await ServerSocket.bind(
-        defaultBindHost,
+        pairedOwnerAddress ?? defaultBindHost,
         port,
-        shared: true,
+        shared: !pairedOnly,
       );
       if (myEpoch != _epoch) {
         await server.close();
@@ -209,7 +221,7 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
       _boundPort = server.port;
       _serverSub = server.listen(
         (Socket client) {
-          if (myEpoch != _epoch) {
+          if (myEpoch != _epoch || (pairedOnly && _activeSocket != null)) {
             client.destroy();
             return;
           }
@@ -345,14 +357,14 @@ class TcpWifiDirectSocketTransport implements WifiDirectSocketTransport {
           'SOCKET_FRAME_TOO_LARGE',
           'Riga ricevuta oltre il limite massimo consentito',
         );
-        if (partial.length <= WifiDirectSyntheticFrame.maxWireBytes) {
+        if (partial.length <= _wireLimit) {
           buffer.write(partial);
         } else {
           discardUntilNewline = true;
           reportOversizedFrame();
         }
         for (final line in lines) {
-          if (line.length > WifiDirectSyntheticFrame.maxWireBytes) {
+          if (line.length > _wireLimit) {
             reportOversizedFrame();
             continue;
           }

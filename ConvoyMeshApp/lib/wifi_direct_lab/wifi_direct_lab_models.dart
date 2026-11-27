@@ -12,6 +12,7 @@ enum WifiDirectLabEventKind {
   probeSent('probe_sent', WifiDirectEvidenceLayer.application),
   probeReceived('probe_received', WifiDirectEvidenceLayer.application),
   ackReceived('ack_received', WifiDirectEvidenceLayer.application),
+  linkQuality('link_quality', WifiDirectEvidenceLayer.application),
   lifecycle('lifecycle', WifiDirectEvidenceLayer.system),
   dnsSdStatus('dns_sd_status', WifiDirectEvidenceLayer.system),
   disconnect('disconnect', WifiDirectEvidenceLayer.transport),
@@ -629,4 +630,51 @@ class WifiDirectLabLogEntry {
       };
 
   String toJsonLine() => jsonEncode(toJsonMap());
+}
+
+/// End-to-end delivery in a rolling window; no infrastructure Wi-Fi RSSI.
+class WifiDirectLabQuality {
+  const WifiDirectLabQuality({
+    required this.connected,
+    required this.confirmed,
+    required this.timeouts,
+    required this.retries,
+    required this.medianRttMs,
+    required this.lastAckAgeMs,
+    required this.connectedMs,
+    required this.interruptions,
+  });
+
+  final bool connected;
+  final int confirmed;
+  final int timeouts;
+  final int retries;
+  final int? medianRttMs;
+  final int? lastAckAgeMs;
+  final int connectedMs;
+  final int interruptions;
+
+  int get samples => confirmed + timeouts;
+  int? get ackPercentage => samples == 0 ? null : (100 * confirmed / samples).round();
+
+  String get label {
+    if (!connected) return 'Scollegato';
+    if ((lastAckAgeMs ?? 0) >= 15000) return 'Debole';
+    if (samples < 5) return 'Campioni insufficienti';
+    if (ackPercentage! < 65) return 'Debole';
+    if (ackPercentage! < 90 || (medianRttMs ?? 0) >= 400) return 'Variabile';
+    return 'Stabile';
+  }
+
+  Map<String, Object?> toLog() => {
+    'quality': label,
+    'samples': samples,
+    'ack_percent': ackPercentage,
+    'median_rtt_ms': medianRttMs,
+    'timeouts': timeouts,
+    'retries': retries,
+    'last_ack_age_ms': lastAckAgeMs,
+    'connected_ms': connectedMs,
+    'interruptions': interruptions,
+  };
 }

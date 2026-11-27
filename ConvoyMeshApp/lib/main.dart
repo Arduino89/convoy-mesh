@@ -239,7 +239,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     } finally {
       _wifiLabRouteOpen = false;
       if (mounted && identical(_wifiLab, controller)) {
-        if (retain && controller.isGroupFormed) {
+        if (retain && (controller.isGroupFormed || controller.isBackgroundLab)) {
           setState(() {});
         } else {
           await _endWifiLab('return_to_outdoor');
@@ -249,7 +249,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   void _wifiLabChanged() {
-    if (!_wifiLabRouteOpen && !_wifiLabSwitching && _wifiLab?.isGroupFormed == false) {
+    if (!_wifiLabRouteOpen && !_wifiLabSwitching && _wifiLab?.isGroupFormed == false && _wifiLab?.isBackgroundLab == false) {
       unawaited(_endWifiLab('retained_group_ended'));
     }
   }
@@ -349,7 +349,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       final background = state == AppLifecycleState.hidden ||
           state == AppLifecycleState.paused || state == AppLifecycleState.detached;
       if (controller != null && !_wifiLabSwitching) {
-        if (background && !_wifiLabRouteOpen) {
+        if (background && !_wifiLabRouteOpen && !controller.isBackgroundLab) {
           unawaited(_endWifiLab('app_backgrounded_${state.name}'));
         } else {
           unawaited(controller.onAppLifecycleStateChanged(state));

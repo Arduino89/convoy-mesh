@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'wifi_direct_lab_controller.dart';
 import 'wifi_direct_lab_models.dart';
+import 'wifi_direct_lab_pairing.dart';
 
 /// Isolated Flutter application root for the Wi-Fi Direct Offline Lab.
 ///
@@ -58,6 +60,7 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
   late bool _ownsController;
   bool _probeSendConsented = false;
   bool _exitInProgress = false;
+  final _labCode = TextEditingController();
 
   Future<void> _returnToOutdoor() async {
     if (_exitInProgress) return;
@@ -110,6 +113,7 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
 
   @override
   void dispose() {
+    _labCode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_onChanged);
     if (_ownsController) {
@@ -218,6 +222,8 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
               const SizedBox(height: 10),
             ],
             _buildEnvironmentCard(env, scheme),
+            const SizedBox(height: 10),
+            _buildBackgroundLabCard(),
             const SizedBox(height: 10),
             _buildDiscoveryAndPeersCard(env, scheme),
             const SizedBox(height: 10),
@@ -411,6 +417,101 @@ class _WifiDirectLabPageState extends State<WifiDirectLabPage>
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startBackgroundLab() async {
+    final code = _labCode.text;
+    if (!WifiDirectLabPairing.isCode(code.trim().toLowerCase())) {
+      await _controller.startBackgroundLab(code);
+      return;
+    }
+    if (_controller.environment.sdkInt >= 33 &&
+        !(await Permission.notification.request()).isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Concedi Notifiche per poter fermare il LAB a schermo spento.'),
+        ));
+      }
+      return;
+    }
+    if (mounted && await _controller.startBackgroundLab(code) && mounted) {
+      _labCode.clear();
+    }
+  }
+
+  Widget _buildBackgroundLabCard() {
+    final active = _controller.isBackgroundLab;
+    final quality = _controller.quality;
+    final theme = Theme.of(context);
+    final percent = quality.ackPercentage;
+    final color = switch (quality.label) {
+      'Stabile' => theme.colorScheme.primary,
+      'Variabile' => theme.colorScheme.tertiary,
+      'Debole' => theme.colorScheme.error,
+      _ => theme.colorScheme.outline,
+    };
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Wi-Fi Direct a schermo spento', style: theme.textTheme.titleMedium),
+            Text(_controller.backgroundStatus, key: const Key('wfd_background_status')),
+            if (!active) ...[
+              const SizedBox(height: 8),
+              const Text('Sessione fino a 30 minuti. Invia un probe sintetico ogni 5 secondi dopo la verifica del peer.'),
+              const Text('Condividi in privato un codice LAB generato e inseriscilo su entrambi i telefoni prima della ricerca.'),
+              TextField(
+                key: const Key('wfd_background_code'),
+                controller: _labCode,
+                enabled: _controller.canStartBackgroundLab,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: const InputDecoration(labelText: 'Codice LAB temporaneo'),
+              ),
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: _controller.canStartBackgroundLab
+                        ? () => _labCode.text = WifiDirectLabPairing.newCode()
+                        : null,
+                    child: const Text('Genera codice'),
+                  ),
+                  FilledButton.tonal(
+                    key: const Key('wfd_start_background'),
+                    onPressed: _controller.canStartBackgroundLab ? _startBackgroundLab : null,
+                    child: const Text('Avvia LAB schermo spento'),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            Row(children: [
+              Icon(Icons.network_check, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Qualità Wi-Fi Direct · ${quality.label}',
+                  key: const Key('wfd_link_quality'))),
+            ]),
+            LinearProgressIndicator(
+              value: quality.connected && quality.samples >= 5 ? percent! / 100 : 0,
+              color: color,
+            ),
+            Text([
+              if (percent != null) 'ACK $percent%',
+              if (quality.medianRttMs != null) 'RTT mediano ${quality.medianRttMs} ms',
+              'Timeout ${quality.timeouts}',
+              'Ritrasmissioni ${quality.retries}',
+              if (quality.lastAckAgeMs != null) 'Ultimo ACK ${quality.lastAckAgeMs! ~/ 1000} s fa',
+              'Collegato ${quality.connectedMs ~/ 1000} s',
+              'Interruzioni ${quality.interruptions}',
+            ].join(' · ')),
+            const Text('Finestra di 60 secondi. RSSI Wi-Fi Direct non disponibile.'),
           ],
         ),
       ),

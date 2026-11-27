@@ -271,7 +271,7 @@ timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 wait_and_tap_text 'Test log' open-test-log
 # The integrated branch uses the same Outdoor package; the Wi-Fi LAB is a
 # separate route, not a second installed app or an always-running transport.
-if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+26" ]]; then
+if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+27" ]]; then
   timeout 15 adb shell cmd location set-location-enabled false
   wait_and_tap_text 'Apri Wi-Fi Direct LAB (solo probe sintetici)' open-integrated-wifi
   sleep 3
@@ -299,6 +299,11 @@ if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VER
   timeout 15 adb shell input keyevent KEYCODE_HOME
   sleep 2
   assert_no_runtime wifi-lab-background
+  timeout 15 adb shell dumpsys activity services "$PACKAGE" > "$OUT/wifi-lab-services.txt"
+  if grep -Fq 'WifiDirectLabService' "$OUT/wifi-lab-services.txt"; then
+    echo 'Wi-Fi Direct background service started without explicit consent' >&2
+    exit 1
+  fi
   launch_app_process wifi-lab-resumed
   assert_no_runtime wifi-lab-resumed
   wait_and_tap_text 'Chiudi LAB e torna a Convoy' return-integrated-outdoor

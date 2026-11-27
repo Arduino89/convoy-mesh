@@ -40,7 +40,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        val wifiAdapter = wifiDirectLabAdapter ?: ConvoyWifiDirectLabAdapter(this).also {
+        val wifiAdapter = wifiDirectLabAdapter ?: ConvoyWifiDirectLabAdapter(this) { uiResumed }.also {
             wifiDirectLabAdapter = it
         }
         MethodChannel(
@@ -70,6 +70,7 @@ class MainActivity : FlutterActivity() {
                             result.success(true)
                         }
                         "startForegroundRuntime" -> {
+                            check(!WifiDirectLabService.isActive) { "Prima chiudere il Wi-Fi Direct LAB" }
                             check(uiResumed) { "Aprire Convoy Mesh per avviare l'uscita" }
                             val intent = Intent(app, ConvoyForegroundService::class.java)
                             if (Build.VERSION.SDK_INT >= 26) app.startForegroundService(intent) else app.startService(intent)

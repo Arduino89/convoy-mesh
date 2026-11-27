@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'wifi_direct_lab_models.dart';
+import 'wifi_direct_lab_pairing.dart';
 import 'wifi_direct_lab_transport.dart';
 
 /// State and protocol controller for the isolated Wi-Fi Direct Offline Lab
@@ -20,7 +21,7 @@ import 'wifi_direct_lab_transport.dart';
 /// - 20-probe bidirectional exchange with exact `(seq, nonce)` ACK matching
 ///   (`0` false confirmations) and receiver deduplication across reconnects.
 /// - Immediate cleanup of sockets, P2P group, and native receiver on `Stop`,
-///   page disposal, or app backgrounding.
+///   page disposal, or app backgrounding without an explicit LAB lease.
 class WifiDirectLabController extends ChangeNotifier {
   WifiDirectLabController({
     WifiDirectPlatformBridge? platform,
@@ -91,9 +92,157 @@ class WifiDirectLabController extends ChangeNotifier {
   bool _nameSettingPending = false;
   Future<void>? _radioCleanup;
 
+  String? _backgroundCode;
+  bool _startingBackground = false;
+  String? _trustedNode;
+  String? _trustedPeerAlias;
+  WifiDirectLabPairing? _pairing;
+  Timer? _labTick;
+  Timer? _proofDeadline;
+  Timer? _recovery;
+  Timer? _connectDeadline;
+  Future<void>? _socketCleanup;
+  bool _groupSocketArmed = false;
+  int _socketGeneration = 0;
+  String _ownerHost = '';
+  int _recoveryStep = 0;
+  bool _probeTickPending = false;
+  int? _pairedAt;
+  int? _latestAck;
+  int? _lossStarted;
+  int _losses = 0;
+  int _connectedMs = 0;
+  int? _connectedSince;
+  int? _backgroundStarted;
+  static const _recoveryDelays = [2, 4, 8, 16, 30, 30];
+  static const _ackTimeoutMs = 4000;
+
+  bool get isBackgroundLab => _backgroundCode != null;
+  bool get canStartBackgroundLab =>
+      _platform is WifiDirectBackgroundBridge && _radioSessionId == null && !radioOperationPending;
+  String get backgroundStatus {
+    if (!isBackgroundLab) return 'Solo in primo piano';
+    if (isSocketOpen) return 'Peer autorizzato, attivo anche a schermo spento';
+    if (_trustedNode == null) return 'In attesa di autorizzare il peer';
+    return _recoveryStep >= _recoveryDelays.length && _recovery == null && !_isConnecting
+        ? 'Tentativi automatici esauriti'
+        : 'Collegamento interrotto, ripresa in corso';
+  }
+
+  WifiDirectLabQuality get quality {
+    final now = _elapsedMs();
+    final recent = _sentProbes.values.where((probe) =>
+        now - probe.lastSentElapsedMs <= 60000).toList(growable: false);
+    final rtts = recent.map((probe) => probe.localRttMs).whereType<int>().toList()..sort();
+    final timeouts = recent.where((probe) =>
+        !probe.ackConfirmed && now - probe.lastSentElapsedMs >= _ackTimeoutMs).length;
+    final retries = recent.fold(0, (int count, probe) => count + probe.attempts - 1);
+    return WifiDirectLabQuality(
+      connected: isSocketOpen,
+      confirmed: rtts.length,
+      timeouts: timeouts,
+      retries: retries,
+      medianRttMs: rtts.isEmpty ? null : rtts[(rtts.length - 1) ~/ 2],
+      lastAckAgeMs: _latestAck == null ? null : now - _latestAck!,
+      connectedMs: _connectedMs + (_connectedSince == null ? 0 : now - _connectedSince!),
+      interruptions: _losses,
+    );
+  }
+
+  Future<bool> startBackgroundLab(String enteredCode) async {
+    final bridge = _platform;
+    final code = enteredCode.trim().toLowerCase();
+    if (bridge is! WifiDirectBackgroundBridge || !canStartBackgroundLab) return false;
+    if (!WifiDirectLabPairing.isCode(code)) {
+      _recordError(stage: 'background_lab', code: 'LAB_CODE_REQUIRED',
+          message: 'Inserisci il codice LAB generato di 32 caratteri.');
+      return false;
+    }
+    _startingBackground = true;
+    final id = _newRadioSession();
+    _radioSessionId = id;
+    _notify();
+    try {
+      await refreshEnvironment();
+      if (!_isRadioSessionCurrent(id)) return false;
+      final blocker = _checkPreflightCodeAndMessage();
+      if (blocker != null) {
+        _recordError(stage: 'background_lab', code: blocker.$1, message: blocker.$2);
+        _radioSessionId = null;
+        return false;
+      }
+      final started = await (bridge as WifiDirectBackgroundBridge).startBackgroundLab(id);
+      if (!_isRadioSessionCurrent(id)) return false;
+      if (!started) throw StateError('Servizio LAB non disponibile');
+      _backgroundCode = code;
+      _backgroundStarted = _elapsedMs();
+      _sentProbes.clear();
+      _deliveredProbesByRemote.clear();
+      _resetQuality();
+      _labTick = Timer.periodic(const Duration(seconds: 5), (_) {
+        unawaited(_sampleBackground());
+      });
+      _record(WifiDirectLabEventKind.lifecycle, data: {'state': 'background_lab_started'});
+      return true;
+    } catch (_) {
+      if (_isRadioSessionCurrent(id)) {
+        await stopAll(reason: 'background_start_failed');
+        _recordError(stage: 'background_lab', code: 'LAB_START_FAILED',
+            message: 'Riapri il LAB in primo piano e verifica il permesso Notifiche.');
+      }
+      return false;
+    } finally {
+      if (_isRadioSessionCurrent(id) || _radioSessionId == null) {
+        _startingBackground = false;
+        _notify();
+      }
+    }
+  }
+
+  String _newRadioSession() =>
+      '${DateTime.now().microsecondsSinceEpoch}-${++_nextRadioSession}';
+
+  void _resetQuality() {
+    _pairedAt = null;
+    _latestAck = null;
+    _lossStarted = null;
+    _losses = 0;
+    _connectedMs = 0;
+    _connectedSince = null;
+  }
+
+  Future<void> _sampleBackground() async {
+    if (_probeTickPending || !isBackgroundLab) return;
+    final now = _elapsedMs();
+    if (_trustedNode == null && now - _backgroundStarted! >= 120000) {
+      await stopAll(reason: 'pairing_deadline');
+      return;
+    }
+    if (!isSocketOpen) {
+      _notify();
+      return;
+    }
+    final lastResponse = max(_pairedAt ?? 0, _latestAck ?? 0);
+    if (now - lastResponse >= 20000) {
+      await _dropBackgroundSocket('probe_ack_deadline');
+      return;
+    }
+    if (_isSendingBatch) return;
+    final epoch = _radioEpoch;
+    _probeTickPending = true;
+    try {
+      await sendSingleProbe(userConsented: true);
+      if (!_isRadioEpochCurrent(epoch) || !isBackgroundLab) return;
+      final sample = quality;
+      _record(WifiDirectLabEventKind.linkQuality, data: sample.toLog());
+    } finally {
+      if (_isRadioEpochCurrent(epoch)) _probeTickPending = false;
+    }
+  }
+
   bool get sharesConvoyName => _advertisedName != null;
   bool get radioOperationPending =>
-      _discoveryPending || _nameSettingPending || _stopsInProgress > 0;
+      _startingBackground || _discoveryPending || _nameSettingPending || _stopsInProgress > 0;
 
   bool _isRadioEpochCurrent(int epoch) => !_disposed && _radioEpoch == epoch;
 
@@ -319,8 +468,7 @@ class WifiDirectLabController extends ChangeNotifier {
     }
 
     if (!_isRadioEpochCurrent(epoch)) return false;
-    final sessionId = _radioSessionId ??=
-        '${DateTime.now().microsecondsSinceEpoch}-${++_nextRadioSession}';
+    final sessionId = _radioSessionId ??= _newRadioSession();
     try {
       await _platform.discoverPeers(sessionId: sessionId, declaredName: _advertisedName);
       if (!_isRadioSessionCurrent(sessionId)) return false;
@@ -386,6 +534,9 @@ class WifiDirectLabController extends ChangeNotifier {
       return false;
     }
 
+    if (isBackgroundLab && _trustedNode != null && peerId != _trustedPeerAlias) {
+      return false;
+    }
     final sessionId = _radioSessionId;
     if (sessionId == null) return false;
     await refreshEnvironment();
@@ -430,6 +581,14 @@ class WifiDirectLabController extends ChangeNotifier {
       );
       if (!_isRadioSessionCurrent(sessionId)) return false;
       _lastError = null;
+      if (isBackgroundLab && _isConnecting) {
+        _connectDeadline?.cancel();
+        _connectDeadline = Timer(const Duration(seconds: 30), () {
+          if (_isRadioSessionCurrent(sessionId) && _isConnecting) {
+            unawaited(stopAll(reason: 'android_negotiation_deadline'));
+          }
+        });
+      }
       _notify();
       return true;
     } catch (e) {
@@ -497,7 +656,7 @@ class WifiDirectLabController extends ChangeNotifier {
     _sentProbes[seq] = record;
 
     try {
-      await _socket.sendJsonLine(frame.toJsonLine());
+      await _sendFrame(frame);
       _record(
         WifiDirectLabEventKind.probeSent,
         layer: WifiDirectEvidenceLayer.application,
@@ -585,6 +744,7 @@ class WifiDirectLabController extends ChangeNotifier {
   Future<int> resumeAfterReconnect({
     required bool userConsented,
     int targetTotalProbes = defaultProbeBatchSize,
+    int? maxRetransmissions,
     Duration interval = const Duration(milliseconds: 40),
   }) async {
     if (!userConsented) {
@@ -615,7 +775,10 @@ class WifiDirectLabController extends ChangeNotifier {
           .toList(growable: false)
         ..sort((a, b) => a.seq.compareTo(b.seq));
 
-      for (final record in unacked) {
+      final toRetry = maxRetransmissions == null
+          ? unacked
+          : unacked.reversed.where((record) => record.attempts < 3).take(maxRetransmissions);
+      for (final record in toRetry) {
         if (myEpoch != _batchEpoch || !isSocketOpen || _disposed) break;
         final nowElapsed = _elapsedMs();
         record.lastSentElapsedMs = nowElapsed;
@@ -628,7 +791,7 @@ class WifiDirectLabController extends ChangeNotifier {
           syntheticState: record.syntheticState,
         );
         try {
-          await _socket.sendJsonLine(frame.toJsonLine());
+          await _sendFrame(frame);
           transmitted++;
           _record(
             WifiDirectLabEventKind.probeSent,
@@ -730,6 +893,13 @@ class WifiDirectLabController extends ChangeNotifier {
   /// Losing window focus to an Android system dialog keeps the LAB session.
   /// Hidden, paused and detached indicate that its route is no longer visible.
   Future<void> onAppLifecycleStateChanged(AppLifecycleState state) async {
+    if (isBackgroundLab &&
+        (state == AppLifecycleState.hidden || state == AppLifecycleState.paused)) {
+      _record(WifiDirectLabEventKind.lifecycle, data: {
+        'state': state.name, 'background_lab': true, ..._radioLogState,
+      });
+      return;
+    }
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.hidden) {
@@ -750,6 +920,21 @@ class WifiDirectLabController extends ChangeNotifier {
   String? _invalidateRadioSession() {
     final sessionId = _radioSessionId;
     _radioSessionId = null;
+    _backgroundCode = null;
+    _startingBackground = false;
+    _trustedNode = null;
+    _trustedPeerAlias = null;
+    _pairing = null;
+    _labTick?.cancel();
+    _proofDeadline?.cancel();
+    _connectDeadline?.cancel();
+    _recovery?.cancel();
+    _recovery = null;
+    _recoveryStep = 0;
+    _probeTickPending = false;
+    _groupSocketArmed = false;
+    _socketGeneration++;
+    _closeQualityInterval();
     _advertisedName = null;
     _radioEpoch++;
     _discoveryPending = false;
@@ -824,8 +1009,14 @@ class WifiDirectLabController extends ChangeNotifier {
         final clientCount = (event['client_count'] as num?)?.toInt() ?? 0;
         final ownerHost = event['group_owner_host']?.toString().trim() ?? '';
         final port = (event['port'] as num?)?.toInt() ?? labPort;
+        _connectDeadline?.cancel();
         _isConnecting = false;
+        if (isBackgroundLab && _isGroupFormed && _groupRole == role && _ownerHost == ownerHost) break;
         _isGroupFormed = true;
+        _groupSocketArmed = false;
+        _ownerHost = ownerHost;
+        _recovery?.cancel();
+        _recovery = null;
         _groupRole = role;
         _activePort = port;
 
@@ -844,7 +1035,12 @@ class WifiDirectLabController extends ChangeNotifier {
 
       case 'p2p_disconnected':
         final reason = event['reason']?.toString() ?? 'p2p_disconnected';
-        unawaited(_closeTransportOnDisconnect(reason));
+        if (isBackgroundLab && _trustedNode != null && reason == 'p2p_group_lost' &&
+            event['session_ended'] != true) {
+          unawaited(_recoverAfterGroupLoss(reason));
+        } else {
+          unawaited(_closeTransportOnDisconnect(reason));
+        }
         break;
 
       case 'dns_sd_status':
@@ -879,77 +1075,215 @@ class WifiDirectLabController extends ChangeNotifier {
     required String ownerHost,
     required int port,
   }) async {
-    bool isCurrent() => _isRadioSessionCurrent(sessionId) && _isGroupFormed;
-    if (!isCurrent()) return;
+    if (!_isRadioSessionCurrent(sessionId) || !_isGroupFormed || _groupSocketArmed) return;
+    _groupSocketArmed = true;
+    final generation = ++_socketGeneration;
+    bool current() => _isRadioSessionCurrent(sessionId) && _isGroupFormed &&
+        generation == _socketGeneration;
+    void opened(int activePort) {
+      if (!current()) return;
+      _activePort = activePort;
+      final code = _backgroundCode;
+      if (code == null) {
+        _markSocketOpen(role);
+      } else {
+        final proof = WifiDirectLabPairing(code,
+            owner: role == WifiDirectGroupRole.groupOwner, localNode: _localNodeId,
+            initiated: _selectedPeerId != null);
+        _pairing = proof;
+        _proofDeadline?.cancel();
+        _proofDeadline = Timer(const Duration(seconds: 6), () {
+          if (current() && !isSocketOpen) {
+            unawaited(_dropBackgroundSocket('peer_proof_deadline'));
+          }
+        });
+        _sendProof(proof.hello, generation);
+      }
+    }
+    void receive(String line) {
+      if (!current()) return;
+      final proof = _pairing;
+      if (!isBackgroundLab) {
+        _handleIncomingJsonLine(line);
+        return;
+      }
+      if (proof == null) return;
+      try {
+        final wasVerified = proof.verified;
+        final message = proof.receive(line);
+        if (message.reply != null) _sendProof(message.reply!, generation);
+        if (!wasVerified && proof.verified) {
+          if (_trustedNode != null && _trustedNode != proof.remoteNode) {
+            throw const FormatException('Peer LAB diverso');
+          }
+          final recovered = _trustedNode != null;
+          _trustedNode = proof.remoteNode;
+          if (!recovered && (!proof.remoteInitiated ||
+              _localNodeId.compareTo(proof.remoteNode!) < 0)) {
+            _trustedPeerAlias = _selectedPeerId;
+          }
+          _pairedAt = _elapsedMs();
+          _proofDeadline?.cancel();
+          _recoveryStep = 0;
+          _markSocketOpen(role);
+          final lostAt = _lossStarted;
+          _lossStarted = null;
+          _record(WifiDirectLabEventKind.lifecycle, data: {
+            'state': recovered ? 'background_peer_recovered' : 'background_peer_verified',
+            if (lostAt != null) 'outage_ms': _elapsedMs() - lostAt,
+          });
+          if (recovered) {
+            unawaited(resumeAfterReconnect(userConsented: true,
+              targetTotalProbes: 0, maxRetransmissions: 3));
+          }
+        }
+        if (message.payload != null) _handleIncomingJsonLine(message.payload!);
+      } on FormatException {
+        unawaited(_dropBackgroundSocket('peer_proof_rejected'));
+      }
+    }
+    void disconnected(String reason) {
+      if (!current()) return;
+      if (isBackgroundLab) {
+        unawaited(_dropBackgroundSocket(reason));
+      } else {
+        unawaited(_handleSocketClosed(reason));
+      }
+    }
+    void failed(String code, String message) {
+      if (!current()) return;
+      _recordError(stage: 'socket_${role.wireName}', code: code, message: message,
+          layer: WifiDirectEvidenceLayer.transport);
+      if (isBackgroundLab) unawaited(_dropBackgroundSocket('socket_setup_failed'));
+    }
+
+    final transport = _socket;
+    if (transport is TcpWifiDirectSocketTransport) {
+      transport.pairedOnly = isBackgroundLab;
+      transport.pairedOwnerAddress = isBackgroundLab ? ownerHost : null;
+    }
     if (role == WifiDirectGroupRole.groupOwner) {
-      await _socket.startGroupOwnerServer(
-        port: port,
-        onSocketOpen: (boundPort) {
-          if (!isCurrent()) return;
-          _activePort = boundPort;
-          _isSocketOpen = true;
-          _lastError = null;
-          _record(
-            WifiDirectLabEventKind.socketOpen,
-            layer: WifiDirectEvidenceLayer.transport,
-            data: <String, Object?>{
-              'role': role.wireName,
-              'port': boundPort,
-              'transport': 'tcp_p2p',
-            },
-          );
-        },
-        onLineReceived: (line) {
-          if (isCurrent()) _handleIncomingJsonLine(line);
-        },
-        onSocketDisconnected: (reason) {
-          if (isCurrent()) unawaited(_handleSocketClosed(reason));
-        },
-        onSocketError: (code, message) {
-          if (!isCurrent()) return;
-          _recordError(
-            stage: 'socket_group_owner',
-            code: code,
-            message: message,
-            layer: WifiDirectEvidenceLayer.transport,
-          );
-        },
-      );
+      if (isBackgroundLab && ownerHost.isEmpty) {
+        failed('P2P_OWNER_ADDRESS_MISSING', 'Indirizzo Wi-Fi Direct non disponibile.');
+        return;
+      }
+      await _socket.startGroupOwnerServer(port: port, onSocketOpen: opened,
+          onLineReceived: receive, onSocketDisconnected: disconnected, onSocketError: failed);
     } else if (role == WifiDirectGroupRole.client) {
-      await _socket.connectAsClient(
-        host: ownerHost,
-        port: port,
-        onSocketOpen: (connectedPort) {
-          if (!isCurrent()) return;
-          _activePort = connectedPort;
-          _isSocketOpen = true;
-          _lastError = null;
-          _record(
-            WifiDirectLabEventKind.socketOpen,
-            layer: WifiDirectEvidenceLayer.transport,
-            data: <String, Object?>{
-              'role': role.wireName,
-              'port': connectedPort,
-              'transport': 'tcp_p2p',
-            },
-          );
-        },
-        onLineReceived: (line) {
-          if (isCurrent()) _handleIncomingJsonLine(line);
-        },
-        onSocketDisconnected: (reason) {
-          if (isCurrent()) unawaited(_handleSocketClosed(reason));
-        },
-        onSocketError: (code, message) {
-          if (!isCurrent()) return;
-          _recordError(
-            stage: 'socket_client',
-            code: code,
-            message: message,
-            layer: WifiDirectEvidenceLayer.transport,
-          );
-        },
-      );
+      await _socket.connectAsClient(host: ownerHost, port: port, onSocketOpen: opened,
+          onLineReceived: receive, onSocketDisconnected: disconnected, onSocketError: failed);
+    }
+  }
+
+  void _sendProof(String line, int generation) {
+    unawaited(_socket.sendJsonLine(line).catchError((Object _) async {
+      if (generation == _socketGeneration && isBackgroundLab) {
+        await _dropBackgroundSocket('peer_proof_send_failed');
+      }
+    }));
+  }
+
+  Future<void> _sendFrame(WifiDirectSyntheticFrame frame) async {
+    final line = frame.toJsonLine();
+    final proof = _pairing;
+    if (isBackgroundLab && (proof == null || !isSocketOpen)) {
+      throw StateError('Peer LAB non autorizzato');
+    }
+    await _socket.sendJsonLine(proof?.seal(line.trimRight()) ?? line);
+  }
+
+  void _markSocketOpen(WifiDirectGroupRole role) {
+    _isSocketOpen = true;
+    _connectedSince = _elapsedMs();
+    _lastError = null;
+    _record(WifiDirectLabEventKind.socketOpen, data: {
+      'role': role.wireName, 'port': _activePort, 'transport': 'tcp_p2p',
+      if (isBackgroundLab) 'peer_verified': true,
+    });
+  }
+
+  void _closeQualityInterval() {
+    if (_connectedSince != null) _connectedMs += _elapsedMs() - _connectedSince!;
+    _connectedSince = null;
+  }
+
+  Future<void> _dropBackgroundSocket(String reason) async {
+    final id = _radioSessionId;
+    if (id == null || !isBackgroundLab || !_groupSocketArmed) return;
+    _groupSocketArmed = false;
+    _socketGeneration++;
+    _pairing = null;
+    _proofDeadline?.cancel();
+    if (_trustedNode != null && _lossStarted == null) {
+      _lossStarted = _elapsedMs();
+      _losses++;
+    }
+    final cleanup = _closeSocket();
+    try {
+      if (_isSocketOpen) {
+        await _handleSocketClosed(reason);
+      } else {
+        _record(WifiDirectLabEventKind.disconnect, data: {
+          'reason': reason, 'source': 'socket',
+        });
+      }
+    } finally {
+      await cleanup;
+      if (_isRadioSessionCurrent(id)) _scheduleRecovery(id);
+    }
+  }
+
+  Future<void> _recoverAfterGroupLoss(String reason) async {
+    final id = _radioSessionId;
+    if (id == null) return;
+    _isGroupFormed = false;
+    _isConnecting = false;
+    _isDiscovering = false;
+    _connectDeadline?.cancel();
+    _recovery?.cancel();
+    _recovery = null;
+    _peers.clear();
+    final cleanup = _dropBackgroundSocket(reason);
+    _record(WifiDirectLabEventKind.disconnect, layer: WifiDirectEvidenceLayer.system,
+        data: {'reason': reason, 'source': 'android_p2p'});
+    await cleanup;
+    if (_isRadioSessionCurrent(id)) _scheduleRecovery(id);
+  }
+
+  void _scheduleRecovery(String id) {
+    if (!isBackgroundLab || _recovery != null || _recoveryStep >= _recoveryDelays.length) return;
+    // Until the first proof succeeds, only reopen TCP inside an existing group.
+    if (!_isGroupFormed && _trustedNode == null) return;
+    final seconds = _recoveryDelays[_recoveryStep++];
+    _recovery = Timer(Duration(seconds: seconds), () {
+      _recovery = null;
+      if (_isRadioSessionCurrent(id) && isBackgroundLab) {
+        unawaited(_tryRecovery(id));
+      }
+    });
+    _record(WifiDirectLabEventKind.lifecycle, data: {
+      'state': 'background_recovery_scheduled', 'attempt': _recoveryStep, 'delay_seconds': seconds,
+    });
+  }
+
+  Future<void> _tryRecovery(String id) async {
+    if (isSocketOpen || _isConnecting) return;
+    if (_isGroupFormed) {
+      await _openSocketForGroup(sessionId: id, role: _groupRole, ownerHost: _ownerHost,
+          port: _activePort);
+      return;
+    }
+    // The original initiator alone may reconnect, and only to the same
+    // session-scoped Android alias. The application proof is required again.
+    final alias = _trustedPeerAlias;
+    if (_isDiscovering && alias != null && _peers[alias]?.status == 'available') {
+      if (await requestConnect(peerId: alias, userConsented: true)) return;
+    } else if (!_discoveryPending && (!_isDiscovering || alias != null)) {
+      await requestDiscovery();
+    }
+    if (_isRadioSessionCurrent(id) && !_isGroupFormed) {
+      _scheduleRecovery(id);
+      _notify();
     }
   }
 
@@ -969,6 +1303,10 @@ class WifiDirectLabController extends ChangeNotifier {
       return;
     }
 
+    if (_pairing != null && frame.senderNodeId != _pairing!.remoteNode) {
+      unawaited(_dropBackgroundSocket('peer_node_mismatch'));
+      return;
+    }
     if (frame.type == WifiDirectFrameType.probe) {
       _handleIncomingProbe(frame);
     } else if (frame.type == WifiDirectFrameType.ack) {
@@ -1037,7 +1375,7 @@ class WifiDirectLabController extends ChangeNotifier {
       rxElapsedMs: _elapsedMs(),
     );
     unawaited(
-      _socket.sendJsonLine(ackFrame.toJsonLine()).then((_) {
+      _sendFrame(ackFrame).then((_) {
         _acksSentCount++;
         _notify();
       }).catchError((Object e) {
@@ -1097,6 +1435,7 @@ class WifiDirectLabController extends ChangeNotifier {
     final rtt = max(0, nowElapsed - sent.lastSentElapsedMs);
     sent.ackConfirmed = true;
     sent.ackReceivedElapsedMs = nowElapsed;
+    _latestAck = nowElapsed;
     sent.localRttMs = rtt;
 
     _record(
@@ -1120,6 +1459,8 @@ class WifiDirectLabController extends ChangeNotifier {
     final wasOpen = _isSocketOpen;
     final stateBeforeClose = _radioLogState;
     _isSocketOpen = false;
+    _closeQualityInterval();
+    if (!isBackgroundLab) _groupSocketArmed = false;
     if (wasOpen) {
       _record(
         WifiDirectLabEventKind.disconnect,
@@ -1175,13 +1516,22 @@ class WifiDirectLabController extends ChangeNotifier {
 
   Future<void> _releaseRadio(String? sessionId, String reason) async {
     final cleanup = _radioCleanup ??= Future.wait([
-      _socket.close(),
+      _closeSocket(),
       _platform.stopAll(sessionId: sessionId, reason: reason).catchError((Object _) {}),
     ]).then<void>((_) {});
     try {
       await cleanup;
     } finally {
       if (identical(_radioCleanup, cleanup)) _radioCleanup = null;
+    }
+  }
+
+  Future<void> _closeSocket() async {
+    final closing = _socketCleanup ??= _socket.close();
+    try {
+      await closing;
+    } finally {
+      if (identical(_socketCleanup, closing)) _socketCleanup = null;
     }
   }
 
@@ -1282,8 +1632,8 @@ class WifiDirectLabController extends ChangeNotifier {
     _batchEpoch++;
     _platformEventSub?.cancel();
     _platformEventSub = null;
-    unawaited(_socket.close());
     final sessionId = _invalidateRadioSession();
+    unawaited(_closeSocket());
     if (sessionId != null) {
       unawaited(_platform.stopAll(sessionId: sessionId, reason: 'controller_disposed'));
     }

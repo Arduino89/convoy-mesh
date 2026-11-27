@@ -43,6 +43,7 @@ import io.flutter.plugin.common.MethodChannel
  */
 class ConvoyWifiDirectLabAdapter(
     private val activity: Activity,
+    private val canStartBackground: () -> Boolean,
 ) : MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
 
     companion object {
@@ -72,6 +73,7 @@ class ConvoyWifiDirectLabAdapter(
     private val cleanupReplies = mutableListOf<MethodChannel.Result>()
     private var pendingConnectResult: MethodChannel.Result? = null
 
+    private var backgroundSessionId: String? = null
     private var pendingPermissionResult: MethodChannel.Result? = null
 
     private fun createReceiver(session: WifiDirectSession) = object : BroadcastReceiver() {
@@ -147,8 +149,32 @@ class ConvoyWifiDirectLabAdapter(
                 "discoverPeers" -> handleDiscoverPeers(call, result)
                 "connectPeer" -> handleConnectPeer(call, result)
                 "advertiseConvoyName" -> handleAdvertiseConvoyName(call, result)
+                "startBackgroundLab" -> {
+                    val id = call.argument<String>("sessionId")
+                    if (id.isNullOrBlank() || !canStartBackground() ||
+                        checkP2pPreflight() != null || p2pSession != null ||
+                        (Build.VERSION.SDK_INT >= 33 && !hasPermission(Manifest.permission.POST_NOTIFICATIONS))
+                    ) {
+                        result.success(false)
+                        return
+                    }
+                    backgroundSessionId = id
+                    WifiDirectLabService.start(app, id, { started ->
+                        if (!started && backgroundSessionId == id) backgroundSessionId = null
+                        result.success(started)
+                    }) { stoppedId, reason ->
+                        if (backgroundSessionId == stoppedId) {
+                            backgroundSessionId = null
+                            val session = p2pSession
+                            if (session?.id == stoppedId) endSession(session, reason)
+                            else eventSink?.success(mapOf("type" to "p2p_disconnected",
+                                "reason" to reason, "session_ended" to true, "session_id" to stoppedId))
+                        }
+                    }
+                }
                 "stopAll" -> {
                     val sessionId = call.argument<String>("sessionId")
+                    if (sessionId != null && backgroundSessionId == sessionId) stopBackgroundLab()
                     when {
                         sessionId != null && p2pSession?.id == sessionId -> {
                             cleanupReplies.add(result)
@@ -177,7 +203,14 @@ class ConvoyWifiDirectLabAdapter(
         return true
     }
 
+    private fun stopBackgroundLab() {
+        val id = backgroundSessionId ?: return
+        backgroundSessionId = null
+        WifiDirectLabService.stop(app, id)
+    }
+
     fun dispose() {
+        stopBackgroundLab()
         pendingPermissionResult = null
         stopAllInternal()
         eventSink = null
@@ -796,6 +829,7 @@ class ConvoyWifiDirectLabAdapter(
 
     private fun endSession(session: WifiDirectSession, reason: String) {
         if (!session.isActive) return
+        if (backgroundSessionId == session.id) stopBackgroundLab()
         eventSink?.success(mapOf("type" to "p2p_disconnected", "reason" to reason,
             "session_ended" to true, "session_id" to session.id))
         stopAllInternal()
