@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 APK=${1:?APK path required}
 PACKAGE=${2:-com.example.convoy_mesh}
 ACTIVITY=com.example.convoy_mesh.MainActivity
@@ -18,6 +18,7 @@ collect() {
   timeout 15 adb exec-out screencap -p > "$OUT/final-screen.png"
 }
 trap collect EXIT
+trap 'printf "Smoke failed at line %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2; tail -15 "$OUT/readiness.txt" >&2 || true' ERR
 runtime_ready() {
   local name=$1
   timeout 15 adb shell dumpsys activity services "$PACKAGE" > "$OUT/services-$name.txt" || return 1
@@ -276,8 +277,14 @@ if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VER
   wait_and_tap_text 'Apri Wi-Fi Direct LAB (solo probe sintetici)' open-integrated-wifi
   sleep 3
   assert_no_runtime wifi-lab-open
-  timeout 15 adb shell uiautomator dump /sdcard/convoy-integrated-lab.xml >/dev/null 2>&1 || true
-  timeout 15 adb shell cat /sdcard/convoy-integrated-lab.xml > "$OUT/ui-integrated-wifi.xml"
+  for try in {1..5}; do
+    if timeout 15 adb shell uiautomator dump /sdcard/convoy-integrated-lab.xml >/dev/null &&
+      timeout 15 adb shell cat /sdcard/convoy-integrated-lab.xml > "$OUT/ui-integrated-wifi.xml" &&
+      grep -Fq 'Convoy Wi-Fi Direct LAB' "$OUT/ui-integrated-wifi.xml"; then
+      break
+    fi
+    sleep 1
+  done
   grep -Fq 'Convoy Wi-Fi Direct LAB' "$OUT/ui-integrated-wifi.xml"
   if grep -Fq 'Torna a Convoy mantenendo il gruppo' "$OUT/ui-integrated-wifi.xml"; then
     echo 'Retention offered without a Wi-Fi Direct group' >&2
@@ -287,11 +294,12 @@ if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VER
     awk -F '[: x]+' '/ size:/ {width=$(NF-1); height=$NF} END {print width, height}')
   location_ui=$OUT/ui-wifi-lab-location-off.xml
   for try in {1..5}; do
-    timeout 15 adb shell uiautomator dump /sdcard/convoy-lab-location.xml >/dev/null
-    timeout 15 adb shell cat /sdcard/convoy-lab-location.xml > "$location_ui"
-    if grep -Fq 'Impostazioni Posizione' "$location_ui"; then break; fi
-    timeout 15 adb shell input swipe "$((width / 2))" "$((height * 68 / 100))" \
-      "$((width / 2))" "$((height * 40 / 100))" 500
+    if timeout 15 adb shell uiautomator dump /sdcard/convoy-lab-location.xml >/dev/null &&
+      timeout 15 adb shell cat /sdcard/convoy-lab-location.xml > "$location_ui"; then
+      if grep -Fq 'Impostazioni Posizione' "$location_ui"; then break; fi
+      timeout 15 adb shell input swipe "$((width / 2))" "$((height * 68 / 100))" \
+        "$((width / 2))" "$((height * 40 / 100))" 500
+    fi
   done
   grep -Fq 'Impostazioni Posizione' "$location_ui"
   timeout 15 adb shell cmd location set-location-enabled true
