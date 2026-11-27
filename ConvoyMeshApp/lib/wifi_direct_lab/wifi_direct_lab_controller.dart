@@ -175,6 +175,7 @@ class WifiDirectLabController extends ChangeNotifier {
       if (!_isRadioSessionCurrent(id)) return false;
       if (!started) throw StateError('Servizio LAB non disponibile');
       _backgroundCode = code;
+      _localNodeId = WifiDirectSyntheticFrame.generateSyntheticNodeId(_random);
       _backgroundStarted = _elapsedMs();
       _sentProbes.clear();
       _deliveredProbesByRemote.clear();
@@ -1152,7 +1153,8 @@ class WifiDirectLabController extends ChangeNotifier {
     }
     void failed(String code, String message) {
       if (!current()) return;
-      _recordError(stage: 'socket_${role.wireName}', code: code, message: message,
+      _recordError(stage: 'socket_${role.wireName}', code: code,
+          message: isBackgroundLab ? 'Connessione TCP Wi-Fi Direct non disponibile.' : message,
           layer: WifiDirectEvidenceLayer.transport);
       if (isBackgroundLab) unawaited(_dropBackgroundSocket('socket_setup_failed'));
     }
@@ -1297,7 +1299,7 @@ class WifiDirectLabController extends ChangeNotifier {
       _recordError(
         stage: 'frame_parse',
         code: 'INVALID_SYNTHETIC_FRAME',
-        message: e.toString(),
+        message: 'Frame sintetico non valido.',
         layer: WifiDirectEvidenceLayer.application,
       );
       return;
