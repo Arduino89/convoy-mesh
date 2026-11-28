@@ -49,6 +49,7 @@ class _MapPageState extends State<MapPage> {
         }
         return;
       }
+      if (!mounted) return;
       await loc.startPreview();
     }
 

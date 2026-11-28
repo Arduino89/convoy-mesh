@@ -1,0 +1,851 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+import 'wifi_direct_lab_controller.dart';
+import 'wifi_direct_lab_models.dart';
+import 'wifi_direct_lab_pairing.dart';
+
+/// Isolated Flutter application root for the Wi-Fi Direct Offline Lab.
+///
+/// Mounting this widget never instantiates `AppShell`, `ConvoyMeshService`,
+/// `BackgroundRuntimeService`, `LocationFusionService`, or PostHog uploaders.
+class WifiDirectOfflineLabApp extends StatelessWidget {
+  const WifiDirectOfflineLabApp({
+    super.key,
+    this.controller,
+  });
+
+  final WifiDirectLabController? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Convoy Wi-Fi Direct LAB',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1B5E20),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
+      home: WifiDirectLabPage(controller: controller),
+    );
+  }
+}
+
+class WifiDirectLabPage extends StatefulWidget {
+  const WifiDirectLabPage({
+    super.key,
+    this.controller,
+    this.integratedMode = false,
+    this.shellOwnsSession = false,
+  });
+
+  final WifiDirectLabController? controller;
+  final bool integratedMode;
+  /// The integrated shell is the sole owner of cleanup and app lifecycle.
+  final bool shellOwnsSession;
+
+  @override
+  State<WifiDirectLabPage> createState() => _WifiDirectLabPageState();
+}
+
+class _WifiDirectLabPageState extends State<WifiDirectLabPage>
+    with WidgetsBindingObserver {
+  late WifiDirectLabController _controller;
+  late bool _ownsController;
+  bool _probeSendConsented = false;
+  bool _exitInProgress = false;
+  final _labCode = TextEditingController();
+
+  Future<void> _returnToOutdoor() async {
+    if (_exitInProgress) return;
+    _exitInProgress = true;
+    try {
+      if (!widget.shellOwnsSession) {
+        await _controller.stopAll(reason: 'return_to_outdoor');
+      }
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      _exitInProgress = false;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.shellOwnsSession) WidgetsBinding.instance.addObserver(this);
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? WifiDirectLabController();
+    _controller.addListener(_onChanged);
+    unawaited(_controller.refreshEnvironment());
+  }
+
+  @override
+  void didUpdateWidget(WifiDirectLabPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      _controller.removeListener(_onChanged);
+      if (_ownsController) {
+        _controller.dispose();
+      }
+      _ownsController = widget.controller == null;
+      _controller = widget.controller ?? WifiDirectLabController();
+      _controller.addListener(_onChanged);
+      unawaited(_controller.refreshEnvironment());
+    }
+  }
+
+  void _onChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    unawaited(_controller.onAppLifecycleStateChanged(state));
+  }
+
+  @override
+  void dispose() {
+    _labCode.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _controller.removeListener(_onChanged);
+    if (_ownsController) {
+      _controller.dispose();
+    } else if (!widget.shellOwnsSession) {
+      unawaited(_controller.stopAll(reason: 'page_disposed'));
+    }
+    super.dispose();
+  }
+
+  Future<void> _confirmAndConnectPeer(String peerId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Conferma connessione a $peerId'),
+        content: Text(
+          'Stai per richiedere una connessione Wi-Fi Direct locale a $peerId.\n\n'
+          '• Nessuna connessione automatica a sconosciuti.\n'
+          '• Verranno scambiati solo probe sintetici e ACK con nonce.\n'
+          '• Il collegamento scambia solo dati sintetici. Il nome Convoy è visibile in scoperta solo a scelta dell’utente e non autentica il peer.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('wfd_cancel_connect_button'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            key: const Key('wfd_confirm_connect_button'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Acconsento e connetti'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await _controller.requestConnect(
+        peerId: peerId,
+        userConsented: true,
+      );
+    }
+  }
+
+  Future<void> _copyJsonlToClipboard() async {
+    final jsonl = _controller.exportJsonl();
+    await Clipboard.setData(ClipboardData(text: jsonl));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Log JSONL sintetico copiato (${_controller.logs.length} eventi, 0 MAC/SSID/coordinate).',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final env = _controller.environment;
+    final scheme = Theme.of(context).colorScheme;
+
+    return PopScope(
+      canPop: !widget.integratedMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && widget.integratedMode) {
+          unawaited(_returnToOutdoor());
+        }
+      },
+      child: Scaffold(
+      appBar: AppBar(
+        leading: widget.integratedMode
+            ? IconButton(
+                key: const Key('wfd_return_to_outdoor'),
+                tooltip: 'Chiudi LAB e torna a Convoy',
+                onPressed: _exitInProgress ? null : _returnToOutdoor,
+                icon: const Icon(Icons.arrow_back),
+              )
+            : null,
+        title: const Text('Convoy Wi-Fi Direct LAB • Gate 1'),
+        actions: [
+          if (widget.shellOwnsSession && _controller.isGroupFormed)
+            IconButton(
+              key: const Key('wfd_keep_group'),
+              tooltip: 'Torna a Convoy mantenendo il gruppo',
+              onPressed: () => Navigator.of(context).pop(true),
+              icon: const Icon(Icons.apps),
+            ),
+          IconButton(
+            key: const Key('wfd_appbar_stop_button'),
+            tooltip: 'Stop e chiudi risorse',
+            onPressed: () => _controller.stopAll(reason: 'manual_stop'),
+            icon: const Icon(Icons.stop_circle_outlined),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildIsolationBanner(scheme),
+            const SizedBox(height: 10),
+            if (_controller.lastError != null) ...[
+              _buildErrorBanner(_controller.lastError!, scheme),
+              const SizedBox(height: 10),
+            ],
+            _buildEnvironmentCard(env, scheme),
+            const SizedBox(height: 10),
+            _buildBackgroundLabCard(),
+            const SizedBox(height: 10),
+            _buildDiscoveryAndPeersCard(env, scheme),
+            const SizedBox(height: 10),
+            _buildSocketAndProbesCard(scheme),
+            const SizedBox(height: 10),
+            _buildEventLogCard(scheme),
+          ],
+        ),
+      ),
+      ),
+    );
+  }
+
+  Widget _buildIsolationBanner(ColorScheme scheme) {
+    return Card(
+      color: scheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.integratedMode
+                  ? 'Wi-Fi Direct LAB — opzione sperimentale Outdoor'
+                  : 'Laboratorio Wi-Fi Direct Offline (app separata)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: scheme.onSecondaryContainer,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Bluetooth spento • Internet assente • Solo probe sintetici e ACK '
+              '(nessuna coordinata reale, nessun BLE, nessun FGS, nessun PostHog o Rescue).',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: scheme.onSecondaryContainer,
+              ),
+            ),
+            const SizedBox(height: 6),
+            SelectableText(
+              'Sessione: ${_controller.sessionId} • Nodo locale: ${_controller.localNodeId}',
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'monospace',
+                color: scheme.onSecondaryContainer,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String errorText, ColorScheme scheme) {
+    return Container(
+      key: const Key('wfd_error_banner'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: scheme.error),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, color: scheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              errorText,
+              style: TextStyle(
+                color: scheme.onErrorContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnvironmentCard(
+    WifiDirectEnvironmentStatus env,
+    ColorScheme scheme,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              '1. Verifica ambiente Android (BT spento / Offline / Permessi)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            const SizedBox(height: 8),
+            _statusRow(
+              label: 'Feature Wi-Fi Direct (PackageManager)',
+              value: env.wifiDirectFeatureSupported && env.wifiP2pServiceAvailable
+                  ? 'Supportato (OK)'
+                  : 'Non disponibile',
+              ok: env.wifiDirectFeatureSupported && env.wifiP2pServiceAvailable,
+            ),
+            _statusRow(
+              label: 'Bluetooth (deve restare SPENTO)',
+              value: env.isBluetoothOffClean
+                  ? 'SPENTO (OK)'
+                  : 'ATTIVO — Spegnere Bluetooth',
+              ok: env.isBluetoothOffClean,
+            ),
+            _statusRow(
+              label: 'Wi-Fi / Stato P2P',
+              value: env.wifiEnabled && env.p2pStateEnabled
+                  ? 'ATTIVO (OK)'
+                  : 'SPENTO — Attivare Wi-Fi',
+              ok: env.wifiEnabled && env.p2pStateEnabled,
+            ),
+            _statusRow(
+              label: 'Internet (prova offline senza router)',
+              value: env.isOfflineClean
+                  ? 'ASSENTE (OK offline)'
+                  : 'Connessione Internet rilevata (disattivare dati/router)',
+              ok: env.isOfflineClean,
+            ),
+            _statusRow(
+              label: 'Permesso P2P (${env.requiredPermissionName}, SDK ${env.sdkInt})',
+              value: env.requiredRuntimePermissionGranted
+                  ? 'Concesso (OK)'
+                  : 'Non concesso',
+              ok: env.requiredRuntimePermissionGranted,
+            ),
+            _statusRow(
+              label: 'Posizione Android (richiesta per la scoperta)',
+              value: env.locationServiceEnabled ? 'Attiva' : 'Disattivata',
+              ok: env.locationServiceEnabled,
+            ),
+            _statusRow(
+              label: 'Servizio Foreground (FGS)',
+              value: !env.foregroundServiceRunning
+                  ? 'Inattivo (OK)'
+                  : 'Attivo (non consentito nel LAB)',
+              ok: !env.foregroundServiceRunning,
+            ),
+            if (env.readinessBlockers.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              for (final blocker in env.readinessBlockers)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '• $blocker',
+                    style: TextStyle(color: scheme.error, fontSize: 12.5),
+                  ),
+                ),
+            ],
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('wfd_refresh_env_button'),
+                  onPressed: _controller.refreshEnvironment,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Aggiorna stato'),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('wfd_request_permission_button'),
+                  onPressed: _controller.requestPermission,
+                  icon: const Icon(Icons.verified_user_outlined, size: 18),
+                  label: const Text('Richiedi permesso P2P'),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('wfd_open_bt_settings_button'),
+                  onPressed: _controller.openBluetoothSettings,
+                  icon: const Icon(Icons.bluetooth_disabled, size: 18),
+                  label: const Text('Impostazioni BT'),
+                ),
+                if (!env.locationServiceEnabled)
+                  OutlinedButton.icon(
+                    key: const Key('wfd_open_location_settings_button'),
+                    onPressed: _controller.openLocationSettings,
+                    icon: const Icon(Icons.location_searching, size: 18),
+                    label: const Text('Impostazioni Posizione'),
+                  ),
+                OutlinedButton.icon(
+                  key: const Key('wfd_open_wifi_settings_button'),
+                  onPressed: _controller.openWifiSettings,
+                  icon: const Icon(Icons.wifi, size: 18),
+                  label: const Text('Impostazioni Wi-Fi'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startBackgroundLab() async {
+    final code = _labCode.text;
+    if (!WifiDirectLabPairing.isCode(code.trim().toLowerCase())) {
+      await _controller.startBackgroundLab(code);
+      return;
+    }
+    if (_controller.environment.sdkInt >= 33 &&
+        !(await Permission.notification.request()).isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Concedi Notifiche per poter fermare il LAB a schermo spento.'),
+        ));
+      }
+      return;
+    }
+    if (mounted && await _controller.startBackgroundLab(code) && mounted) {
+      _labCode.clear();
+    }
+  }
+
+  Widget _buildBackgroundLabCard() {
+    final active = _controller.isBackgroundLab;
+    final quality = _controller.quality;
+    final theme = Theme.of(context);
+    final percent = quality.ackPercentage;
+    final color = switch (quality.label) {
+      'Stabile' => theme.colorScheme.primary,
+      'Variabile' => theme.colorScheme.tertiary,
+      'Debole' => theme.colorScheme.error,
+      _ => theme.colorScheme.outline,
+    };
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Wi-Fi Direct a schermo spento', style: theme.textTheme.titleMedium),
+            Text(_controller.backgroundStatus, key: const Key('wfd_background_status')),
+            if (!active) ...[
+              const SizedBox(height: 8),
+              const Text('Sessione fino a 30 minuti. Invia un probe sintetico ogni 5 secondi dopo la verifica del peer.'),
+              const Text('Condividi in privato un codice LAB generato e inseriscilo su entrambi i telefoni prima della ricerca.'),
+              TextField(
+                key: const Key('wfd_background_code'),
+                controller: _labCode,
+                enabled: _controller.canStartBackgroundLab,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: const InputDecoration(labelText: 'Codice LAB temporaneo'),
+              ),
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: _controller.canStartBackgroundLab
+                        ? () => _labCode.text = WifiDirectLabPairing.newCode()
+                        : null,
+                    child: const Text('Genera codice'),
+                  ),
+                  FilledButton.tonal(
+                    key: const Key('wfd_start_background'),
+                    onPressed: _controller.canStartBackgroundLab ? _startBackgroundLab : null,
+                    child: const Text('Avvia LAB schermo spento'),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            Row(children: [
+              Icon(Icons.network_check, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Qualità Wi-Fi Direct · ${quality.label}',
+                  key: const Key('wfd_link_quality'))),
+            ]),
+            LinearProgressIndicator(
+              value: quality.connected && quality.samples >= 5 ? percent! / 100 : 0,
+              color: color,
+            ),
+            Text([
+              if (percent != null) 'ACK $percent%',
+              if (quality.medianRttMs != null) 'RTT mediano ${quality.medianRttMs} ms',
+              'Timeout ${quality.timeouts}',
+              'Ritrasmissioni ${quality.retries}',
+              if (quality.lastAckAgeMs != null) 'Ultimo ACK ${quality.lastAckAgeMs! ~/ 1000} s fa',
+              'Collegato ${quality.connectedMs ~/ 1000} s',
+              'Interruzioni ${quality.interruptions}',
+            ].join(' · ')),
+            const Text('Finestra di 60 secondi. RSSI Wi-Fi Direct non disponibile.'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiscoveryAndPeersCard(
+    WifiDirectEnvironmentStatus env,
+    ColorScheme scheme,
+  ) {
+    final peers = _controller.peers;
+    final convoyPeers = peers.where((peer) => peer.declaredName != null).toList();
+    final otherPeers = peers.where((peer) => peer.declaredName == null).toList();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              '2. Scoperta e connessione Wi-Fi Direct (Consenso locale)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Ogni peer ha un ID temporaneo. Un nome Convoy dichiarato può '
+              'essere condiviso o imitato da più dispositivi e non autentica il peer.',
+              style: TextStyle(fontSize: 12.5),
+            ),
+            const SizedBox(height: 10),
+            SwitchListTile(
+              key: const Key('wfd_share_convoy_name'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Mostra il mio nome Convoy ai dispositivi vicini'),
+              subtitle: const Text('Solo nel LAB. Puoi disattivarlo qui o usare Stop.'),
+              value: _controller.sharesConvoyName,
+              onChanged: (_controller.radioOperationPending || _controller.isConnecting)
+                  ? null
+                  : _controller.setShareConvoyName,
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  key: const Key('wfd_discover_button'),
+                  onPressed: (_controller.radioOperationPending || _controller.isConnecting || _controller.isGroupFormed)
+                      ? null
+                      : _controller.requestDiscovery,
+                  icon: const Icon(Icons.radar),
+                  label: Text(
+                    _controller.isDiscovering
+                        ? 'Riavvia scoperta peer P2P'
+                        : 'Scopri peer Wi-Fi Direct',
+                  ),
+                ),
+                if (peers.isEmpty)
+                  OutlinedButton.icon(
+                    key: const Key('wfd_no_peers_button'),
+                    onPressed: _controller.reportNoPeersObserved,
+                    icon: const Icon(Icons.search_off),
+                    label: const Text('Annota 0 peer rilevati'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text('Servizio Convoy rilevato (${convoyPeers.length})'),
+            if (convoyPeers.isEmpty)
+              const Text('Per vedere i nomi, attiva l’annuncio e la scoperta su entrambi i telefoni.')
+            else
+              for (final peer in convoyPeers) _buildPeerRow(peer),
+            if (otherPeers.isNotEmpty)
+              ExpansionTile(
+                key: const Key('wfd_other_p2p'),
+                tilePadding: EdgeInsets.zero,
+                title: Text('Altri dispositivi P2P (${otherPeers.length})'),
+                subtitle: const Text('Diagnostica. Servizio Convoy non rilevato.'),
+                children: [for (final peer in otherPeers) _buildPeerRow(peer)],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeerRow(WifiDirectSyntheticPeer peer) => ListTile(
+    contentPadding: EdgeInsets.zero,
+    leading: const Icon(Icons.phonelink_ring),
+    title: Text(
+      peer.declaredName == null
+          ? '${peer.peerId} (${peer.status})'
+          : '${peer.declaredName} — ${peer.peerId} (${peer.status})',
+      style: const TextStyle(fontWeight: FontWeight.w600),
+    ),
+    subtitle: Text(
+      '${peer.declaredName == null ? '' : 'Nome dichiarato, non autenticato.\n'}'
+      'Rilevato a t=${peer.firstSeenElapsedMs} ms • agg. ${peer.lastSeenElapsedMs} ms',
+      style: const TextStyle(fontSize: 12),
+    ),
+    trailing: FilledButton.tonal(
+      key: Key('wfd_connect_${peer.peerId}'),
+      onPressed: (_controller.radioOperationPending || _controller.isConnecting || _controller.isGroupFormed)
+          ? null
+          : () => _confirmAndConnectPeer(peer.peerId),
+      child: const Text('Connetti'),
+    ),
+  );
+
+  Widget _buildSocketAndProbesCard(ColorScheme scheme) {
+    final rttMean = _controller.meanRttMs;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              '3. Connessione Socket TCP & Scambio Bidirezionale (20 Probe + ACK)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            const SizedBox(height: 8),
+            _statusRow(
+              label: 'Gruppo Wi-Fi Direct (group_formed)',
+              value: _controller.isGroupFormed
+                  ? 'FORMATO (ruolo: ${_controller.groupRole.wireName})'
+                  : 'Non formato',
+              ok: _controller.isGroupFormed,
+            ),
+            _statusRow(
+              label: 'Socket TCP locale (socket_open)',
+              value: _controller.isSocketOpen
+                  ? 'APERTO (porta ${_controller.activePort})'
+                  : 'Chiuso',
+              ok: _controller.isSocketOpen,
+            ),
+            const Divider(height: 16),
+            CheckboxListTile(
+              key: const Key('wfd_probe_consent_checkbox'),
+              contentPadding: EdgeInsets.zero,
+              value: _probeSendConsented,
+              onChanged: (val) =>
+                  setState(() => _probeSendConsented = val ?? false),
+              title: const Text(
+                'Confermo l’invio locale di soli probe sintetici (seq + nonce casuale, 0 coordinate)',
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  key: const Key('wfd_send_20_probes_button'),
+                  onPressed: _controller.isSendingBatch
+                      ? null
+                      : () => _controller.sendProbeBatch(
+                            userConsented: _probeSendConsented,
+                            count: WifiDirectLabController.defaultProbeBatchSize,
+                          ),
+                  icon: const Icon(Icons.send),
+                  label: const Text('Invia 20 probe sintetici'),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('wfd_send_single_probe_button'),
+                  onPressed: _controller.isSendingBatch
+                      ? null
+                      : () => _controller.sendSingleProbe(
+                            userConsented: _probeSendConsented,
+                          ),
+                  icon: const Icon(Icons.bolt),
+                  label: const Text('Invia 1 probe'),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('wfd_resume_probes_button'),
+                  onPressed: _controller.isSendingBatch
+                      ? null
+                      : () => _controller.resumeAfterReconnect(
+                            userConsented: _probeSendConsented,
+                          ),
+                  icon: const Icon(Icons.replay),
+                  label: const Text('Riprendi non confermati'),
+                ),
+                FilledButton.tonalIcon(
+                  key: const Key('wfd_stop_all_button'),
+                  onPressed: () => _controller.stopAll(reason: 'manual_stop'),
+                  icon: const Icon(Icons.stop),
+                  label: const Text('STOP • Chiudi tutto'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Inviati (probe_sent): ${_controller.probesSentCount} • '
+                    'Confermati (ack_received): ${_controller.acksConfirmedCount} • '
+                    'Non confermati/persi: ${_controller.unconfirmedProbesCount}',
+                    key: const Key('wfd_outbound_counters_text'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Falsi ACK respinti: ${_controller.falseAcksRejected} (0 false conferme) • '
+                    'ACK duplicati ignorati: ${_controller.duplicateAcksIgnored}',
+                    key: const Key('wfd_ack_integrity_text'),
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ricevuti unici (probe_received): ${_controller.uniqueProbesDelivered} • '
+                    'Duplicati soppressi: ${_controller.duplicateProbesSuppressed} • '
+                    'ACK inviati: ${_controller.acksSentCount}',
+                    key: const Key('wfd_inbound_counters_text'),
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'RTT locale (ms): min=${_controller.minRttMs ?? "-"} • '
+                    'medio=${rttMean != null ? rttMean.toStringAsFixed(1) : "-"} • '
+                    'max=${_controller.maxRttMs ?? "-"}',
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventLogCard(ColorScheme scheme) {
+    final entries = _controller.logs.reversed.toList(growable: false);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '4. Log eventi distinguibili (${_controller.logs.length})',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                TextButton.icon(
+                  key: const Key('wfd_copy_jsonl_button'),
+                  onPressed:
+                      _controller.logs.isEmpty ? null : _copyJsonlToClipboard,
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: const Text('Copia JSONL'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Eventi di sistema (system), trasporto (transport) e applicativi (application) registrati separatamente.',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            if (entries.isEmpty)
+              const Text(
+                'Nessun evento registrato.',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              )
+            else
+              for (final e in entries.take(60))
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: SelectableText(
+                    '#${e.index} [${e.layer.wireName}] +${e.elapsedMs}ms ${e.kind.wireName} ${e.data}',
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11.5,
+                    ),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusRow({
+    required String label,
+    required String value,
+    required bool ok,
+  }) {
+    final color = ok ? const Color(0xFF1B5E20) : const Color(0xFFB71C1C);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      child: Row(
+        children: [
+          Icon(
+            ok ? Icons.check_circle_outline : Icons.cancel_outlined,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

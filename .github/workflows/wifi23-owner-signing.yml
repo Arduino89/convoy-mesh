@@ -1,0 +1,129 @@
+name: Wi-Fi +23 protected signing and update
+on:
+  push:
+    branches: [experiment/wifi-direct-offline-lab-20261121]
+    paths: ['.github/convoy-wifi23-signing-request.json']
+permissions:
+  actions: read
+  contents: read
+concurrency:
+  group: convoy-wifi23-owner-signing
+jobs:
+  sign-and-upgrade:
+    if: github.repository == 'Arduino89/convoy-mesh'
+    environment: convoy-beta-signing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      EXPECTED_CERT: dd058e998369d9e3b46ae91e60177b95a31aa096a6ed04b9f7ba29142480f965
+      BASE_HASH: a16cc631cb42c162fd084414890369829946d3125831af54f89a16eb5f27eb2f
+      PACKAGE: com.example.convoy_mesh.outdoor
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Fetch exact reviewed encrypted candidate and verified signed +22
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          request=.github/convoy-wifi23-signing-request.json
+          run=$(jq -er '.run | strings | select(test("^[0-9]+$"))' "$request")
+          source=$(jq -er '.source_sha | strings | select(test("^[0-9a-f]{40}$"))' "$request")
+          sha=$(jq -er '.apk_sha256 | strings | select(test("^[0-9a-f]{64}$"))' "$request")
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" |
+            jq -e --arg sha "$source" --arg branch "$GITHUB_REF_NAME" \
+              '.head_sha == $sha and .head_branch == $branch and .conclusion == "success" and .path == ".github/workflows/android-debug.yml"'
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/jobs" |
+            jq -e 'any(.jobs[].steps[]; .name == "Exercise Wi-Fi LAB and Outdoor on API 35" and .conclusion == "success")'
+          gh run download "$run" --name convoy-wifi23-encrypted-candidate --dir candidate
+          jq -e --arg source "$source" --arg sha "$sha" --arg run "$run" --arg package "$PACKAGE" \
+            '.source_sha == $source and .run == $run and .apk_sha256 == $sha and .package == $package and
+             .version_code == 23 and .version_name == "0.7.7-outdoor" and .smoke_api == 35' candidate/receipt.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/44949115682" |
+            jq -e '.head_sha == "8337ecf38f341845bbf9a3acef6d9649eecfb1ff" and .conclusion == "success"'
+          gh run download 44949115682 --name convoy-outdoor-beta-22-signed-verified --dir base
+          printf '%s  %s\n' "$BASE_HASH" base/Convoy-Outdoor-Beta-22.apk | sha256sum --check -
+      - name: Verify candidate bytes and sign with pinned owner certificate
+        shell: bash
+        env:
+          WIFI23_RECIPIENT_PEM: ${{ secrets.CONVOY_WIFI23_RECIPIENT_PEM }}
+          KEYSTORE_BASE64: ${{ secrets.CONVOY_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.CONVOY_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          : "${WIFI23_RECIPIENT_PEM:?}" "${KEYSTORE_BASE64:?}" "${KEYSTORE_PASSWORD:?}"
+          temp=$(mktemp -d "$RUNNER_TEMP/convoy-wifi23.XXXXXX")
+          trap 'rm -rf -- "$temp"' EXIT
+          printf '%s\n' "$WIFI23_RECIPIENT_PEM" > "$temp/recipient.pem"
+          unset WIFI23_RECIPIENT_PEM
+          openssl x509 -in "$temp/recipient.pem" -out delivery-recipient.pem
+          openssl x509 -in delivery-recipient.pem -outform DER -out "$temp/recipient.der"
+          recipient_sha=$(jq -er '.recipient_certificate_sha256 | strings | select(test("^[0-9a-f]{64}$"))' candidate/receipt.json)
+          printf '%s  %s\n' "$recipient_sha" "$temp/recipient.der" | sha256sum --check -
+          openssl cms -decrypt -binary -inform DER -in candidate/Convoy-Outdoor-23-debug.apk.cms \
+            -recip delivery-recipient.pem -inkey "$temp/recipient.pem" -out "$temp/debug.apk"
+          sha=$(jq -er '.apk_sha256 | strings | select(test("^[0-9a-f]{64}$"))' candidate/receipt.json)
+          printf '%s  %s\n' "$sha" "$temp/debug.apk" | sha256sum --check -
+          test "$(stat -c%s "$temp/debug.apk")" = "$(jq -er '.apk_bytes' candidate/receipt.json)"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$temp/owner.p12"
+          unset KEYSTORE_BASE64
+          tools=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          jar="$tools/lib/apksigner.jar"
+          javac -cp "$jar" -d "$temp" tools/ConvoyApkCertificate.java
+          verify() { java -cp "$jar:$temp" ConvoyApkCertificate "$1" "$EXPECTED_CERT"; }
+          identity() {
+            "$tools/aapt" dump badging "$1" > "$temp/badging"
+            grep -Fq "package: name='$PACKAGE' versionCode='$2' versionName='0.7.7-outdoor'" "$temp/badging"
+          }
+          identity base/Convoy-Outdoor-Beta-22.apk 22
+          verify base/Convoy-Outdoor-Beta-22.apk
+          identity "$temp/debug.apk" 23
+          "$tools/apksigner" verify "$temp/debug.apk"
+          "$tools/zipalign" -c -P 16 4 "$temp/debug.apk"
+          if verify "$temp/debug.apk"; then echo 'Candidate already carries the owner certificate'; exit 1; fi
+          keytool -exportcert -keystore "$temp/owner.p12" -storetype PKCS12 -alias convoy-beta \
+            -storepass:env KEYSTORE_PASSWORD -file "$temp/owner.der"
+          printf '%s  %s\n' "$EXPECTED_CERT" "$temp/owner.der" | sha256sum --check -
+          "$tools/apksigner" sign --ks "$temp/owner.p12" --ks-type PKCS12 --ks-key-alias convoy-beta \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD --out signed-23.apk "$temp/debug.apk"
+          "$tools/zipalign" -c -P 16 4 signed-23.apk
+          identity signed-23.apk 23
+          verify signed-23.apk
+          sha256sum signed-23.apk > signed-23.sha256
+      - name: Enable KVM
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Require signed in-place update on Android 35
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          disable-animations: true
+          script: bash tools/android_wifi23_signed_upgrade.sh base/Convoy-Outdoor-Beta-22.apk signed-23.apk
+      - name: Seal the verified signed candidate
+        run: |
+          set -euo pipefail
+          sha256sum --check signed-23.sha256
+          mkdir delivery
+          openssl cms -encrypt -binary -aes-256-gcm -outform DER -in signed-23.apk \
+            -out delivery/Convoy-Outdoor-Beta-23.apk.cms delivery-recipient.pem
+          cp signed-23.sha256 candidate/receipt.json delivery/
+      - name: Upload only ciphertext and provenance
+        uses: actions/upload-artifact@v7
+        with:
+          name: convoy-wifi23-signed-upgrade-verified-encrypted
+          path: delivery/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30

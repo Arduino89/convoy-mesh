@@ -18,11 +18,14 @@ class DiagnosticPage extends StatefulWidget {
     this.deviceIdOverride,
     this.deviceNameOverride,
     this.captureNowOverride,
+    this.onOpenWifiDirectLab,
   });
 
   final int? deviceIdOverride;
   final String? deviceNameOverride;
   final VoidCallback? captureNowOverride;
+  /// Optional entry into the isolated Wi-Fi Direct LAB; absent in normal builds.
+  final VoidCallback? onOpenWifiDirectLab;
 
   @override
   State<DiagnosticPage> createState() => _DiagnosticPageState();
@@ -164,6 +167,13 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
           appBar: AppBar(
             title: Text(t != null ? t.copy.diagnosticTitle : 'Test diagnostico'),
             actions: [
+              if (widget.onOpenWifiDirectLab != null)
+                IconButton(
+                  key: const Key('diag-open-wifi-lab-btn'),
+                  tooltip: 'Apri Wi-Fi Direct LAB (solo probe sintetici)',
+                  icon: const Icon(Icons.wifi_tethering_outlined),
+                  onPressed: widget.onOpenWifiDirectLab,
+                ),
               IconButton(
                 key: const Key('diag-open-design-btn'),
                 tooltip: 'Personalizza Outdoor Premium o torna a Originale',

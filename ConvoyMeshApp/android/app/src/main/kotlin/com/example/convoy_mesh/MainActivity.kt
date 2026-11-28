@@ -16,13 +16,42 @@ class MainActivity : FlutterActivity() {
         private var registeredEngine: FlutterEngine? = null
         private var uiResumed = false
     }
+    private var wifiDirectLabAdapter: ConvoyWifiDirectLabAdapter? = null
+
     override fun provideFlutterEngine(context: Context): FlutterEngine? =
         FlutterEngineCache.getInstance().get(ConvoyForegroundService.ENGINE_ID)
     override fun shouldDestroyEngineWithHost(): Boolean = false
     override fun onResume() { super.onResume(); uiResumed = true }
     override fun onPause() { uiResumed = false; super.onPause() }
+    override fun onDestroy() {
+        wifiDirectLabAdapter?.dispose()
+        wifiDirectLabAdapter = null
+        super.onDestroy()
+    }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        if (wifiDirectLabAdapter?.onRequestPermissionsResult(requestCode, permissions, grantResults) == true) {
+            return
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        val wifiAdapter = wifiDirectLabAdapter ?: ConvoyWifiDirectLabAdapter(this) { uiResumed }.also {
+            wifiDirectLabAdapter = it
+        }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            ConvoyWifiDirectLabAdapter.METHOD_CHANNEL,
+        ).setMethodCallHandler(wifiAdapter)
+        EventChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            ConvoyWifiDirectLabAdapter.EVENT_CHANNEL,
+        ).setStreamHandler(wifiAdapter)
+
         if (registeredEngine === flutterEngine) return
         super.configureFlutterEngine(flutterEngine)
         registeredEngine = flutterEngine
@@ -41,6 +70,7 @@ class MainActivity : FlutterActivity() {
                             result.success(true)
                         }
                         "startForegroundRuntime" -> {
+                            check(!WifiDirectLabService.isActive) { "Prima chiudere il Wi-Fi Direct LAB" }
                             check(uiResumed) { "Aprire Convoy Mesh per avviare l'uscita" }
                             val intent = Intent(app, ConvoyForegroundService::class.java)
                             if (Build.VERSION.SDK_INT >= 26) app.startForegroundService(intent) else app.startService(intent)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 APK=${1:?APK path required}
 PACKAGE=${2:-com.example.convoy_mesh}
 ACTIVITY=com.example.convoy_mesh.MainActivity
@@ -18,6 +18,7 @@ collect() {
   timeout 15 adb exec-out screencap -p > "$OUT/final-screen.png"
 }
 trap collect EXIT
+trap 'printf "Smoke failed at line %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2; tail -15 "$OUT/readiness.txt" >&2 || true' ERR
 runtime_ready() {
   local name=$1
   timeout 15 adb shell dumpsys activity services "$PACKAGE" > "$OUT/services-$name.txt" || return 1
@@ -209,6 +210,41 @@ count_matches() {
 
 timeout 90 adb install -r "$APK" | tee "$OUT/install.txt"
 grep -q 'Success' "$OUT/install.txt"
+if [[ "$PACKAGE" == "com.example.convoy_mesh.wifilab" ]]; then
+  timeout 15 adb shell pm grant "$PACKAGE" android.permission.NEARBY_WIFI_DEVICES >/dev/null 2>&1 || true
+  for permission in ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION BLUETOOTH_SCAN BLUETOOTH_CONNECT BLUETOOTH_ADVERTISE; do
+    timeout 15 adb shell pm revoke "$PACKAGE" "android.permission.$permission" >/dev/null 2>&1 || true
+  done
+  timeout 15 adb shell cmd bluetooth_manager disable >/dev/null 2>&1 || true
+  timeout 15 adb shell input keyevent KEYCODE_WAKEUP
+  timeout 15 adb shell wm dismiss-keyguard
+  timeout 15 adb logcat -c
+
+  launch_app_process wifilab-first-run
+  sleep 4
+  assert_no_runtime wifilab-boot
+  timeout 15 adb exec-out screencap -p > "$OUT/wifilab-screen.png"
+  timeout 15 adb shell uiautomator dump /sdcard/convoy-wifilab-ui.xml >/dev/null 2>&1 || true
+  timeout 15 adb shell cat /sdcard/convoy-wifilab-ui.xml > "$OUT/ui-wifilab.xml" 2>/dev/null || true
+  grep -Fq 'Convoy Wi-Fi Direct LAB' "$OUT/ui-wifilab.xml"
+  if grep -Eq 'Radar BLE|Avvia uscita' "$OUT/ui-wifilab.xml"; then
+    echo 'Wi-Fi Direct LAB unexpectedly mounted AppShell/BLE UI' >&2
+    exit 1
+  fi
+  timeout 15 adb shell dumpsys package "$PACKAGE" > "$OUT/wifilab-permissions.txt"
+  if grep -Eq 'android\.permission\.ACCESS_(FINE|COARSE)_LOCATION: granted=true' "$OUT/wifilab-permissions.txt"; then
+    echo 'Wi-Fi Direct LAB unexpectedly requested or received location permission on API 35' >&2
+    exit 1
+  fi
+  timeout 15 adb logcat -d --pid="$PID" > "$OUT/app-logcat.txt"
+  if grep -E 'FATAL EXCEPTION|Fatal signal|Unhandled Exception|EXCEPTION CAUGHT BY' "$OUT/app-logcat.txt"; then
+    echo 'App exception detected in Wi-Fi Direct LAB' >&2
+    exit 1
+  fi
+  printf '%s\n' 'PASS: Wi-Fi Direct Offline Lab APK installed as com.example.convoy_mesh.wifilab; launched isolated WifiDirectOfflineLabApp with Bluetooth off, zero location permission granted on API 35, zero ConvoyForegroundService runtime, zero AppShell/BLE startup, and zero app exceptions.' > "$OUT/result.txt"
+  printf '%s\n' 'NOT TESTED: physical two-phone Wi-Fi Direct radio discovery, group formation, range (10..150 m), OEM P2P behavior, and screen-off battery impact require two real Android handsets.' >> "$OUT/result.txt"
+  exit 0
+fi
 # Grant Bluetooth first but deliberately leave location ungranted. Nearby itself
 # must request location on a clean Android 12+ install because Convoy uses BLE
 # observations as proximity/location evidence and does not declare neverForLocation.
@@ -234,6 +270,58 @@ timeout 15 adb exec-out screencap -p > "$OUT/nearby-screen.png"
 
 # A diagnostic session may begin BEFORE an outing and must span the transition.
 wait_and_tap_text 'Test log' open-test-log
+# The integrated branch uses the same Outdoor package; the Wi-Fi LAB is a
+# separate route, not a second installed app or an always-running transport.
+if [[ "$PACKAGE" == "com.example.convoy_mesh.outdoor" && "${EXPECTED_OUTDOOR_VERSION:-}" == "0.7.7-outdoor+27" ]]; then
+  timeout 15 adb shell cmd location set-location-enabled false
+  wait_and_tap_text 'Apri Wi-Fi Direct LAB (solo probe sintetici)' open-integrated-wifi
+  sleep 3
+  assert_no_runtime wifi-lab-open
+  for try in {1..5}; do
+    if timeout 15 adb shell uiautomator dump /sdcard/convoy-integrated-lab.xml >/dev/null &&
+      timeout 15 adb shell cat /sdcard/convoy-integrated-lab.xml > "$OUT/ui-integrated-wifi.xml" &&
+      grep -Fq 'Convoy Wi-Fi Direct LAB' "$OUT/ui-integrated-wifi.xml"; then
+      break
+    fi
+    sleep 1
+  done
+  grep -Fq 'Convoy Wi-Fi Direct LAB' "$OUT/ui-integrated-wifi.xml"
+  if grep -Fq 'Torna a Convoy mantenendo il gruppo' "$OUT/ui-integrated-wifi.xml"; then
+    echo 'Retention offered without a Wi-Fi Direct group' >&2
+    exit 1
+  fi
+  read -r width height < <(timeout 15 adb shell wm size | tr -d '\r' |
+    awk -F '[: x]+' '/ size:/ {width=$(NF-1); height=$NF} END {print width, height}')
+  location_ui=$OUT/ui-wifi-lab-location-off.xml
+  for try in {1..5}; do
+    if timeout 15 adb shell uiautomator dump /sdcard/convoy-lab-location.xml >/dev/null &&
+      timeout 15 adb shell cat /sdcard/convoy-lab-location.xml > "$location_ui"; then
+      if grep -Fq 'Impostazioni Posizione' "$location_ui"; then break; fi
+      timeout 15 adb shell input swipe "$((width / 2))" "$((height * 68 / 100))" \
+        "$((width / 2))" "$((height * 40 / 100))" 500
+    fi
+  done
+  grep -Fq 'Impostazioni Posizione' "$location_ui"
+  timeout 15 adb shell cmd location set-location-enabled true
+  echo "PASS: LAB explains disabled Android Location Mode with a settings action on API 35"
+  timeout 15 adb shell input keyevent KEYCODE_HOME
+  sleep 2
+  assert_no_runtime wifi-lab-background
+  timeout 15 adb shell dumpsys activity services "$PACKAGE" > "$OUT/wifi-lab-services.txt"
+  if grep -Fq 'WifiDirectLabService' "$OUT/wifi-lab-services.txt"; then
+    echo 'Wi-Fi Direct background service started without explicit consent' >&2
+    exit 1
+  fi
+  launch_app_process wifi-lab-resumed
+  assert_no_runtime wifi-lab-resumed
+  wait_and_tap_text 'Chiudi LAB e torna a Convoy' return-integrated-outdoor
+  sleep 3
+  assert_no_runtime wifi-lab-return
+  timeout 15 adb shell uiautomator dump /sdcard/convoy-return-outdoor.xml >/dev/null 2>&1 || true
+  timeout 15 adb shell cat /sdcard/convoy-return-outdoor.xml > "$OUT/ui-return-outdoor.xml"
+  grep -Fq 'Test diagnostico' "$OUT/ui-return-outdoor.xml"
+  echo "PASS: LAB returned through Android Home/resume and closed without foreground runtime"
+fi
 # The start control is deliberately before the explanatory text. Do NOT
 # swipe here: a previous unconditional swipe hid the button above the
 # viewport in actual emulator UI dumps. Capture the pre-tap view to
@@ -440,7 +528,9 @@ assert len(handoff) == 1, 'WARM_STOP_HANDOFF: expected one visible-map outing->p
 t = handoff[0]
 assert t['data']['record_track'] is False and t['data']['fresh'] is True, 'WARM_STOP_FRESH: fresh original source fix must survive stop'
 assert not [r for r in tail if r['category']=='gps' and r['event']=='position_request'], 'WARM_STOP_RESTART: GPS provider must not be restarted'
-fixes = [r['data'] for r in tail if r['category']=='gps' and r['event']=='fix']
+# The pre-tap capture precedes UI lookup and input. The mode transition is
+# emitted when the service switches off track recording.
+fixes = [r['data'] for r in tail if r['event_index'] > t['event_index'] and r['category']=='gps' and r['event']=='fix']
 assert fixes and any(f['fresh'] for f in fixes), 'WARM_STOP_FRESH: new physical provider callback required'
 assert all(f['record_track'] is False and f['track_added'] is False for f in fixes), 'WARM_STOP_TRAIL: after-stop fixes must not extend outing'
 assert not [r for r in tail if r['category']=='runtime' and r['event']=='foreground_service_started'], 'WARM_STOP_FOREGROUND: stopped outing must not restart FGS'
